@@ -38,13 +38,16 @@ Features:
 - Input validation with visual feedback (checkmarks/X icons)
 - Barangay selection dropdown with search functionality
 - Password strength requirements with confirmation
+- Email verification via 6-digit OTP sent to the user's inbox
+- When SMTP credentials are missing or emails fail, the system surfaces the generated OTP in-app for development/testing
 - Success popup modal after registration
-- Auto-redirect to login page after successful signup
+- Auto-redirect to login page after successful signup once email is verified
 
 Form Fields:
 - Personal Information: First Name, Last Name, Contact Number
 - Account Details: Email, Username, Password, Confirm Password
 - Location: Barangay selection (dropdown), Address
+- Verification: 6-digit One-Time Password (OTP) entry with resend support
 - All fields have real-time validation with error messages
 
 Validation Rules:
@@ -66,9 +69,10 @@ Design Elements:
 User Flow:
 1. User fills out registration form
 2. Real-time validation provides immediate feedback
-3. Form submission validates all fields
-4. On success: displays success message and redirects to login
-5. On error: displays specific error message
+3. User requests a verification code which is emailed to the provided address
+4. User inputs the 6-digit OTP (taken from the email, or from the on-screen fallback if email delivery fails) to confirm ownership
+5. After successful verification, the system creates the account and displays the success modal
+6. Auto-redirect returns the user to the login page; on error, specific messages guide corrective action
 
 TECHNICAL IMPLEMENTATION
 ------------------------
@@ -83,7 +87,7 @@ Backend Integration:
 - RESTful API endpoints for authentication
 - Role-based access control
 - Password hashing and security
-- Email verification system
+- Email verification system shared with signup and forgot-password OTP flows
 - Forgot password functionality with email reset
 
 Security Features:

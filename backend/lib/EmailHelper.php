@@ -54,6 +54,7 @@ class EmailHelper {
     public function sendPasswordResetCode($email, $username, $resetCode, $expiryTime) {
         try {
             // Recipient
+            $this->mailer->clearAddresses();
             $this->mailer->addAddress($email);
             
             // Subject
@@ -73,6 +74,28 @@ class EmailHelper {
             
             return true;
             
+        } catch (Exception $e) {
+            throw new Exception("Failed to send email: " . $e->getMessage());
+        }
+    }
+
+    public function sendSignupVerificationCode($email, $name, $verificationCode, $expiryTime) {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($email);
+
+            $this->mailer->Subject = 'Verify Your KoleTrash Email Address';
+
+            $htmlBody = $this->getSignupVerificationHTML($name, $verificationCode, $expiryTime);
+            $this->mailer->isHTML(true);
+            $this->mailer->Body = $htmlBody;
+
+            $textBody = $this->getSignupVerificationText($name, $verificationCode, $expiryTime);
+            $this->mailer->AltBody = $textBody;
+
+            $this->mailer->send();
+
+            return true;
         } catch (Exception $e) {
             throw new Exception("Failed to send email: " . $e->getMessage());
         }
@@ -162,6 +185,88 @@ If you have any questions, please contact our support team.
 
 Best regards,
 KoleTrash System Team
+
+This is an automated message. Please do not reply to this email.
+        ";
+    }
+
+    private function getSignupVerificationHTML($name, $verificationCode, $expiryTime) {
+        $displayName = $name ?: 'there';
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>Email Verification Code</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+                .code-box { background: #111827; color: white; padding: 20px; text-align: center; font-size: 26px; font-weight: bold; letter-spacing: 6px; border-radius: 8px; margin: 20px 0; }
+                .info { background: #ECFDF5; border: 1px solid #10B981; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Verify Your Email</h1>
+                </div>
+                <div class='content'>
+                    <p>Hello <strong>{$displayName}</strong>,</p>
+                    <p>Welcome to the KoleTrash community! To complete your registration, please enter the verification code below in the signup portal.</p>
+                    <div class='code-box'>
+                        {$verificationCode}
+                    </div>
+                    <div class='info'>
+                        <strong>Important:</strong>
+                        <ul>
+                            <li>This code will expire in 15 minutes.</li>
+                            <li>If you didn't create an account, please ignore this email.</li>
+                            <li>Never share this code with anyone.</li>
+                        </ul>
+                    </div>
+                    <p><strong>Expires at:</strong> {$expiryTime}</p>
+                    <p>Once verified, you'll be able to access resident services and track waste collection schedules.</p>
+                    <p>Need help? Feel free to reply to this email or contact support.</p>
+                    <p>Best regards,<br>
+                    <strong>The KoleTrash Team</strong></p>
+                </div>
+                <div class='footer'>
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+    }
+
+    private function getSignupVerificationText($name, $verificationCode, $expiryTime) {
+        $displayName = $name ?: 'there';
+        return "
+Email Verification - KoleTrash System
+
+Hello {$displayName},
+
+Welcome to the KoleTrash community! To complete your registration, please enter this verification code in the signup portal:
+
+Verification Code: {$verificationCode}
+
+IMPORTANT:
+- This code will expire in 15 minutes.
+- If you didn't create an account, please ignore this email.
+- Never share this code with anyone.
+
+Expires at: {$expiryTime}
+
+Once verified, you'll be able to access our resident services and waste collection updates.
+
+If you need help, please contact our support team.
+
+Best regards,
+The KoleTrash Team
 
 This is an automated message. Please do not reply to this email.
         ";
