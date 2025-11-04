@@ -137,7 +137,7 @@ CREATE TABLE garbage_collectors (
 ### Garbage Collector Test Account
 - **Username**: `collector1`
 - **Password**: `collector123`
-- **Email**: `collector@koletrash.com`
+- **Email**: `collector@kolektrash.com`
 
 ## Error Handling
 
@@ -148,7 +148,7 @@ CREATE TABLE garbage_collectors (
 4. **"Network error"**: Backend server not running or connection issues
 
 ### Error Resolution
-1. Ensure backend server is running on `http://localhost/koletrash/backend/`
+1. Ensure backend server is running on `http://localhost/kolektrash/backend/`
 2. Check database connection
 3. Verify user is logged in
 4. Check browser console for detailed error messages

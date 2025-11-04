@@ -1,13 +1,120 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiMapPin, FiAlertCircle, FiCamera, FiCheckCircle, FiChevronDown, FiChevronUp, FiTag } from 'react-icons/fi';
-import { authService } from '../../services/authService';
+import { FiUser, FiMapPin, FiAlertCircle, FiCamera, FiCheckCircle, FiChevronDown, FiChevronUp, FiTag, FiX } from 'react-icons/fi';
 import axios from 'axios';
 
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api';
+const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
 
 const issueTypes = [
-  'Missed Collection', 'Overflowing Bins', 'Illegal Dumping', 'Damaged Bin', 'Other'
+  'Missed or delayed pickups',
+  'Overflowing or insufficient bins',
+  'Unpleasant odors from trash areas',
+  'Rude or unprofessional service from collectors',
+  'Others'
 ];
+
+const ConfirmationModal = ({ isOpen, onConfirm, onCancel, isSubmitting, issueType, exactLocation, description, barangay }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-40 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm p-6 animate-fadeIn">
+        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+          <FiAlertCircle className="text-green-600 text-3xl" />
+        </div>
+        <h2 className="text-lg font-semibold text-gray-900 text-center mb-2">Submit Issue Report?</h2>
+        <p className="text-sm text-gray-600 text-center mb-4">
+          Please confirm that you want to send this issue report. This action can't be undone.
+        </p>
+
+        <div className="space-y-3 text-sm text-gray-700 mb-6">
+          {barangay && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Barangay</p>
+              <p className="font-medium text-gray-800">{barangay}</p>
+            </div>
+          )}
+          {issueType && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Issue Type</p>
+              <p className="font-medium text-gray-800">{issueType}</p>
+            </div>
+          )}
+          {exactLocation && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Exact Location</p>
+              <p className="font-medium text-gray-800 break-words">{exactLocation}</p>
+            </div>
+          )}
+          {description && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Description</p>
+              <p className="text-gray-700 whitespace-pre-line break-words">{description}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="sm:flex-1 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="sm:flex-1 py-2.5 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:bg-green-500 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Submitting...
+              </>
+            ) : (
+              'Confirm'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SuccessModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
+      <div className="relative bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 w-full max-w-xs sm:max-w-sm mx-4 text-center">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+          aria-label="Close"
+        >
+          <FiX className="text-xl" />
+        </button>
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 border border-green-200 mx-auto mb-4">
+          <FiCheckCircle className="text-green-600 text-3xl" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Success</h2>
+        <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+          Report submitted successfully! We'll review it shortly.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function ReportIssue() {
   // State for user data and loading
@@ -18,12 +125,17 @@ export default function ReportIssue() {
     name: '',
     barangay: '',
     issueType: '',
+    customIssueType: '',
+    exactLocation: '',
     description: '',
     photo: null,
   });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showIssueType, setShowIssueType] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingSubmission, setPendingSubmission] = useState(null);
 
   // Fetch user data from database on component mount
   useEffect(() => {
@@ -33,27 +145,14 @@ export default function ReportIssue() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const userDataLocal = JSON.parse(storedUser);
-          console.log('Local storage user data:', userDataLocal); // Debug log
           
           // Get user_id and role, checking all possible properties
           const userId = userDataLocal.user_id || userDataLocal.id || userDataLocal.userId;
           const userRole = userDataLocal.role || userDataLocal.user_type || userDataLocal.userType;
           
-          // Debug log all possible ID fields
-          console.log('User data fields:', {
-            user_id: userDataLocal.user_id,
-            id: userDataLocal.id,
-            userId: userDataLocal.userId,
-            role: userDataLocal.role,
-            user_type: userDataLocal.user_type,
-            userType: userDataLocal.userType
-          });
-          
           if (!userId) {
             throw new Error('User ID not found in stored data');
           }
-          
-          console.log('Using user ID:', userId, 'Role:', userRole); // Debug log
           
           // We'll verify the role after getting fresh data from the database
           // Fetch user details from database using the get_user endpoint
@@ -61,20 +160,11 @@ export default function ReportIssue() {
             params: { id: userId }
           });
           
-          console.log('API Response:', response.data); // Debug log
-          
           if (response.data.status === 'success') {
             const user = response.data.data;
-            console.log('User data from API:', {
-              id: user.user_id,
-              name: `${user.firstname || ''} ${user.lastname || ''}`.trim(),
-              role: user.role,
-              barangay: user.barangay_id || user.barangay
-            });
 
             // Verify the user is a barangay head using the role from database
             if (user.role !== 'Barangay Head' && user.role !== 'barangay_head') {
-              console.log('Invalid role:', user.role);
               throw new Error('Access denied. Only barangay heads can access this page.');
             }
             setUserData(user);
@@ -95,7 +185,6 @@ export default function ReportIssue() {
         
         // Determine the specific error case
         if (error.message === 'Network Error') {
-          console.log('Network error details:', error);
           setError('Unable to connect to server. Please check your connection and try again.');
         } else if (error.message.includes('User ID not found')) {
           setError('Session expired. Please log out and log in again.');
@@ -109,21 +198,6 @@ export default function ReportIssue() {
           }
         } else {
           setError('Error loading user data. Please try refreshing the page.');
-        }
-
-        // Log full error details
-        if (error.response) {
-          console.log('Error response:', {
-            status: error.response.status,
-            statusText: error.response.statusText,
-            data: error.response.data
-          });
-        } else if (error.request) {
-          console.log('Error request:', {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers
-          });
         }
       } finally {
         setLoading(false);
@@ -162,14 +236,19 @@ export default function ReportIssue() {
     }
   };
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setSuccess(false);
 
     // Validate required fields
-    if (!form.issueType || !form.description) {
-      setError('Please fill in all required fields.');
+    if (!form.issueType || !form.exactLocation || !form.description) {
+      setError('Please fill in all required fields (issue type, exact location, description).');
+      return;
+    }
+    // Validate custom issue type when "Others" is selected
+    if (form.issueType === 'Others' && !form.customIssueType.trim()) {
+      setError('Please specify your issue type.');
       return;
     }
     if (!form.barangay) {
@@ -177,19 +256,43 @@ export default function ReportIssue() {
       return;
     }
 
-    // Submit to backend
+    if (!userData?.user_id) {
+      setError('User information is missing. Please reload the page.');
+      return;
+    }
+
+    setPendingSubmission({
+      reporterId: userData.user_id,
+      reporterName: form.name,
+      barangay: form.barangay,
+      issueType: form.issueType === 'Others' ? form.customIssueType : form.issueType,
+      exactLocation: form.exactLocation,
+      description: form.description,
+      photo: form.photo,
+    });
+    setShowConfirmModal(true);
+  }
+
+  const confirmSubmission = async () => {
+    if (!pendingSubmission) {
+      setShowConfirmModal(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
     try {
-      setLoading(true);
-      
       const formData = new FormData();
-      formData.append('reporter_id', userData?.user_id); // Using user_id from userData
-      formData.append('reporter_name', form.name);
-      formData.append('barangay', form.barangay);
-      formData.append('issue_type', form.issueType);
-      formData.append('description', form.description);
-      formData.append('table', 'issue_reports'); // Use the correct table name
-      if (form.photo) {
-        formData.append('photo', form.photo);
+      formData.append('reporter_id', pendingSubmission.reporterId);
+      formData.append('reporter_name', pendingSubmission.reporterName);
+      formData.append('barangay', pendingSubmission.barangay);
+      formData.append('issue_type', pendingSubmission.issueType);
+  formData.append('exact_location', pendingSubmission.exactLocation);
+  formData.append('description', pendingSubmission.description);
+      formData.append('table', 'issue_reports');
+      if (pendingSubmission.photo) {
+        formData.append('photo', pendingSubmission.photo);
       }
 
       const response = await axios.post(`${API_BASE_URL}/submit_issue_report.php`, formData, {
@@ -197,15 +300,16 @@ export default function ReportIssue() {
           'Content-Type': 'multipart/form-data',
         }
       });
-      
+
       if (response.data.status === 'success') {
         setSuccess(true);
-        // Reset form but keep name and barangay
-        setForm(prevForm => ({ 
-          ...prevForm, 
-          issueType: '', 
-          description: '', 
-          photo: null 
+        setForm(prevForm => ({
+          ...prevForm,
+          issueType: '',
+          customIssueType: '',
+          exactLocation: '',
+          description: '',
+          photo: null,
         }));
         setTimeout(() => setSuccess(false), 5000);
       } else {
@@ -215,9 +319,19 @@ export default function ReportIssue() {
       console.error('Error submitting issue report:', error);
       setError(error.response?.data?.message || error.message || 'Failed to submit issue report. Please try again.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
+      setShowConfirmModal(false);
+      setPendingSubmission(null);
     }
-  }
+  };
+
+  const cancelSubmission = () => {
+    if (isSubmitting) {
+      return;
+    }
+    setShowConfirmModal(false);
+    setPendingSubmission(null);
+  };
 
   // Show loading state
   if (loading) {
@@ -245,12 +359,6 @@ export default function ReportIssue() {
             <FiAlertCircle /> {error}
           </div>
         )}
-        {success && (
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded px-3 py-2 text-sm">
-            <FiCheckCircle /> Report submitted successfully!
-          </div>
-        )}
-
         {/* Name - Disabled */}
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
@@ -283,6 +391,7 @@ export default function ReportIssue() {
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
             <FiTag className="text-green-500" /> Issue Type
+            <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <button
@@ -311,6 +420,42 @@ export default function ReportIssue() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Custom Issue Type Input (shown when "Others" is selected) */}
+        {form.issueType === 'Others' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
+              <FiTag className="text-green-500" /> Specify Issue Type <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="customIssueType"
+              value={form.customIssueType}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 text-base bg-white"
+              placeholder="Please describe your specific issue"
+            />
+            <p className="text-xs text-gray-500 mt-1">Provide details about the issue you're experiencing.</p>
+          </div>
+        )}
+
+        {/* Exact Location */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
+            <FiMapPin className="text-green-500" /> Exact Location <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="exactLocation"
+            value={form.exactLocation}
+            onChange={handleChange}
+            required
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 text-base bg-white"
+            placeholder="Provide the specific spot (e.g., Zone 3, near the plaza)"
+          />
+          <p className="text-xs text-gray-500 mt-1">Give a precise area so the MENRO team can respond faster.</p>
         </div>
 
         {/* Description */}
@@ -362,16 +507,30 @@ export default function ReportIssue() {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || isSubmitting}
           className={`w-full px-4 py-2 rounded-lg font-medium text-white transition-colors ${
-            loading
+            loading || isSubmitting
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
           }`}
         >
-          {loading ? 'Submitting...' : 'Submit Report'}
+          {isSubmitting ? 'Submitting...' : 'Submit Report'}
         </button>
       </form>
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onConfirm={confirmSubmission}
+        onCancel={cancelSubmission}
+        isSubmitting={isSubmitting}
+        issueType={pendingSubmission?.issueType}
+        exactLocation={pendingSubmission?.exactLocation}
+        description={pendingSubmission?.description}
+        barangay={pendingSubmission?.barangay}
+      />
+      <SuccessModal
+        isOpen={success}
+        onClose={() => setSuccess(false)}
+      />
     </div>
   );
 }

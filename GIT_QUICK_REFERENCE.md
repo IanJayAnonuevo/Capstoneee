@@ -13,7 +13,7 @@ git commit -m "Initial commit - KolekTrash v1.0.0"
 git tag -a v1.0.0 -m "Release v1.0.0 - Mobile-optimized UI"
 
 # Connect to GitHub (replace with your repo URL)
-git remote add origin https://github.com/yourusername/koletrash.git
+git remote add origin https://github.com/yourusername/kolektrash.git
 git branch -M main
 git push -u origin main
 git push origin v1.0.0

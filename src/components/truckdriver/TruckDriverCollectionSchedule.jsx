@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { buildApiUrl } from '../../config/api';
 
 const weekdays = [
   { label: 'M', value: 'Monday' },
@@ -29,7 +30,7 @@ export default function TruckDriverCollectionSchedule() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://koletrash.systemproj.com/backend/api/get_personnel_schedule.php?user_id=${userId}&role=driver`);
+  const response = await axios.get(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`));
       
       if (response.data.success) {
         setSchedules(response.data.schedules);

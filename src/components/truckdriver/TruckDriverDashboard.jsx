@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare } from 'react-icons/fi';
-import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson } from 'react-icons/md';
+import { MdHome, MdLogout } from 'react-icons/md';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -20,7 +20,12 @@ import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { authService } from '../../services/authService';
+import { buildApiUrl } from '../../config/api';
 import axios from 'axios';
+import { StatusProvider } from '../../contexts/StatusContext';
+import { calculateUnreadCount, dispatchNotificationCount } from '../../utils/notificationUtils';
+import BrandedLoader from '../shared/BrandedLoader';
+import { useLoader } from '../../contexts/LoaderContext';
 
 // Fix default marker icon issue with leaflet in React
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -48,12 +53,31 @@ const collectionPoints = [
 
 const handleRespond = async (assignmentId, userId, role, response) => {
   try {
-    const res = await axios.post('/backend/api/respond_assignment.php', {
-      assignment_id: assignmentId,
-      user_id: userId,
-      role, // 'driver' or 'collector'
-      response, // 'accepted' or 'declined'
-    });
+    const token = (() => {
+      try {
+        return localStorage.getItem('access_token');
+      } catch (error) {
+        console.warn('Unable to read access token for respond_assignment:', error);
+        return null;
+      }
+    })();
+
+    const res = await axios.post(
+      buildApiUrl('respond_assignment.php'),
+      {
+        assignment_id: assignmentId,
+        user_id: userId,
+        role, // 'driver' or 'collector'
+        response, // 'accepted' or 'declined'
+      },
+      token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        : undefined
+    );
     if (res.data.success) {
       // Optionally refresh notifications/assignments here
       alert('Response recorded!');
@@ -71,43 +95,272 @@ export default function TruckDriverDashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState('');
+  const [avatarCooldownUntil, setAvatarCooldownUntil] = useState(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { showLoader } = useLoader();
+
+  const getStoredAccessToken = () => {
+    try {
+      return localStorage.getItem('access_token');
+    } catch (error) {
+      console.warn('Unable to read stored access token:', error);
+      return null;
+    }
+  };
+
+  const buildAuthHeaders = (extra = {}) => {
+    const token = getStoredAccessToken();
+    if (token) {
+      return {
+        ...extra,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+    return { ...extra };
+  };
+
+  const normalizeAvatarUrl = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+    return authService.resolveAssetUrl(value);
+  };
+
+  const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  const parseServerTimestamp = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    const formatted = value.replace(' ', 'T');
+    const candidate = `${formatted}+08:00`;
+    const parsed = Date.parse(candidate);
+    if (Number.isNaN(parsed)) {
+      const fallback = Date.parse(value);
+      return Number.isNaN(fallback) ? null : fallback;
+    }
+    return parsed;
+  };
+
+  const computeCooldownUntil = (timestampString) => {
+    const parsed = parseServerTimestamp(timestampString);
+    if (!parsed) return null;
+    const target = parsed + COOLDOWN_DURATION_MS;
+    return target > Date.now() ? target : null;
+  };
+
+  const formatCooldownMessage = (targetMs) => {
+    if (!targetMs) return '';
+    const diffMs = targetMs - Date.now();
+    if (diffMs <= 0) return '';
+    const totalMinutes = Math.ceil(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) {
+      return `You can change your photo again in ${hours}h ${minutes}m.`;
+    }
+    return `You can change your photo again in ${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}.`;
+  };
+
+  const getAvatarStorageKey = () => {
+    const identifier = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    return identifier ? `truckDriverAvatar:${identifier}` : null;
+  };
+
+  const handleAvatarClick = () => {
+    if (isAvatarUploading) {
+      return;
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil <= Date.now()) {
+      setAvatarCooldownUntil(null);
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil > Date.now()) {
+      setAvatarUploadError(formatCooldownMessage(avatarCooldownUntil));
+      return;
+    }
+
+    setAvatarUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const targetUserId = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    if (!targetUserId) {
+      setAvatarUploadError('Profile is still loading. Try again soon.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('Use a PNG, JPG, WEBP, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAvatarUploadError('Image must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarUploadError('');
+    const previousAvatar = avatarPreview;
+    const tempPreview = URL.createObjectURL(file);
+    setAvatarPreview(tempPreview);
+    setIsAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('user_id', targetUserId);
+      formData.append('avatar', file);
+
+      const response = await authService.uploadProfileImage(formData);
+      if (response?.status === 'success') {
+        const relativePath = response?.data?.relativePath || response?.relativePath || null;
+        const providedUrl = response?.data?.imageUrl || response?.imageUrl || tempPreview;
+        const resolvedUrl = normalizeAvatarUrl(relativePath || providedUrl);
+
+        setAvatarPreview(resolvedUrl);
+
+        const key = getAvatarStorageKey();
+        if (key && resolvedUrl) {
+          localStorage.setItem(key, resolvedUrl);
+        }
+
+        const updatedAt = response?.data?.updatedAt || null;
+        const cooldownUntil = computeCooldownUntil(updatedAt) || (Date.now() + COOLDOWN_DURATION_MS);
+        setAvatarCooldownUntil(cooldownUntil);
+
+        setUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            profile_image: relativePath || prev.profile_image || providedUrl,
+            profile_image_updated_at: updatedAt || prev?.profile_image_updated_at,
+            avatar: resolvedUrl,
+          };
+        });
+
+        try {
+          const stored = localStorage.getItem('user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.profile_image = relativePath || parsed.profile_image || providedUrl;
+            parsed.profile_image_updated_at = updatedAt || parsed.profile_image_updated_at;
+            parsed.avatar = resolvedUrl;
+            localStorage.setItem('user', JSON.stringify(parsed));
+          }
+        } catch (storageError) {
+          console.error('Unable to update stored user with new avatar:', storageError);
+        }
+      } else {
+        setAvatarPreview(previousAvatar || null);
+        setAvatarUploadError(response?.message || 'Upload failed. Please try again.');
+      }
+    } catch (error) {
+      setAvatarPreview(previousAvatar || null);
+      let fallbackMessage = error?.message || 'Upload failed. Please try again.';
+      const payload = error?.payload;
+      if (payload?.cooldownRemainingSeconds) {
+        let cooldownUntil = null;
+        if (payload?.cooldownEndsAt) {
+          cooldownUntil = payload.cooldownEndsAt * 1000;
+        } else {
+          cooldownUntil = Date.now() + payload.cooldownRemainingSeconds * 1000;
+        }
+        if (cooldownUntil) {
+          setAvatarCooldownUntil(cooldownUntil);
+          const message = formatCooldownMessage(cooldownUntil);
+          if (message) {
+            fallbackMessage = message;
+          }
+        }
+      }
+      setAvatarUploadError(fallbackMessage);
+    } finally {
+      setIsAvatarUploading(false);
+      URL.revokeObjectURL(tempPreview);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Fetch user data from database
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Get user data from localStorage first to get the user ID
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          
-          // Fetch fresh data from database using the user ID
-          if (userData.id) {
-            const response = await authService.getUserData(userData.id);
+          const parsed = JSON.parse(storedUser);
+          const fallbackId = localStorage.getItem('user_id');
+          const computedUserId = parsed.user_id || parsed.id || fallbackId;
+
+          if (computedUserId) {
+            const response = await authService.getUserData(computedUserId);
             if (response.status === 'success') {
               setUser(response.data);
+              setResolvedUserId(computedUserId);
+              const avatarKey = `truckDriverAvatar:${computedUserId}`;
+              const remoteAvatar = normalizeAvatarUrl(response.data?.profile_image || response.data?.avatar || response.data?.profileImage || null);
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              setAvatarPreview(remoteAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(response.data?.profile_image_updated_at));
             } else {
               console.error('Failed to fetch user data:', response.message);
-              // Fallback to stored data
-              setUser(userData);
+              setUser(parsed);
+              if (computedUserId) {
+                setResolvedUserId(computedUserId);
+                const avatarKey = `truckDriverAvatar:${computedUserId}`;
+                const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+                const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+                setAvatarPreview(fallbackAvatar || storedAvatar || null);
+                setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+              }
             }
           } else {
-            // Use stored data if no ID
-            setUser(userData);
+            setUser(parsed);
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `truckDriverAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           }
         } else {
           console.warn('No user data found in localStorage');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        // Try to use stored data as fallback
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
+            const parsed = JSON.parse(storedUser);
+            setUser(parsed);
+            const fallbackId = parsed?.user_id || parsed?.id || localStorage.getItem('user_id');
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `truckDriverAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
           }
@@ -129,27 +382,24 @@ export default function TruckDriverDashboard() {
     const uid = localStorage.getItem('user_id') || uidFromUser || user?.user_id || user?.id;
     if (!uid) return;
 
+    setResolvedUserId((current) => (current ? current : uid));
+
     let isActive = true;
 
     const loadUnread = async () => {
       try {
-        const res = await fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
+        const res = await fetch(
+          buildApiUrl(`get_notifications.php?recipient_id=${uid}`),
+          {
+            headers: buildAuthHeaders(),
+          }
+        );
         const data = await res.json();
         if (isActive && data?.success) {
-          const count = (data.notifications || []).reduce((acc, n) => {
-            // unread
-            const isUnread = n.response_status !== 'read';
-            // pending assignment (not accepted/declined)
-            let isPendingAssignment = false;
-            try {
-              const parsed = JSON.parse(n.message || '{}');
-              if (parsed && (parsed.type === 'assignment' || parsed.type === 'daily_assignments')) {
-                isPendingAssignment = !['accepted', 'declined'].includes((n.response_status || '').toLowerCase());
-              }
-            } catch {}
-            return acc + ((isUnread || isPendingAssignment) ? 1 : 0);
-          }, 0);
+          const notifications = data.notifications || [];
+          const count = calculateUnreadCount(notifications);
           setUnreadNotifications(count);
+          dispatchNotificationCount(uid, notifications);
         }
       } catch (_) {
         // ignore network errors for badge
@@ -161,9 +411,29 @@ export default function TruckDriverDashboard() {
     return () => { isActive = false; clearInterval(intervalId); };
   }, [user]);
 
+  useEffect(() => {
+    if (!resolvedUserId) return;
+
+    const handleSync = (event) => {
+      const { userId, count } = event.detail || {};
+      if (String(userId) === String(resolvedUserId)) {
+        setUnreadNotifications(count);
+      }
+    };
+
+    window.addEventListener('notificationsUpdated', handleSync);
+    return () => window.removeEventListener('notificationsUpdated', handleSync);
+  }, [resolvedUserId]);
+
+  const fallbackName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
+  const displayName = (user?.fullName && user.fullName.trim()) || fallbackName || 'Loading...';
+  const derivedAvatar = normalizeAvatarUrl(user?.profile_image || user?.avatar || user?.profileImage || null);
+  const effectiveAvatar = avatarPreview || derivedAvatar || null;
+  const avatarInitial = displayName && displayName !== 'Loading...' ? displayName.charAt(0).toUpperCase() : 'D';
+
   // Driver info from database
   const driver = {
-    name: user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Loading...',
+    name: displayName,
     role: user?.role || 'Truck Driver',
     id: user?.user_id || 'TD-001',
     truck: 'Truck #05',
@@ -171,7 +441,11 @@ export default function TruckDriverDashboard() {
     username: user?.username || '',
     email: user?.email || '',
     assignedArea: user?.assignedArea || '',
+    avatarUrl: effectiveAvatar,
+    avatarInitial,
   };
+
+  const activeCooldownMessage = avatarUploadError ? '' : formatCooldownMessage(avatarCooldownUntil);
 
   // MENRO events carousel images - same as other dashboards for consistency
   const eventImages = [
@@ -201,21 +475,51 @@ export default function TruckDriverDashboard() {
     }
   ];
 
+  const handleNavigation = (targetPath, options = {}) => {
+    const { skipLoading = false, closeMenu = true, customAction } = options;
+
+    if (!skipLoading && targetPath && location.pathname !== targetPath) {
+      void showLoader({
+        primaryText: 'Loading your next view…',
+        secondaryText: 'We’re preparing the section you selected.',
+        variant: 'login'
+      });
+    }
+
+    if (closeMenu) {
+      setMenuOpen(false);
+    }
+
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
+    if (customAction) {
+      customAction();
+    }
+  };
+
   // Navigation links with routing - truck driver specific
   const navLinks = [
-    { label: 'Dashboard', icon: <MdHome className="w-6 h-6" />, to: '/truckdriver', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver') navigate('/truckdriver'); } },
-    { label: 'Collection Schedule', icon: <FiCalendar className="w-6 h-6" />, to: '/truckdriver/schedule', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver/schedule') navigate('/truckdriver/schedule'); } },
-    { label: 'Assigned Tasks', icon: <FiCheckSquare className="w-6 h-6" />, to: '/truckdriver/tasks', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver/tasks') navigate('/truckdriver/tasks'); } },
-    { label: 'Assigned Routes', icon: <FiMapPin className="w-6 h-6" />, to: '/truckdriver/routes', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver/routes') navigate('/truckdriver/routes'); } },
-    { label: 'Vehicle Status', icon: <FiTruck className="w-6 h-6" />, to: '/truckdriver/vehicle', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver/vehicle') navigate('/truckdriver/vehicle'); } },
-    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/truckdriver/settings', onClick: () => { setMenuOpen(false); if(location.pathname !== '/truckdriver/settings') navigate('/truckdriver/settings'); } },
-    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, to: '/login', onClick: () => { setMenuOpen(false); setShowLogoutModal(true); } },
+    { label: 'Dashboard', icon: <MdHome className="w-6 h-6" />, to: '/truckdriver', showLoading: true },
+    { label: 'Collection Schedule', icon: <FiCalendar className="w-6 h-6" />, to: '/truckdriver/schedule', showLoading: true },
+    { label: 'Assigned Tasks', icon: <FiCheckSquare className="w-6 h-6" />, to: '/truckdriver/tasks', showLoading: true },
+    { label: 'Assigned Routes', icon: <FiMapPin className="w-6 h-6" />, to: '/truckdriver/routes', showLoading: true },
+    { label: 'Vehicle Status', icon: <FiTruck className="w-6 h-6" />, to: '/truckdriver/vehicle', showLoading: true },
+    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/truckdriver/settings', showLoading: true },
+    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, action: () => setShowLogoutModal(true), showLoading: false },
   ];
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setShowLogoutModal(false);
     // Clear user data from localStorage
     localStorage.removeItem('user');
+    localStorage.removeItem('user_id');
+    await showLoader({
+      primaryText: 'Signing you out…',
+      secondaryText: 'We’re securely closing your session.',
+      variant: 'login'
+    });
     navigate('/login', { replace: true });
   };
 
@@ -241,16 +545,22 @@ export default function TruckDriverDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 w-full max-w-full relative">
+    <StatusProvider>
+      <div className="min-h-screen flex flex-col bg-gray-100 w-full max-w-full relative">
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       {/* Loading state */}
-      {loading && (
-        <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-green-700 font-medium">Loading user data...</p>
-          </div>
-        </div>
-      )}
+      <BrandedLoader
+        visible={loading}
+        primaryText="Loading your dashboard…"
+        secondaryText="Setting up your driver tools."
+        variant="login"
+      />
 
       {/* Hamburger Menu Drawer */}
       {menuOpen && (
@@ -259,8 +569,31 @@ export default function TruckDriverDashboard() {
           <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
             {/* Profile Section */}
             <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg">
-                <MdPerson className="w-7 h-7 text-green-800" />
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  title="Change profile picture"
+                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                >
+                  {isAvatarUploading ? (
+                    <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                  ) : driver.avatarUrl ? (
+                    <img src={driver.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-green-800 font-bold text-lg">{driver.avatarInitial}</span>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Change
+                  </span>
+                </button>
+                {avatarUploadError ? (
+                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
+                ) : isAvatarUploading ? (
+                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
+                ) : activeCooldownMessage ? (
+                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
+                ) : null}
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-white font-semibold text-base truncate">{driver.name}</h2>
@@ -278,26 +611,32 @@ export default function TruckDriverDashboard() {
             {/* Navigation Menu */}
             <nav className="flex-1 overflow-y-auto py-4 px-2">
               <div className="space-y-1">
-                {navLinks.map((link, i) => (
-                  <button
-                    key={link.label}
-                    className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
-                      ${link.label === 'Logout' 
-                        ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100' 
-                        : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
-                      }
-                      ${location.pathname === link.to ? 'border-2' : 'border'}
-                    `}
-                    onClick={link.onClick}
-                  >
-                    <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>
-                      {link.icon}
-                    </span>
-                    <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
-                      {link.label}
-                    </span>
-                  </button>
-                ))}
+                {navLinks.map((link) => {
+                  const isActive = link.to && location.pathname === link.to;
+                  return (
+                    <button
+                      key={link.label}
+                      className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
+                        ${link.label === 'Logout' 
+                          ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100' 
+                          : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
+                        }
+                        ${isActive ? 'border-2' : 'border'}
+                      `}
+                      onClick={() => handleNavigation(link.to, {
+                        skipLoading: link.showLoading === false,
+                        customAction: link.action
+                      })}
+                    >
+                      <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>
+                        {link.icon}
+                      </span>
+                      <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
+                        {link.label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </nav>
           </div>
@@ -340,7 +679,7 @@ export default function TruckDriverDashboard() {
         </button>
         <span 
           className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
-          onClick={() => navigate('/truckdriver')}
+          onClick={() => handleNavigation('/truckdriver')}
         >
           KolekTrash
         </span>
@@ -349,7 +688,7 @@ export default function TruckDriverDashboard() {
             aria-label="Notifications"
             className="relative p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
             style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
-            onClick={() => navigate('/truckdriver/notifications')}
+            onClick={() => handleNavigation('/truckdriver/notifications')}
           >
             <FiBell className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
             {unreadNotifications > 0 && (
@@ -370,6 +709,7 @@ export default function TruckDriverDashboard() {
       <footer className="mt-auto text-xs text-center text-white bg-green-800 py-2 w-full">
         © 2025 Municipality of Sipocot – MENRO. All rights reserved.
       </footer>
-    </div>
+      </div>
+    </StatusProvider>
   );
 }

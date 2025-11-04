@@ -11,7 +11,36 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/marker-shadow.png',
 })
 
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'
+// Create custom truck icon
+function createTruckIcon(rotation = 0) {
+  return L.divIcon({
+    className: 'custom-truck-icon',
+    html: `
+      <div style="
+        transform: rotate(${rotation}deg);
+        transform-origin: center;
+        transition: transform 0.3s ease;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #059669;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      ">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-1.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5zM17 12h-3V9h1.5l1.5 3z"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  })
+}
+
+import { buildApiUrl } from '../../config/api';
 const MAPBOX_TOKEN = (import.meta && import.meta.env && import.meta.env.VITE_MAPBOX_TOKEN) || null
 
 export default function RouteRun(){
@@ -29,19 +58,68 @@ export default function RouteRun(){
   const [routeError, setRouteError] = React.useState(null)
   const [targetStop, setTargetStop] = React.useState(null)
   const [routeSummary, setRouteSummary] = React.useState(null)
-  const [routeSteps, setRouteSteps] = React.useState([])
-  const [showAllSteps, setShowAllSteps] = React.useState(false)
-  const [lastAction, setLastAction] = React.useState(null) // { stopId, prevStatus }
-  const [showUndo, setShowUndo] = React.useState(false)
-  const [showStatusModal, setShowStatusModal] = React.useState(false)
-  const [statusChoice, setStatusChoice] = React.useState('pending')
-  const [truckFull, setTruckFull] = React.useState(false)
-  const [note, setNote] = React.useState('')
-  const [landfillMode, setLandfillMode] = React.useState(false)
-  const [resumeTarget, setResumeTarget] = React.useState(null) // remember where to return after landfill
-  const MANTILA_COORDS = React.useMemo(() => ({ lat: 13.7817000, lng: 123.0203000 }), [])
+  const [truckRotation, setTruckRotation] = React.useState(0) // truck rotation angle
+  const [submitting, setSubmitting] = React.useState(false)
+  const [routeMeta, setRouteMeta] = React.useState(null)
 
   const MIN_INTERVAL_MS = 5000
+
+  const getCurrentUserId = React.useCallback(() => {
+    try {
+      const direct = localStorage.getItem('user_id') || sessionStorage.getItem('user_id')
+      if (direct && Number(direct)) return Number(direct)
+      const userJson = localStorage.getItem('user') || sessionStorage.getItem('user')
+      if (userJson) {
+        const parsed = JSON.parse(userJson)
+        const value = parsed?.user_id ?? parsed?.id
+        if (value && Number(value)) return Number(value)
+      }
+    } catch (_) {}
+    return null
+  }, [])
+
+  const normalizeDateKey = React.useCallback((raw) => {
+    if (!raw) {
+      try {
+        return new Date().toISOString().slice(0, 10)
+      } catch (_) {
+        return ''
+      }
+    }
+    const str = String(raw)
+    const match = str.match(/\d{4}-\d{2}-\d{2}/)
+    if (match) return match[0]
+    const parsed = new Date(str)
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear()
+      const month = String(parsed.getMonth() + 1).padStart(2, '0')
+      const day = String(parsed.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    return ''
+  }, [])
+
+  // Calculate bearing between two points
+  function calculateBearing(from, to) {
+    const lat1 = from.lat * Math.PI / 180
+    const lat2 = to.lat * Math.PI / 180
+    const deltaLng = (to.lng - from.lng) * Math.PI / 180
+    
+    const y = Math.sin(deltaLng) * Math.cos(lat2)
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng)
+    
+    let bearing = Math.atan2(y, x) * 180 / Math.PI
+    return (bearing + 360) % 360
+  }
+
+  // Update truck rotation based on destination
+  React.useEffect(() => {
+    if (!currentPos || !targetStop) return
+
+    const dest = { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
+    const bearing = calculateBearing(currentPos, dest)
+    setTruckRotation(bearing)
+  }, [currentPos, targetStop])
 
   async function postLocation(coords){
     // Try to include driver_id as fallback
@@ -53,7 +131,7 @@ export default function RouteRun(){
         driverId = Number(u?.user_id || u?.id)
       }
     } catch {}
-    const url = driverId ? `${API_BASE_URL}/post_gps.php?driver_id=${driverId}` : `${API_BASE_URL}/post_gps.php`
+  const url = driverId ? buildApiUrl(`post_gps.php?driver_id=${driverId}`) : buildApiUrl('post_gps.php')
     const payload = {
       lat: coords.latitude,
       lng: coords.longitude,
@@ -89,15 +167,7 @@ export default function RouteRun(){
           const route = j.routes[0]
           const coords = route.geometry?.coordinates || []
           const latlngs = coords.map(([lng, lat]) => [lat, lng])
-          const steps = (route.legs?.[0]?.steps || []).map(s => ({
-            name: s.name,
-            distance: s.distance,
-            duration: s.duration,
-            maneuver: s.maneuver?.type,
-            modifier: s.maneuver?.modifier,
-            instruction: `${s.maneuver?.instruction || s.maneuver?.type || 'Continue'}`
-          }))
-          return { line: latlngs, summary: { distance: route.distance, duration: route.duration }, steps }
+          return { line: latlngs, summary: { distance: route.distance, duration: route.duration } }
         }
         throw new Error(j?.message || 'No Mapbox route')
       }
@@ -112,39 +182,119 @@ export default function RouteRun(){
       const route = j.routes[0]
       const coordsLine = route.geometry.coordinates || []
       const latlngs = coordsLine.map(([lng, lat]) => [lat, lng])
-      const steps = (route.legs?.[0]?.steps || []).map(s => ({
-        name: s.name,
-        distance: s.distance,
-        duration: s.duration,
-        maneuver: s.maneuver?.type,
-        modifier: s.maneuver?.modifier,
-        instruction: `${s.maneuver?.type || 'Continue'}${s.maneuver?.modifier ? ' ' + s.maneuver.modifier : ''}${s.name ? ' onto ' + s.name : ''}`.trim()
-      }))
-      return { line: latlngs, summary: { distance: route.distance, duration: route.duration }, steps }
+      return { line: latlngs, summary: { distance: route.distance, duration: route.duration } }
     }
     throw new Error(j?.message || j?.code || 'No OSRM route')
   }
 
   async function loadStops(routeId){
     try {
-      const res = await fetch(`${API_BASE_URL}/get_route_details.php?id=${routeId}`)
+  const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`))
       const data = await res.json()
       if (data?.success) {
-        const ordered = (data.route.stops||[]).sort((a,b)=>(a.seq||0)-(b.seq||0))
+        const routeInfo = data.route || {}
+        const ordered = (routeInfo.stops||[]).sort((a,b)=>(a.seq||0)-(b.seq||0))
+        setRouteMeta(routeInfo)
         setStops(ordered)
-        setRouteName(`${data.route.cluster_id || ''} ${data.route.barangay_name || ''}`.trim())
-        // Initialize modal status to current DB status to avoid accidental overwrite
-        const dbStatus = String(data.route.status || '').toLowerCase()
-        if (dbStatus === 'in_progress') setStatusChoice('in_progress')
-        else if (dbStatus === 'completed') setStatusChoice('completed')
-        else setStatusChoice('pending') // map scheduled/others to pending option
+        setRouteName(`${routeInfo.cluster_id || ''} ${routeInfo.barangay_name || ''}`.trim())
+        return { stops: ordered, route: routeInfo }
       }
-    } catch {}
+    } catch (e) {
+      console.error('Failed to load route details:', e)
+    }
+    return null
   }
 
+  const findNextRoute = React.useCallback(async (currentRouteId, metaOverride = null) => {
+    try {
+      const meta = metaOverride || routeMeta || {}
+      let dateKey = normalizeDateKey(meta.date || meta.scheduled_date || meta.route_date || meta.created_at)
+      if (!dateKey) {
+        dateKey = normalizeDateKey(new Date())
+      }
+      const userId = getCurrentUserId()
+  const url = new URL(buildApiUrl('get_routes.php'))
+      if (dateKey) url.searchParams.set('date', dateKey)
+      if (userId) {
+        url.searchParams.set('role', 'driver')
+        url.searchParams.set('user_id', String(userId))
+      }
+      const res = await fetch(url.toString())
+      const data = await res.json()
+      if (!data?.success) return null
+      const routes = Array.isArray(data.routes) ? data.routes : []
+      if (!routes.length) return null
+      const sortKey = (route) => {
+        const keyDate = normalizeDateKey(route.date || route.scheduled_date || dateKey)
+        const time = route.start_time ? String(route.start_time).slice(0,5) : '99:99'
+        return `${keyDate}T${time}`
+      }
+      const sorted = [...routes].sort((a,b) => sortKey(a).localeCompare(sortKey(b)))
+      const normalizedCurrentId = Number(currentRouteId)
+      const isIncomplete = (route) => {
+        const status = String(route.status || '').toLowerCase()
+        return !['completed','cancelled','done'].includes(status)
+      }
+      let candidate = null
+      const currentIndex = sorted.findIndex(r => Number(r.id) === normalizedCurrentId)
+      if (currentIndex >= 0) {
+        for (let i = currentIndex + 1; i < sorted.length; i++) {
+          if (isIncomplete(sorted[i])) { candidate = sorted[i]; break }
+        }
+      }
+      if (!candidate) {
+        candidate = sorted.find((route) => Number(route.id) !== normalizedCurrentId && isIncomplete(route)) || null
+      }
+      return candidate || null
+    } catch (e) {
+      console.error('Failed to determine next route', e)
+      return null
+    }
+  }, [routeMeta, normalizeDateKey, getCurrentUserId])
+
+  const activateNextRoute = React.useCallback(async (route, fallbackMeta = null) => {
+    if (!route) return
+    const routeIdNum = Number(route.id)
+    if (!routeIdNum) return
+    const userId = getCurrentUserId()
+    try {
+  await fetch(buildApiUrl('update_route_status.php'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ route_id: routeIdNum, status: 'in_progress', user_id: userId })
+      })
+    } catch (e) {
+      console.error('Failed to set next route status', e)
+    }
+    const barangayName = route.barangay_name || route.name || fallbackMeta?.barangay_name || ''
+    const teamId = route.team_id || fallbackMeta?.team_id || routeMeta?.team_id || null
+    try {
+  await fetch(buildApiUrl('set_route_active.php'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ route_id: routeIdNum, barangay: barangayName, team_id: teamId })
+      })
+    } catch (e) {
+      console.error('Failed to set next route active', e)
+    }
+    try {
+      const activeRouteData = {
+        route_id: routeIdNum,
+        barangay: barangayName,
+        team_id: teamId,
+        started_at: new Date().toISOString(),
+        status: 'in_progress',
+      }
+      localStorage.setItem('active_route', JSON.stringify(activeRouteData))
+      sessionStorage.setItem('active_route', JSON.stringify(activeRouteData))
+    } catch (_) {}
+  }, [getCurrentUserId, routeMeta])
+
   React.useEffect(() => {
-    // initial load
+    // initial load and periodic refresh so driver sees collector updates
     loadStops(id)
+    const interval = setInterval(() => { loadStops(id) }, 20000)
+    return () => clearInterval(interval)
   }, [id])
 
   React.useEffect(() => {
@@ -163,22 +313,18 @@ export default function RouteRun(){
         // Fetch suggested road route polyline + steps to the target stop (OSRM demo server)
         try {
           setRouteError(null)
-          const dest = landfillMode
-            ? { lat: MANTILA_COORDS.lat, lng: MANTILA_COORDS.lng }
-            : (targetStop && targetStop.lat != null && targetStop.lng != null)
-              ? { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
-              : null
+          const dest = (targetStop && targetStop.lat != null && targetStop.lng != null)
+            ? { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
+            : null
           if (dest) {
             setRouteLoading(true)
             const res = await fetchSuggestedRoute(here, dest)
             setRouteLine(res.line)
             setRouteSummary(res.summary)
-            setRouteSteps(res.steps)
           }
         } catch (e) {
           setRouteError('routing failed')
           setRouteSummary(null)
-          setRouteSteps([])
         } finally {
           setRouteLoading(false)
         }
@@ -201,6 +347,13 @@ export default function RouteRun(){
     return null
   }
 
+  const stopTracking = React.useCallback(() => {
+    if (watchIdRef.current != null) {
+      navigator.geolocation.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+    }
+  }, [])
+
   // Choose target stop: next unvisited (fallback first)
   React.useEffect(() => {
     if (!stops || stops.length === 0) { setTargetStop(null); return }
@@ -209,74 +362,95 @@ export default function RouteRun(){
     else setTargetStop(null)
   }, [stops])
 
-  async function markVisited(stopId){
-    try {
-      // find previous status for undo
-      const prev = stops.find(s => s.id === stopId)?.status || 'pending'
-      // confirm prompt
-      const ok = window.confirm('Mark this stop as visited?')
-      if (!ok) return
-      await fetch(`${API_BASE_URL}/update_stop_status.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stop_id: stopId, status: 'visited' })
-      })
-      await loadStops(id)
-      // store action for undo
-      setLastAction({ stopId, prevStatus: prev })
-      setShowUndo(true)
-      // auto-hide after 6s
-      setTimeout(() => setShowUndo(false), 6000)
-    } catch (e) {
-      // ignore for now
-    }
-  }
-
-  async function undoLast(){
-    if (!lastAction) return
-    try {
-      await fetch(`${API_BASE_URL}/update_stop_status.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stop_id: lastAction.stopId, status: lastAction.prevStatus || 'pending' })
-      })
-      await loadStops(id)
-    } catch(e) {
-      // ignore
-    } finally {
-      setShowUndo(false)
-      setLastAction(null)
-    }
-  }
-
   // Recompute suggested route whenever target or current position changes
   React.useEffect(() => {
     (async () => {
-      const hasDest = landfillMode || !!targetStop
-      if (!currentPos || !hasDest) return
+      if (!currentPos || !targetStop || targetStop.lat == null || targetStop.lng == null) return
       try {
         setRouteLoading(true)
         setRouteError(null)
-        const dest = landfillMode
-          ? { lat: MANTILA_COORDS.lat, lng: MANTILA_COORDS.lng }
-          : { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
+        const dest = { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
         const res = await fetchSuggestedRoute(currentPos, dest)
         setRouteLine(res.line)
         setRouteSummary(res.summary)
-        setRouteSteps(res.steps)
       } catch (e) {
         setRouteError('routing failed')
         setRouteLine([])
         setRouteSummary(null)
-        setRouteSteps([])
       } finally {
         setRouteLoading(false)
       }
     })()
-  }, [targetStop, currentPos, landfillMode])
+  }, [targetStop, currentPos])
+
+  const totalStops = stops.length
+  const visitedCount = React.useMemo(() => stops.filter(s => (s.status || 'pending') === 'visited').length, [stops])
+  const progressPercent = totalStops ? Math.round((visitedCount / totalStops) * 100) : 0
+  const allVisited = totalStops > 0 && visitedCount === totalStops
+  const nextStop = React.useMemo(() => stops.find(s => (s.status || 'pending') !== 'visited') || null, [stops])
+
+  async function handleCompleteRoute(){
+    if (submitting) return
+    try {
+      const latest = await loadStops(id)
+      const snapshot = latest?.stops?.length ? latest.stops : stops
+      const nextMeta = latest?.route || routeMeta
+      const total = snapshot.length
+      const visited = snapshot.filter(s => (s.status || 'pending') === 'visited').length
+      if (!total || visited < total) {
+        alert('Collectors still have pending stops. Please wait until all stops are visited before submitting.')
+        return
+      }
+
+      setSubmitting(true)
+      try {
+        const userId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
+  await fetch(buildApiUrl('update_route_status.php'), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ route_id: Number(id), status: 'completed', truck_full: false, note: null, user_id: userId })
+        })
+
+  await fetch(buildApiUrl('log_task_event.php'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assignment_id: null, event_type: 'route_submitted', after: { route_id: id, total_stops: total, visited } })
+        }).catch(()=>{})
+
+  await fetch(buildApiUrl('clear_route_active.php'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ route_id: Number(id) })
+        }).catch(()=>{})
+
+        stopTracking()
+        const nextRoute = await findNextRoute(Number(id), nextMeta)
+        if (nextRoute && Number(nextRoute.id) !== Number(id)) {
+          await activateNextRoute(nextRoute, nextMeta)
+          const nextName = nextRoute.barangay_name || nextRoute.name || 'Next Route'
+          alert(`Route completed. Proceeding to ${nextName}.`)
+          navigate(`/truckdriver/route/${nextRoute.id}`, { replace: true })
+        } else {
+          alert('Route completed. No remaining routes for today.')
+          navigate('/truckdriver/routes', { replace: true })
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    } catch (e) {
+      console.error('Failed to complete route', e)
+      alert('Failed to complete route. Please try again.')
+    }
+  }
 
   return (
     <div className="fixed inset-0">
+      <style>{`
+        .custom-truck-icon {
+          background: transparent !important;
+          border: none !important;
+        }
+        .custom-truck-icon div {
+          pointer-events: none;
+        }
+      `}</style>
       <MapContainer center={startCenter} zoom={15} className="h-full w-full" style={{ zIndex: 0 }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
         {positions.length>0 && (
@@ -293,8 +467,17 @@ export default function RouteRun(){
           </Marker>
         ))}
         {currentPos && (
-          <Marker position={[currentPos.lat, currentPos.lng]}>
-            <Popup>Current Location</Popup>
+          <Marker 
+            position={[currentPos.lat, currentPos.lng]}
+            icon={createTruckIcon(truckRotation)}
+          >
+            <Popup>
+              <div className="text-sm">
+                <div className="font-medium">🚛 Truck Location</div>
+                <div className="text-gray-600">Heading: {Math.round(truckRotation)}°</div>
+                <div className="text-gray-600">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>
+              </div>
+            </Popup>
           </Marker>
         )}
         {routeLine.length > 1 ? (
@@ -316,45 +499,24 @@ export default function RouteRun(){
         <FollowController position={currentPos} enabled={follow} />
       </MapContainer>
 
-      {/* Overlay panel for stops + controls */}
+      {/* Overlay panel for route status */}
       <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(680px,92vw)] bg-white/20 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-lg">
         <div className="flex items-center justify-between mb-2">
           <div className="font-semibold text-base truncate flex items-center gap-2">
             <span>{routeName || 'Route'}</span>
-            {landfillMode && (
-              <span className="px-2 py-0.5 text-[10px] rounded bg-amber-100 text-amber-800 border border-amber-200">Landfill</span>
-            )}
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded" onClick={()=>setTargetStop(stops.find(s => (s.status||'pending')!=='visited') || stops[0])}>Re-route</button>
-            <button className={`px-2 py-1 text-xs rounded ${follow ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`} onClick={()=>setFollow(v=>!v)}>
+            <button
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
+              onClick={() => setTargetStop(stops.find(s => (s.status || 'pending') !== 'visited') || stops[0])}
+            >Re-route</button>
+            <button
+              className={`px-2 py-1 text-xs rounded ${follow ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+              onClick={() => setFollow(v => !v)}
+            >
               {follow ? 'Following' : 'Follow'}
             </button>
-              {/* When in landfill mode, offer resume button */}
-              {landfillMode ? (
-                <button
-                  className="px-3 py-1.5 text-xs rounded-full border border-amber-500 text-amber-700 bg-white hover:bg-amber-50"
-                  onClick={async ()=>{
-                    try {
-                      // Log event for auditing
-                      await fetch(`${API_BASE_URL}/log_task_event.php`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ assignment_id: null, event_type: 'truck_emptied', after: { route_id: id } })
-                      }).catch(()=>{})
-                    } catch {}
-                    // Exit landfill mode and return to saved or next stop
-                    setLandfillMode(false)
-                    if (resumeTarget && resumeTarget.lat != null && resumeTarget.lng != null) {
-                      setTargetStop(resumeTarget)
-                    } else {
-                      const next = stops.find(s => (s.status || 'pending') !== 'visited') || stops[0]
-                      if (next) setTargetStop(next)
-                    }
-                  }}
-                >Resume route</button>
-              ) : (
-                <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={()=>navigate(-1)}>Back</button>
-              )}
+            <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={() => navigate(-1)}>Back</button>
           </div>
         </div>
         <div className="text-[11px] text-gray-700 mb-2">
@@ -363,140 +525,49 @@ export default function RouteRun(){
           {status === 'denied' && 'Location permission denied'}
           {routeLoading && ' • Routing…'}
           {routeError && ` • Route error: ${routeError}`}
-          {landfillMode && ' • Landfill mode: Routing to Mantila'}
         </div>
         {routeSummary && (
           <div className="text-xs text-gray-800 mb-2">{formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}</div>
         )}
-        {/* Progress */}
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
             <span>Progress</span>
-            <span>{(stops.filter(s => (s.status||'pending')==='visited').length)}/{stops.length} stops</span>
+            <span>{visitedCount}/{totalStops} stops</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${stops.length ? Math.round(100*stops.filter(s => (s.status||'pending')==='visited').length/stops.length) : 0}%` }} />
+            <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
 
-        <ol className="space-y-2 text-sm max-h-[40vh] overflow-auto pr-1">
-          <li className="flex items-start gap-2">
-            <span className="w-2 h-2 mt-2 rounded-full bg-green-500 inline-block"></span>
-            <div>
-              <div className="font-medium">Current Location</div>
-              {currentPos && <div className="text-gray-600 text-xs">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>}
-            </div>
-          </li>
-          {/* Directions removed - showing only current location and stops */}
-          {stops.map((s,i)=> {
-            const visited = (s.status||'pending')==='visited'
-            return (
-              <li key={i} className="flex items-start gap-2">
-                <span className={`w-2 h-2 mt-2 rounded-full inline-block ${visited ? 'bg-emerald-600' : 'bg-gray-400'}`}></span>
-                <div className="flex-1">
-                  <div className="font-medium">{s.name || `Stop ${s.seq}`}</div>
-                  <div className="text-gray-600 text-xs">Seq {s.seq} • {visited ? 'Visited' : 'Pending'}</div>
-                </div>
-                <button
-                  className={`ml-2 px-2 py-1 text-xs rounded ${visited ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
-                  onClick={() => !visited && markVisited(s.id)}
-                  disabled={visited}
-                >
-                  {visited ? 'Done' : 'Mark visited'}
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="space-y-3 text-sm">
+          <div className="p-3 bg-white/60 rounded-lg border border-white/30 shadow-inner">
+            <div className="font-medium text-gray-800">Next stop</div>
+            {nextStop ? (
+              <div className="text-xs text-gray-600">
+                Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-600">All stops have been marked as visited by the collectors.</div>
+            )}
+          </div>
+          <div className="p-3 bg-white/50 rounded-lg border border-white/20 text-xs text-gray-600 leading-relaxed">
+            Collectors handle stop completion. This screen refreshes automatically as they record each pickup.
+          </div>
+        </div>
+
+        <div className="mt-4">
           <button
-            className="px-4 py-2 bg-green-600 text-white rounded text-sm"
-            onClick={()=> setShowStatusModal(true)}
-          >Submit</button>
-          <button
-            className="px-4 py-2 bg-gray-700 text-white rounded text-sm"
-            onClick={async ()=>{
-              const ok = window.confirm('End route and submit summary?')
-              if (!ok) return
-              try {
-                if (watchIdRef.current != null) {
-                  navigator.geolocation.clearWatch(watchIdRef.current)
-                  watchIdRef.current = null
-                }
-                const total = stops.length
-                const done = stops.filter(s => (s.status||'pending')==='visited').length
-                await fetch(`${API_BASE_URL}/log_task_event.php`, {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ assignment_id: null, event_type: 'route_submitted', after: { route_id: id, total_stops: total, visited: done } })
-                }).catch(()=>{})
-                alert('Route submitted. Thank you!')
-                navigate('/truckdriver')
-              } catch(e) {
-                alert('Failed to submit, but tracking has been stopped.')
-                navigate('/truckdriver')
-              }
-            }}
-          >End Route</button>
+            className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors ${allVisited ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-200'}`}
+            onClick={handleCompleteRoute}
+            disabled={submitting}
+          >
+            {submitting ? 'Submitting…' : allVisited ? 'Submit & mark route completed' : 'Waiting for collectors'}
+          </button>
+        </div>
+        <div className="mt-2 text-[11px] text-gray-600 text-center">
+          {allVisited ? 'Ready to wrap up the route.' : 'Button becomes green once every stop is visited.'}
         </div>
       </div>
-
-      {showUndo && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-24 z-50 bg-black/70 text-white text-sm px-3 py-2 rounded shadow">
-          <span>Marked visited.</span>
-          <button className="ml-3 underline" onClick={undoLast}>Undo</button>
-        </div>
-      )}
-
-      {showStatusModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40" onClick={()=>setShowStatusModal(false)}>
-          <div className="bg-white rounded-xl shadow-lg w-[min(520px,92vw)] p-5" onClick={e=>e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Status</h3>
-            <div className="space-y-3 text-sm">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="radio" name="route_status" value="pending" checked={statusChoice==='pending'} onChange={()=>setStatusChoice('pending')} />
-                <span>Pending</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="radio" name="route_status" value="in_progress" checked={statusChoice==='in_progress'} onChange={()=>setStatusChoice('in_progress')} />
-                <span>In Progress</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="radio" name="route_status" value="completed" checked={statusChoice==='completed'} onChange={()=>setStatusChoice('completed')} />
-                <span>Completed</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={truckFull} onChange={e=>setTruckFull(e.target.checked)} />
-                <span>Truck is full (heading to landfill)</span>
-              </label>
-              <textarea className="w-full border border-gray-300 rounded px-3 py-2" rows="2" placeholder="Optional note" value={note} onChange={e=>setNote(e.target.value)} />
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button className="px-4 py-2 rounded bg-gray-200 text-gray-800 text-sm" onClick={()=>setShowStatusModal(false)}>Cancel</button>
-              <button className="px-4 py-2 rounded bg-emerald-600 text-white text-sm" onClick={async ()=>{
-                try{
-                  const userId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
-                  await fetch(`${API_BASE_URL}/update_route_status.php`, {
-                    method:'POST', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({ route_id: Number(id), status: statusChoice, truck_full: truckFull, note, user_id: userId })
-                  })
-                  alert('Status updated')
-                  setShowStatusModal(false)
-                  // If truck is full, enter landfill mode to Mantila
-                  if (truckFull) {
-                    // remember current target to resume later
-                    setResumeTarget(targetStop)
-                    setLandfillMode(true)
-                  } else {
-                    setLandfillMode(false)
-                  }
-                } catch(e){
-                  alert('Failed to update status')
-                }
-              }}>Submit</button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   )

@@ -1,3 +1,5 @@
+import { buildApiUrl } from '../config/api';
+
 // Shared schedule data service
 export const scheduleData = {
   'Cluster A': {
@@ -251,3 +253,148 @@ export function addScheduleEvent(cluster, truck, day, event) {
     });
   }
 } 
+
+const CLUSTER_ID_NAME_MAP = {
+  '1C-PB': 'Priority Barangays',
+  '2C-CA': 'Cluster A',
+  '3C-CB': 'Cluster B',
+  '4C-CC': 'Cluster C',
+  '5C-CD': 'Cluster D',
+};
+
+const DAY_ABBREVIATIONS = {
+  mon: 'Mon',
+  monday: 'Mon',
+  tue: 'Tue',
+  tues: 'Tue',
+  tuesday: 'Tue',
+  wed: 'Wed',
+  weds: 'Wed',
+  wednesday: 'Wed',
+  thu: 'Thu',
+  thur: 'Thu',
+  thurs: 'Thu',
+  thursday: 'Thu',
+  fri: 'Fri',
+  friday: 'Fri',
+  sat: 'Sat',
+  saturday: 'Sat',
+  sun: 'Sun',
+  sunday: 'Sun',
+};
+
+const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const SCHEDULE_TYPE_LABELS = {
+  daily_priority: 'Priority Truck',
+  weekly_cluster: 'Cluster Truck',
+  fixed_days: 'Fixed-Day Route',
+};
+
+const toMinutesValue = (time = '') => {
+  if (!time) return 0;
+  const [hourStr = '0', minuteStr = '0'] = time.split(':');
+  const hour = Number.parseInt(hourStr, 10);
+  const minute = Number.parseInt(minuteStr, 10);
+  return (Number.isFinite(hour) ? hour : 0) * 60 + (Number.isFinite(minute) ? minute : 0);
+};
+
+const normalizeTimeLabel = (value) => {
+  if (!value) return '';
+  const match = /^(\d{1,2}):(\d{1,2})/.exec(value.trim());
+  if (!match) return '';
+  const [, hour, minute] = match;
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+};
+
+const resolveDayAbbrev = (value) => {
+  if (!value) return null;
+  const normalized = value.toString().trim().toLowerCase();
+  return DAY_ABBREVIATIONS[normalized] || DAY_ABBREVIATIONS[normalized.slice(0, 3)] || null;
+};
+
+const resolveClusterName = (schedule) => {
+  const name = (schedule?.cluster_name || '').toString().trim();
+  if (name) return name;
+  const id = (schedule?.cluster_id || '').toString().trim();
+  if (!id) return 'Unassigned Cluster';
+  return CLUSTER_ID_NAME_MAP[id] || id;
+};
+
+const resolveTruckLabel = (schedule, clusterName) => {
+  const type = (schedule?.schedule_type || '').toString().trim().toLowerCase();
+  if (type === 'daily_priority') return SCHEDULE_TYPE_LABELS.daily_priority;
+  if (type === 'weekly_cluster') {
+    return clusterName ? `${clusterName} Truck` : SCHEDULE_TYPE_LABELS.weekly_cluster;
+  }
+  if (type && SCHEDULE_TYPE_LABELS[type]) {
+    return SCHEDULE_TYPE_LABELS[type];
+  }
+  return 'General Route';
+};
+
+export function mapPredefinedSchedulesToResidentStructure(rawSchedules = []) {
+  const scheduleMap = {};
+
+  rawSchedules.forEach((schedule) => {
+    const day = resolveDayAbbrev(schedule?.day_of_week);
+    if (!day) return;
+
+    const clusterName = resolveClusterName(schedule);
+    const truckLabel = resolveTruckLabel(schedule, clusterName);
+    const startTime = normalizeTimeLabel((schedule?.start_time || '').toString());
+    const endTime = normalizeTimeLabel((schedule?.end_time || '').toString());
+    const barangayLabel = (schedule?.barangay_name || schedule?.barangay_id || 'Barangay').toString();
+
+    if (!scheduleMap[clusterName]) {
+      scheduleMap[clusterName] = {};
+    }
+
+    if (!scheduleMap[clusterName][truckLabel]) {
+      scheduleMap[clusterName][truckLabel] = [];
+    }
+
+    let daySchedule = scheduleMap[clusterName][truckLabel].find((entry) => entry.day === day);
+    if (!daySchedule) {
+      daySchedule = { day, date: undefined, events: [] };
+      scheduleMap[clusterName][truckLabel].push(daySchedule);
+    }
+
+    daySchedule.events.push({
+      time: startTime,
+      end: endTime,
+      label: barangayLabel,
+      barangayId: schedule?.barangay_id || null,
+      scheduleType: schedule?.schedule_type || null,
+      weekOfMonth: schedule?.week_of_month || null,
+    });
+  });
+
+  Object.values(scheduleMap).forEach((truckMap) => {
+    Object.values(truckMap).forEach((dayList) => {
+      dayList.sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day));
+      dayList.forEach((daySchedule) => {
+        daySchedule.events.sort((a, b) => toMinutesValue(a.time) - toMinutesValue(b.time));
+      });
+    });
+  });
+
+  return scheduleMap;
+}
+
+export async function fetchResidentScheduleMap({ signal } = {}) {
+  const response = await fetch(buildApiUrl('get_predefined_schedules.php'), { signal });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load predefined schedules: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data?.success) {
+    throw new Error(data?.message || 'Failed to load predefined schedules');
+  }
+
+  const schedules = Array.isArray(data.schedules) ? data.schedules : [];
+  return mapPredefinedSchedulesToResidentStructure(schedules);
+}

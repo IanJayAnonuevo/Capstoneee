@@ -1,10 +1,10 @@
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+import { buildApiUrl } from '../config/api';
 
 export const authService = {
   // For residents (users table)
   async signupResident(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/register_resident.php`, {
+  const response = await fetch(buildApiUrl('auth/register_resident.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ export const authService = {
   // Unified login for both residents and employees
   async login(credentials) {
     try {
-      const response = await fetch(`${API_BASE_URL}/login.php`, {
+        const response = await fetch(buildApiUrl('auth/login.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ export const authService = {
   // Get user data (residents)
   async getResidentData(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_resident.php?id=${userId}`, {
+        const response = await fetch(buildApiUrl(`auth/get_resident.php?id=${userId}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ export const authService = {
   // Get employee data (MENRO staff and barangay officials)
   async getEmployeeData(employeeId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_employee.php?id=${employeeId}`, {
+        const response = await fetch(buildApiUrl(`auth/get_employee.php?id=${employeeId}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ export const authService = {
   // Update resident profile
   async updateResidentProfile(userId, profileData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/update_resident.php`, {
+  const response = await fetch(buildApiUrl('auth/update_resident.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ export const authService = {
   // Update employee profile
   async updateEmployeeProfile(employeeId, profileData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/update_employee.php`, {
+  const response = await fetch(buildApiUrl('auth/update_employee.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ export const authService = {
   // Change password for residents
   async changeResidentPassword(userId, currentPassword, newPassword) {
     try {
-      const response = await fetch(`${API_BASE_URL}/change_resident_password.php`, {
+  const response = await fetch(buildApiUrl('auth/change_resident_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export const authService = {
   // Change password for employees
   async changeEmployeePassword(employeeId, currentPassword, newPassword) {
     try {
-      const response = await fetch(`${API_BASE_URL}/change_employee_password.php`, {
+  const response = await fetch(buildApiUrl('auth/change_employee_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

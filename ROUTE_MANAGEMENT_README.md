@@ -15,7 +15,7 @@ The route management system fetches collection schedules from the `collection_sc
 
 ### API Endpoint
 - **File**: `backend/api/get_scheduled_routes.php`
-- **URL**: `http://localhost/koletrash/backend/api/get_scheduled_routes.php?date=YYYY-MM-DD`
+- **URL**: `http://localhost/kolektrash/backend/api/get_scheduled_routes.php?date=YYYY-MM-DD`
 - **Method**: GET
 - **Parameters**: 
   - `date`: Date to fetch routes for (defaults to today)

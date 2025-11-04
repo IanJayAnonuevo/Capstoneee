@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -41,7 +41,9 @@ import {
   MarkEmailRead as MarkEmailReadIcon,
 } from '@mui/icons-material';
 
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api';
+import { dispatchNotificationCount } from '../../utils/notificationUtils';
+
+const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
 
 const initialNotifications = [];
 
@@ -68,21 +70,47 @@ export default function ResidentNotifications() {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  const resolveUserId = useCallback(() => {
+    const storedId = localStorage.getItem('user_id');
+    if (storedId) return storedId;
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      return storedUser?.user_id || storedUser?.id || null;
+    } catch (_) {
+      return null;
+    }
+  }, []);
+
+  const syncCount = useCallback((updatedNotifications) => {
+    const uid = userId || resolveUserId();
+    if (!uid) return;
+    dispatchNotificationCount(uid, updatedNotifications);
+  }, [resolveUserId, userId]);
 
   // Fetch from backend
   useEffect(() => {
-    const uid = localStorage.getItem('user_id') || JSON.parse(localStorage.getItem('user') || 'null')?.user_id;
+    const uid = resolveUserId();
     if (!uid) { setLoading(false); return; }
+    setUserId(uid);
     setLoading(true);
     fetch(`${API_BASE_URL}/get_notifications.php?recipient_id=${uid}`)
       .then(res => res.json())
       .then(data => {
-        if (data?.success) setNotifications(data.notifications || []);
-        else { setNotifications([]); setError(data?.message || 'Failed to load notifications'); }
+        if (data?.success) {
+          const list = data.notifications || [];
+          setNotifications(list);
+          syncCount(list);
+        } else {
+          setNotifications([]);
+          setError(data?.message || 'Failed to load notifications');
+          syncCount([]);
+        }
       })
-      .catch(()=>{ setNotifications([]); setError('Failed to load notifications'); })
+      .catch(()=>{ setNotifications([]); setError('Failed to load notifications'); syncCount([]); })
       .finally(()=> setLoading(false));
-  }, []);
+  }, [resolveUserId, syncCount]);
 
   // Transform notifications for resident context (parse JSON payloads)
   const residentNotifications = notifications.map((notif, index) => {
@@ -124,7 +152,12 @@ export default function ResidentNotifications() {
 
   const markAllAsRead = async () => {
     const unread = notifications.filter(n => n.response_status !== 'read');
-    setNotifications(prev => prev.map(n => ({ ...n, response_status: 'read' })));
+    if (!unread.length) return;
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, response_status: 'read' }));
+      syncCount(updated);
+      return updated;
+    });
     for (const n of unread) {
       try {
         await fetch(`${API_BASE_URL}/mark_notification_read.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: n.notification_id }) });
@@ -133,7 +166,11 @@ export default function ResidentNotifications() {
   };
 
   const deleteNotification = async (id) => {
-    setNotifications(prev => prev.filter(n => (n.notification_id || n.id) !== id));
+    setNotifications(prev => {
+      const updated = prev.filter(n => (n.notification_id || n.id) !== id);
+      syncCount(updated);
+      return updated;
+    });
     try {
       await fetch(`${API_BASE_URL}/delete_notification.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: id }) });
     } catch {}

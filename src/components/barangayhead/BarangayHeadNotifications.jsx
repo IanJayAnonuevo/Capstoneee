@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -25,7 +25,9 @@ import {
   MenuBook as MenuBookIcon
 } from '@mui/icons-material';
 
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api';
+import { dispatchNotificationCount } from '../../utils/notificationUtils';
+
+import { buildApiUrl } from '../../config/api';
 const initialNotifications = [];
 
 function getNotificationIcon(title) {
@@ -52,21 +54,48 @@ export default function BarangayHeadNotifications() {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  const resolveUserId = useCallback(() => {
+    const storedId = localStorage.getItem('user_id');
+    if (storedId) return storedId;
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      return storedUser?.user_id || storedUser?.id || null;
+    } catch (_) {
+      return null;
+    }
+  }, []);
+
+  const syncCount = useCallback((updatedNotifications) => {
+    const uid = userId || resolveUserId();
+    if (!uid) return;
+    dispatchNotificationCount(uid, updatedNotifications);
+  }, [resolveUserId, userId]);
 
   // Fetch from backend
   useEffect(() => {
-    const uid = localStorage.getItem('user_id') || JSON.parse(localStorage.getItem('user') || 'null')?.user_id;
-    if (!uid) { setLoading(false); return; }
+    const uid = resolveUserId();
+    if (!uid) { setLoading(false); syncCount([]); return; }
+    setUserId(uid);
     setLoading(true);
     fetch(`${API_BASE_URL}/get_notifications.php?recipient_id=${uid}`)
       .then(res => res.json())
       .then(data => {
-        if (data?.success) setNotifications(data.notifications || []);
-        else { setNotifications([]); setError(data?.message || 'Failed to load notifications'); }
+        if (data?.success) {
+          const list = data.notifications || [];
+          setNotifications(list);
+          syncCount(list);
+          setError(null);
+        } else {
+          setNotifications([]);
+          setError(data?.message || 'Failed to load notifications');
+          syncCount([]);
+        }
       })
-      .catch(()=>{ setNotifications([]); setError('Failed to load notifications'); })
+      .catch(()=>{ setNotifications([]); setError('Failed to load notifications'); syncCount([]); })
       .finally(()=> setLoading(false));
-  }, []);
+  }, [resolveUserId, syncCount]);
 
   // Transform notifications for barangay head context (parse JSON payloads)
   const barangayHeadNotifications = notifications.map((notif, index) => {
@@ -92,9 +121,13 @@ export default function BarangayHeadNotifications() {
   });
 
   const markAllAsRead = async () => {
-    // Optimistic UI; backend endpoint supports single mark. Iterate.
     const unread = notifications.filter(n => n.response_status !== 'read');
-    setNotifications(prev => prev.map(n => ({ ...n, response_status: 'read' })));
+    if (!unread.length) return;
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, response_status: 'read' }));
+      syncCount(updated);
+      return updated;
+    });
     for (const n of unread) {
       try {
         await fetch(`${API_BASE_URL}/mark_notification_read.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: n.notification_id }) });
@@ -103,7 +136,11 @@ export default function BarangayHeadNotifications() {
   };
 
   const deleteNotification = async (id) => {
-    setNotifications(prev => prev.filter(n => (n.notification_id || n.id) !== id));
+    setNotifications(prev => {
+      const updated = prev.filter(n => (n.notification_id || n.id) !== id);
+      syncCount(updated);
+      return updated;
+    });
     try {
       await fetch(`${API_BASE_URL}/delete_notification.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: id }) });
     } catch {}
@@ -123,7 +160,7 @@ export default function BarangayHeadNotifications() {
           variant="contained"
           startIcon={<MarkEmailReadIcon />}
           onClick={markAllAsRead}
-          disabled={!notifications.some(n => !n.read)}
+          disabled={!barangayHeadNotifications.some(n => !n.read)}
           sx={{ 
             borderRadius: 2,
             bgcolor: '#059669',

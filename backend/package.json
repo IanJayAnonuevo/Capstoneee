@@ -1,0 +1,9 @@
+{
+	"name": "kolektrash-backend",
+	"private": true,
+	"description": "Placeholder manifest to prevent npm parse errors in backend directory",
+	"version": "0.0.0",
+	"scripts": {
+		"build": "echo Backend has no build step"
+	}
+}

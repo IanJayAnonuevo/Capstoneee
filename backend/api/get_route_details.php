@@ -8,24 +8,23 @@ try {
   $id = (int)$_GET['id'];
   $db = (new Database())->connect();
 
-  $head = $db->prepare("SELECT dr.*, t.plate_num, ct.team_id
-                         FROM daily_route dr
-                         LEFT JOIN truck t ON dr.truck_id = t.truck_id
-                         LEFT JOIN collection_team ct ON dr.team_id = ct.team_id
-                         WHERE dr.id = ?");
+  // Get daily_route data
+  $head = $db->prepare("SELECT * FROM daily_route WHERE id = ?");
   $head->execute([$id]);
   $route = $head->fetch(PDO::FETCH_ASSOC);
-  if (!$route) { throw new Exception('Route not found'); }
+  
+  if (!$route) {
+    throw new Exception("Route with ID {$id} not found in daily_route table");
+  }
 
+  // Get stops from daily_route_stop
   $stops = $db->prepare("SELECT * FROM daily_route_stop WHERE daily_route_id = ? ORDER BY seq");
   $stops->execute([$id]);
   $route['stops'] = $stops->fetchAll(PDO::FETCH_ASSOC);
 
   echo json_encode([ 'success' => true, 'route' => $route ]);
 } catch (Throwable $e) {
-  http_response_code(400);
+  http_response_code(500);
   echo json_encode([ 'success' => false, 'message' => $e->getMessage() ]);
 }
 ?>
-
-

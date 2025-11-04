@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MdPerson, MdLock, MdNotifications } from 'react-icons/md';
-import { FiUser, FiLock, FiBell, FiShield, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiUser, FiLock, FiShield, FiAlertCircle, FiCheckCircle, FiX } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 
 export default function BarangayHeadSettings() {
@@ -14,18 +13,12 @@ export default function BarangayHeadSettings() {
     confirmPassword: '',
   });
 
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    schedule: true,
-    announcements: true
-  });
-
   const [loading, setLoading] = useState(false);
   const [fetchingUser, setFetchingUser] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [confirmAction, setConfirmAction] = useState(null); // 'profile' | 'password' | 'delete' | null
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -84,13 +77,6 @@ export default function BarangayHeadSettings() {
     setError('');
   };
 
-  const handleNotificationToggle = (key) => {
-    setNotifications(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
   const handleProfileUpdate = async () => {
     const userId = user?.user_id || user?.id;
     if (!userId) {
@@ -107,23 +93,28 @@ export default function BarangayHeadSettings() {
         email: formData.email
       });
       if (response.status === 'success') {
-        setSuccess('Profile updated successfully!');
-        // Update localStorage with new data
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          userData.firstname = formData.firstname;
-          userData.lastname = formData.lastname;
-          userData.email = formData.email;
-          localStorage.setItem('user', JSON.stringify(userData));
+        // Update localStorage with new data from response
+        if (response.data) {
+          localStorage.setItem('user', JSON.stringify(response.data));
+          setUser(response.data);
+        } else {
+          // Fallback if no data in response
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const userData = JSON.parse(storedUser);
+            userData.firstname = formData.firstname;
+            userData.lastname = formData.lastname;
+            userData.email = formData.email;
+            localStorage.setItem('user', JSON.stringify(userData));
+          }
+          setUser(prev => ({
+            ...prev,
+            firstname: formData.firstname,
+            lastname: formData.lastname,
+            email: formData.email
+          }));
         }
-        setUser(prev => ({
-          ...prev,
-          firstname: formData.firstname,
-          lastname: formData.lastname,
-          email: formData.email
-        }));
-        setTimeout(() => setSuccess(''), 3000);
+        setShowSuccessModal(true);
       } else {
         setError(response.message || 'Failed to update profile');
       }
@@ -153,14 +144,13 @@ export default function BarangayHeadSettings() {
         formData.newPassword
       );
       if (response.status === 'success') {
-        setSuccess('Password changed successfully!');
         setFormData(prev => ({
           ...prev,
           currentPassword: '',
           newPassword: '',
           confirmPassword: ''
         }));
-        setTimeout(() => setSuccess(''), 3000);
+        setShowSuccessModal(true);
       } else {
         setError(response.message || 'Failed to change password');
       }
@@ -238,6 +228,39 @@ export default function BarangayHeadSettings() {
       {/* Main content - only show when not fetching */}
       {!fetchingUser && (
         <>
+          {/* Success Modal */}
+          {showSuccessModal && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+              <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4 animate-fadeIn">
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => setShowSuccessModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <FiCheckCircle className="w-10 h-10 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Success!</h3>
+                  <p className="text-gray-600 mb-6">
+                    {confirmAction === 'profile' 
+                      ? 'Your profile has been updated successfully.' 
+                      : 'Your password has been changed successfully.'}
+                  </p>
+                  <button
+                    onClick={() => setShowSuccessModal(false)}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Confirmation Modal */}
       {confirmAction && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
@@ -363,30 +386,6 @@ export default function BarangayHeadSettings() {
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            {/* Notification Preferences */}
-            <div>
-              <div className="flex items-center gap-1 mb-2">
-                <FiBell className="text-emerald-600" />
-                <h2 className="text-base font-semibold text-emerald-700">Notifications</h2>
-              </div>
-              <div className="flex flex-col gap-2">
-                {Object.entries(notifications).map(([key, value]) => (
-                  <label key={key} className="flex items-center justify-between px-2 py-1 bg-gray-50 rounded">
-                    <span className="capitalize text-sm">{key} Notifications</span>
-                    <span className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={value}
-                        onChange={() => handleNotificationToggle(key)}
-                      />
-                      <span className="w-9 h-5 bg-gray-200 rounded-full peer-focus:ring-emerald-300 peer-checked:bg-emerald-600 transition-all relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Privacy & Account */}
             <div>
               <div className="flex items-center gap-1 mb-2">

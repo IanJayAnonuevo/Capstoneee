@@ -1,4 +1,4 @@
-# KOLETRASH Database Migration - Users vs Employees
+# KOLEKTRASH Database Migration - Users vs Employees
 
 ## Overview
 
@@ -63,7 +63,7 @@ CREATE TABLE users_backup AS SELECT * FROM users;
 
 ### 2. Run New Database Structure
 ```bash
-mysql -u root -p koletrash_db < backend/database/koletrash_db_new.sql
+mysql -u root -p kolektrash_db < backend/database/kolektrash_db_new.sql
 ```
 
 ### 3. Run Migration Script

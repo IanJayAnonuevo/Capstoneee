@@ -5,104 +5,140 @@ require_once __DIR__ . '/PHPMailer/Exception.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/../config/email.php';
 
 class EmailHelper {
-    private $mailer;
-    
+    private $primaryDriver;
+    private $fallbackDriver;
+    private $allowFallback;
+
     public function __construct() {
-        $this->mailer = new PHPMailer(true);
-        $this->setupSMTP();
+        $this->primaryDriver = defined('SMTP_DRIVER') ? strtolower(SMTP_DRIVER) : 'smtp';
+        $this->fallbackDriver = defined('SMTP_FALLBACK_DRIVER') ? strtolower(SMTP_FALLBACK_DRIVER) : 'mail';
+        $this->allowFallback = defined('SMTP_ALLOW_FALLBACK') ? (bool)SMTP_ALLOW_FALLBACK : true;
     }
-    
-    private function setupSMTP() {
-        try {
-            // Server settings
-            $this->mailer->isSMTP();
-            $this->mailer->Host = SMTP_HOST;
-            $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = SMTP_USERNAME;
-            $this->mailer->Password = SMTP_PASSWORD;
-            $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $this->mailer->Port = SMTP_PORT;
-            $this->mailer->CharSet = EMAIL_CHARSET;
-            $this->mailer->Encoding = EMAIL_ENCODING;
-            
-            // SSL/TLS settings to fix certificate issues
-            $this->mailer->SMTPOptions = array(
-                'ssl' => array(
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                )
-            );
-            
-            // Debug SMTP connection
-            $this->mailer->SMTPDebug = 2; // Enable debug output
-            $this->mailer->Debugoutput = 'error_log'; // Log to error log
-            
-            // Default sender
-            $this->mailer->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-            
-        } catch (Exception $e) {
-            throw new Exception("Email setup failed: " . $e->getMessage());
+
+    private function createMailer($driver = null) {
+        $driver = $driver ? strtolower($driver) : $this->primaryDriver;
+        $this->assertOperationalConfig($driver);
+        $mailer = new PHPMailer(true);
+
+        $mailer->CharSet = EMAIL_CHARSET;
+        $mailer->Encoding = EMAIL_ENCODING;
+        $mailer->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+
+        switch ($driver) {
+            case 'sendmail':
+                $mailer->isSendmail();
+                break;
+            case 'mail':
+                $mailer->isMail();
+                break;
+            default:
+                $mailer->isSMTP();
+                $mailer->Host = SMTP_HOST;
+                $mailer->SMTPAuth = true;
+                $mailer->Username = SMTP_USERNAME;
+                $mailer->Password = SMTP_PASSWORD;
+                $mailer->Port = SMTP_PORT;
+
+                $encryption = defined('SMTP_ENCRYPTION') ? strtolower(SMTP_ENCRYPTION) : 'tls';
+                if ($encryption === 'ssl') {
+                    $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                } elseif ($encryption === 'none' || $encryption === 'false') {
+                    $mailer->SMTPSecure = false;
+                } else {
+                    $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                }
+
+                $mailer->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ],
+                ];
+
+                $mailer->SMTPDebug = defined('SMTP_DEBUG_LEVEL') ? (int)SMTP_DEBUG_LEVEL : 0;
+                $mailer->Debugoutput = 'error_log';
+                break;
         }
+
+        return $mailer;
     }
-    
+
+    private function resolveTtlMinutes($constantName, $default = 15) {
+        if (defined($constantName)) {
+            $value = (int)constant($constantName);
+            if ($value > 0) {
+                return $value;
+            }
+        }
+
+        return $default;
+    }
+
+    private function sendMessage($email, $subject, $htmlBody, $textBody) {
+        $drivers = [$this->primaryDriver];
+        if ($this->allowFallback && $this->primaryDriver !== $this->fallbackDriver) {
+            $drivers[] = $this->fallbackDriver;
+        }
+
+        $lastException = null;
+
+        foreach ($drivers as $driver) {
+            try {
+                $mailer = $this->createMailer($driver);
+                $mailer->clearAddresses();
+                $mailer->addAddress($email);
+                $mailer->Subject = $subject;
+                $mailer->isHTML(true);
+                $mailer->Body = $htmlBody;
+                $mailer->AltBody = $textBody;
+                $mailer->send();
+
+                if ($driver !== $this->primaryDriver) {
+                    error_log("Email transport fallback succeeded using '{$driver}' driver for {$email}.");
+                }
+
+                return [
+                    'success' => true,
+                    'transport' => $driver,
+                ];
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                error_log("Email sending via '{$driver}' driver failed: " . $e->getMessage());
+            }
+        }
+
+        throw $lastException ?: new \RuntimeException('Unable to deliver email using any configured transport.');
+    }
+
     public function sendPasswordResetCode($email, $username, $resetCode, $expiryTime) {
+        $htmlBody = $this->getPasswordResetHTML($username, $resetCode, $expiryTime);
+        $textBody = $this->getPasswordResetText($username, $resetCode, $expiryTime);
         try {
-            // Recipient
-            $this->mailer->clearAddresses();
-            $this->mailer->addAddress($email);
-            
-            // Subject
-            $this->mailer->Subject = 'Password Reset Code - KoleTrash System';
-            
-            // HTML Body
-            $htmlBody = $this->getPasswordResetHTML($username, $resetCode, $expiryTime);
-            $this->mailer->isHTML(true);
-            $this->mailer->Body = $htmlBody;
-            
-            // Plain text body
-            $textBody = $this->getPasswordResetText($username, $resetCode, $expiryTime);
-            $this->mailer->AltBody = $textBody;
-            
-            // Send email
-            $this->mailer->send();
-            
-            return true;
-            
-        } catch (Exception $e) {
-            throw new Exception("Failed to send email: " . $e->getMessage());
+            return $this->sendMessage($email, 'Password Reset Code - KolekTrash System', $htmlBody, $textBody);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Failed to send email: ' . $e->getMessage(), 0, $e);
         }
     }
 
     public function sendSignupVerificationCode($email, $name, $verificationCode, $expiryTime) {
+        $htmlBody = $this->getSignupVerificationHTML($name, $verificationCode, $expiryTime);
+        $textBody = $this->getSignupVerificationText($name, $verificationCode, $expiryTime);
         try {
-            $this->mailer->clearAddresses();
-            $this->mailer->addAddress($email);
-
-            $this->mailer->Subject = 'Verify Your KoleTrash Email Address';
-
-            $htmlBody = $this->getSignupVerificationHTML($name, $verificationCode, $expiryTime);
-            $this->mailer->isHTML(true);
-            $this->mailer->Body = $htmlBody;
-
-            $textBody = $this->getSignupVerificationText($name, $verificationCode, $expiryTime);
-            $this->mailer->AltBody = $textBody;
-
-            $this->mailer->send();
-
-            return true;
-        } catch (Exception $e) {
-            throw new Exception("Failed to send email: " . $e->getMessage());
+            return $this->sendMessage($email, 'Verify Your KolekTrash Email Address', $htmlBody, $textBody);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Failed to send email: ' . $e->getMessage(), 0, $e);
         }
     }
     
     private function getPasswordResetHTML($username, $resetCode, $expiryTime) {
-        return "
+        $ttlMinutes = $this->resolveTtlMinutes('RESET_CODE_TTL_MINUTES');
+        $ttlLabel = $ttlMinutes === 1 ? 'minute' : 'minutes';
+        return <<<HTML
         <!DOCTYPE html>
         <html>
         <head>
@@ -127,7 +163,7 @@ class EmailHelper {
                 <div class='content'>
                     <p>Hello <strong>{$username}</strong>,</p>
                     
-                    <p>We received a request to reset your password for your KoleTrash System account.</p>
+                    <p>We received a request to reset your password for your KolekTrash System account.</p>
                     
                     <p>Your password reset code is:</p>
                     
@@ -138,7 +174,7 @@ class EmailHelper {
                     <div class='warning'>
                         <strong>⚠️ Important:</strong>
                         <ul>
-                            <li>This code will expire in 15 minutes</li>
+                            <li>This code will expire in {$ttlMinutes} {$ttlLabel}</li>
                             <li>If you didn't request this, please ignore this email</li>
                             <li>Never share this code with anyone</li>
                         </ul>
@@ -151,7 +187,7 @@ class EmailHelper {
                     <p>If you have any questions, please contact our support team.</p>
                     
                     <p>Best regards,<br>
-                    <strong>KoleTrash System Team</strong></p>
+                    <strong>KolekTrash System Team</strong></p>
                 </div>
                 <div class='footer'>
                     <p>This is an automated message. Please do not reply to this email.</p>
@@ -159,21 +195,24 @@ class EmailHelper {
             </div>
         </body>
         </html>
-        ";
+        HTML;
     }
     
     private function getPasswordResetText($username, $resetCode, $expiryTime) {
-        return "
-Password Reset Request - KoleTrash System
+        $ttlMinutes = $this->resolveTtlMinutes('RESET_CODE_TTL_MINUTES');
+        $ttlLabel = $ttlMinutes === 1 ? 'minute' : 'minutes';
+
+        return <<<TEXT
+Password Reset Request - KolekTrash System
 
 Hello {$username},
 
-We received a request to reset your password for your KoleTrash System account.
+We received a request to reset your password for your KolekTrash System account.
 
 Your password reset code is: {$resetCode}
 
 IMPORTANT:
-- This code will expire in 15 minutes
+- This code will expire in {$ttlMinutes} {$ttlLabel}
 - If you didn't request this, please ignore this email
 - Never share this code with anyone
 
@@ -184,15 +223,18 @@ Enter this code in the password reset form to continue with your password reset.
 If you have any questions, please contact our support team.
 
 Best regards,
-KoleTrash System Team
+KolekTrash System Team
 
 This is an automated message. Please do not reply to this email.
-        ";
+TEXT;
     }
 
     private function getSignupVerificationHTML($name, $verificationCode, $expiryTime) {
         $displayName = $name ?: 'there';
-        return "
+        $ttlMinutes = $this->resolveTtlMinutes('SIGNUP_CODE_TTL_MINUTES');
+        $ttlLabel = $ttlMinutes === 1 ? 'minute' : 'minutes';
+
+        return <<<HTML
         <!DOCTYPE html>
         <html>
         <head>
@@ -216,14 +258,14 @@ This is an automated message. Please do not reply to this email.
                 </div>
                 <div class='content'>
                     <p>Hello <strong>{$displayName}</strong>,</p>
-                    <p>Welcome to the KoleTrash community! To complete your registration, please enter the verification code below in the signup portal.</p>
+                    <p>Welcome to the KolekTrash community! To complete your registration, please enter the verification code below in the signup portal.</p>
                     <div class='code-box'>
                         {$verificationCode}
                     </div>
                     <div class='info'>
                         <strong>Important:</strong>
                         <ul>
-                            <li>This code will expire in 15 minutes.</li>
+                            <li>This code will expire in {$ttlMinutes} {$ttlLabel}.</li>
                             <li>If you didn't create an account, please ignore this email.</li>
                             <li>Never share this code with anyone.</li>
                         </ul>
@@ -232,7 +274,7 @@ This is an automated message. Please do not reply to this email.
                     <p>Once verified, you'll be able to access resident services and track waste collection schedules.</p>
                     <p>Need help? Feel free to reply to this email or contact support.</p>
                     <p>Best regards,<br>
-                    <strong>The KoleTrash Team</strong></p>
+                    <strong>The KolekTrash Team</strong></p>
                 </div>
                 <div class='footer'>
                     <p>This is an automated message. Please do not reply to this email.</p>
@@ -240,22 +282,25 @@ This is an automated message. Please do not reply to this email.
             </div>
         </body>
         </html>
-        ";
+HTML;
     }
 
     private function getSignupVerificationText($name, $verificationCode, $expiryTime) {
         $displayName = $name ?: 'there';
-        return "
-Email Verification - KoleTrash System
+        $ttlMinutes = $this->resolveTtlMinutes('SIGNUP_CODE_TTL_MINUTES');
+        $ttlLabel = $ttlMinutes === 1 ? 'minute' : 'minutes';
+
+        return <<<TEXT
+Email Verification - KolekTrash System
 
 Hello {$displayName},
 
-Welcome to the KoleTrash community! To complete your registration, please enter this verification code in the signup portal:
+Welcome to the KolekTrash community! To complete your registration, please enter this verification code in the signup portal:
 
 Verification Code: {$verificationCode}
 
 IMPORTANT:
-- This code will expire in 15 minutes.
+- This code will expire in {$ttlMinutes} {$ttlLabel}.
 - If you didn't create an account, please ignore this email.
 - Never share this code with anyone.
 
@@ -266,10 +311,35 @@ Once verified, you'll be able to access our resident services and waste collecti
 If you need help, please contact our support team.
 
 Best regards,
-The KoleTrash Team
+The KolekTrash Team
 
 This is an automated message. Please do not reply to this email.
-        ";
+TEXT;
+    }
+
+    private function assertOperationalConfig($driver) {
+        if ($driver !== 'smtp') {
+            return;
+        }
+
+        $username = SMTP_USERNAME ?? '';
+        $password = SMTP_PASSWORD ?? '';
+        $fromEmail = SMTP_FROM_EMAIL ?? '';
+
+        $placeholderUser = stripos($username, 'YOUR-GMAIL-ADDRESS@') === 0;
+        $placeholderPassword = stripos($password, 'YOUR-16-CHARACTER-APP-PASSWORD') === 0;
+
+        if ($placeholderUser || empty($username)) {
+            throw new \RuntimeException('SMTP_USERNAME is missing or still using the placeholder value. Update the .env file with your actual email account.');
+        }
+
+        if ($placeholderPassword || empty($password)) {
+            throw new \RuntimeException('SMTP_PASSWORD is missing or still using the placeholder value. Generate an app password for your mail provider and place it in the .env file.');
+        }
+
+        if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            throw new \RuntimeException('SMTP_FROM_EMAIL is not a valid email address. Verify the .env configuration.');
+        }
     }
 }
 ?>

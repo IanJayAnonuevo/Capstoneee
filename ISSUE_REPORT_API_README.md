@@ -107,7 +107,7 @@ CREATE TABLE issue_reports (
             "barangay": "North Centro",
             "issue_type": "Missed Collection",
             "description": "Garbage was not collected on schedule",
-            "photo_url": "http://localhost/koletrash/uploads/issue_reports/issue_123_1234567890_abc123.jpg",
+            "photo_url": "http://localhost/kolektrash/uploads/issue_reports/issue_123_1234567890_abc123.jpg",
             "created_at": "2025-01-27 13:30:00",
             "status": "pending",
             "priority": "medium"
@@ -167,7 +167,7 @@ CREATE TABLE issue_reports (
             "barangay": "North Centro",
             "issue_type": "Missed Collection",
             "description": "Garbage was not collected on schedule",
-            "photo_url": "http://localhost/koletrash/uploads/issue_reports/issue_123_1234567890_abc123.jpg",
+            "photo_url": "http://localhost/kolektrash/uploads/issue_reports/issue_123_1234567890_abc123.jpg",
             "created_at": "2025-01-27 13:30:00",
             "status": "pending"
         }

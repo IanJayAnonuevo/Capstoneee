@@ -28,7 +28,8 @@ if (!$driver_id || !$truck_id || !$date || !$time || !$barangay_id) {
 }
 
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=kolektrash_db", "root", "");
+    $database = new Database();
+    $pdo = $database->connect();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->beginTransaction();
 

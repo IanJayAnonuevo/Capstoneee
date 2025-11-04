@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaBars, FaTimes } from "react-icons/fa";
+import logo from "../../assets/logo/logo.png";
+
+const LOGIN_LOADING_DURATION_MS = 2000;
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [loadingLogin, setLoadingLogin] = useState(false);
+  const navigate = useNavigate();
 
   const handlePreLogin = () => {
     try {
@@ -12,32 +17,50 @@ const Navbar = () => {
     setOpen(false);
   };
 
+  const handleLoginClick = () => {
+    if (loadingLogin) return;
+    handlePreLogin();
+    setLoadingLogin(true);
+    setTimeout(() => navigate('/login'), LOGIN_LOADING_DURATION_MS);
+  };
+
   return (
     <nav className="fixed w-full z-50 bg-green-700">
       <div className="max-w-[1240px] mx-auto px-8 py-5 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 bg-white rounded-full mr-1"></span>
-          <span className="inline-block w-2 h-6 bg-green-400 rounded-sm mr-2"></span>
-          <Link to="/" className="text-xl font-bold text-white hover:text-gray-200 transition-colors duration-200">
+        <Link to="/" className="flex items-center gap-0.5 group" aria-label="KolekTrash home">
+          <img
+            src={logo}
+            alt="KolekTrash logo"
+            className="h-10 w-auto drop-shadow-md transition-transform duration-200 group-hover:scale-105"
+          />
+          <span className="text-2xl md:text-2xl font-bold text-white group-hover:text-gray-200 transition-colors duration-200">
             KolekTrash
-          </Link>
-        </div>
+          </span>
+        </Link>
 
         <div className="hidden md:flex items-center space-x-8">
           <div className="flex space-x-8">
             <a href="#home" className="text-white hover:text-gray-200 transition-colors duration-200">Home</a>
             <a href="#services" className="text-white hover:text-gray-200 transition-colors duration-200">Services</a>
-            <a href="#iec" className="text-white hover:text-gray-200 transition-colors duration-200">IEC Materials</a>
+            <a href="#about" className="text-white hover:text-gray-200 transition-colors duration-200">About Us</a>
             <a href="#contact" className="text-white hover:text-gray-200 transition-colors duration-200">Contact</a>
           </div>
-          <Link 
-            to="/login"
-            onClick={handlePreLogin}
-            className="ml-8 px-6 py-2 bg-white hover:bg-gray-100 text-green-700 font-medium rounded-md shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          <button 
+            type="button"
+            onClick={handleLoginClick}
+            disabled={loadingLogin}
+            className="ml-8 px-6 py-2 bg-white hover:bg-gray-100 text-green-700 font-medium rounded-md shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-80 disabled:cursor-wait"
             aria-label="Login to your account"
           >
-            Login
-          </Link>
+            {loadingLogin ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 rounded-full border-2 border-green-200 border-t-green-600 animate-spin"></span>
+                <span>Redirecting...</span>
+              </span>
+            ) : (
+              <span>Login</span>
+            )}
+          </button>
         </div>
 
         <div className="md:hidden">
@@ -59,16 +82,24 @@ const Navbar = () => {
         <div className="md:hidden absolute top-full left-0 right-0 px-8 py-4 space-y-4 bg-white shadow-lg">
           <a href="#home" className="block text-green-700 hover:text-green-600 transition-colors duration-200">Home</a>
           <a href="#services" className="block text-green-700 hover:text-green-600 transition-colors duration-200">Services</a>
-          <a href="#iec" className="block text-green-700 hover:text-green-600 transition-colors duration-200">IEC Materials</a>
+          <a href="#about" className="block text-green-700 hover:text-green-600 transition-colors duration-200">About Us</a>
           <a href="#contact" className="block text-green-700 hover:text-green-600 transition-colors duration-200">Contact</a>
-          <Link 
-            to="/login"
-            onClick={handlePreLogin}
-            className="w-full bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium shadow-sm transition-colors duration-200 block text-center focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          <button 
+            type="button"
+            onClick={handleLoginClick}
+            disabled={loadingLogin}
+            className="w-full bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium shadow-sm transition-colors duration-200 block text-center focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-80 disabled:cursor-wait"
             aria-label="Login to your account"
           >
-            Login
-          </Link>
+            {loadingLogin ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-white animate-spin"></span>
+                <span>Redirecting...</span>
+              </span>
+            ) : (
+              <span>Login</span>
+            )}
+          </button>
         </div>
       )}
     </nav>

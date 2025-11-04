@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $tomorrow = (Get-Date).AddDays(1).ToString('yyyy-MM-dd')
 
 # API endpoint
-$apiUrl = 'http://localhost/koletrash/backend/api/generate_tasks_from_predefined.php'
+$apiUrl = 'http://localhost/kolektrash/backend/api/generate_tasks_from_predefined.php'
 
 # Payload: generate exactly for tomorrow (start=end)
 $payload = @{ start_date = $tomorrow; end_date = $tomorrow; overwrite = $false } | ConvertTo-Json

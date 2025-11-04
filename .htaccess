@@ -32,3 +32,8 @@ Header always set X-XSS-Protection "1; mode=block"
     ExpiresByType image/jpg "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
 </IfModule>
+
+
+
+
+

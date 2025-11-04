@@ -34,8 +34,19 @@ try {
         exit();
     }
 
+    // Determine optional profile columns so queries work even if migrations lag behind
+    $profileImageExistsStmt = $db->query("SHOW COLUMNS FROM user_profile LIKE 'profile_image'");
+    $profileImageUpdatedExistsStmt = $db->query("SHOW COLUMNS FROM user_profile LIKE 'profile_image_updated_at'");
+
+    $profileImageSelect = ($profileImageExistsStmt && $profileImageExistsStmt->rowCount() > 0)
+        ? 'up.profile_image'
+        : 'NULL';
+    $profileImageUpdatedSelect = ($profileImageUpdatedExistsStmt && $profileImageUpdatedExistsStmt->rowCount() > 0)
+        ? 'up.profile_image_updated_at'
+        : 'NULL';
+
     // Query to get user data from user, user_profile, role, and barangay tables
-    $query = "SELECT u.user_id, u.username, u.email, u.status, up.firstname, up.lastname, up.contact_num as phone, up.address, up.barangay_id, b.barangay_name, r.role_name as role FROM user u LEFT JOIN user_profile up ON u.user_id = up.user_id LEFT JOIN role r ON u.role_id = r.role_id LEFT JOIN barangay b ON up.barangay_id = b.barangay_id WHERE u.user_id = :id LIMIT 1";
+    $query = "SELECT u.user_id, u.username, u.email, u.status, up.firstname, up.lastname, up.contact_num as phone, up.address, up.barangay_id, {$profileImageSelect} AS profile_image, {$profileImageUpdatedSelect} AS profile_image_updated_at, b.barangay_name, r.role_name as role FROM user u LEFT JOIN user_profile up ON u.user_id = up.user_id LEFT JOIN role r ON u.role_id = r.role_id LEFT JOIN barangay b ON up.barangay_id = b.barangay_id WHERE u.user_id = :id LIMIT 1";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':id', $user_id);
     $stmt->execute();
@@ -57,7 +68,9 @@ try {
                 'address' => $user['address'],
                 'barangay_id' => $user['barangay_id'],
                 'barangay' => $user['barangay_name'],
-                'role' => $user['role']
+                'role' => $user['role'],
+                'profile_image' => $user['profile_image'],
+                'profile_image_updated_at' => $user['profile_image_updated_at']
             )
         ));
     } else {

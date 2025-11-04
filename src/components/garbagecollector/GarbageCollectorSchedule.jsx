@@ -29,7 +29,7 @@ export default function GarbageCollectorSchedule() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`https://koletrash.systemproj.com/backend/api/get_personnel_schedule.php?user_id=${userId}&role=collector`);
+  const response = await axios.get(`https://kolektrash.systemproj.com/backend/api/get_personnel_schedule.php?user_id=${userId}&role=collector`);
       
       if (response.data.success) {
         setSchedules(response.data.schedules);

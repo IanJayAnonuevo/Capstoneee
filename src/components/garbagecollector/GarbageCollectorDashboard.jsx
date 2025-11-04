@@ -1,70 +1,299 @@
-import React, { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FiMenu, FiBell, FiX, FiMessageSquare } from 'react-icons/fi';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { FiMenu, FiX, FiBell } from 'react-icons/fi';
 import {
   HomeIcon,
   CalendarIcon,
   MapIcon,
   ClipboardDocumentCheckIcon,
-  BellIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 import { authService } from '../../services/authService';
+import { StatusProvider } from '../../contexts/StatusContext';
+import { calculateUnreadCount, dispatchNotificationCount } from '../../utils/notificationUtils';
+import BrandedLoader from '../shared/BrandedLoader';
+import { useLoader } from '../../contexts/LoaderContext';
 
 const navigation = [
-  { name: 'Home', href: '/garbagecollector', icon: HomeIcon },
-  { name: 'Collection Schedule', href: '/garbagecollector/schedule', icon: CalendarIcon },
-  { name: 'Routes', href: '/garbagecollector/routes', icon: MapIcon },
-  { name: 'Tasks', href: '/garbagecollector/tasks', icon: ClipboardDocumentCheckIcon },
-  { name: 'Notifications', href: '/garbagecollector/notifications', icon: BellIcon },
-  { name: 'Settings', href: '/garbagecollector/settings', icon: Cog6ToothIcon },
+  { name: 'Home', href: '/garbagecollector', icon: HomeIcon, showLoading: true },
+  { name: 'Collection Schedule', href: '/garbagecollector/schedule', icon: CalendarIcon, showLoading: true },
+  { name: 'Routes', href: '/garbagecollector/routes', icon: MapIcon, showLoading: true },
+  { name: 'Tasks', href: '/garbagecollector/tasks', icon: ClipboardDocumentCheckIcon, showLoading: true },
+  { name: 'Settings', href: '/garbagecollector/settings', icon: Cog6ToothIcon, showLoading: true },
 ];
 
 export default function GarbageCollectorDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState('');
+  const [avatarCooldownUntil, setAvatarCooldownUntil] = useState(null);
+  const fileInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { showLoader } = useLoader();
+
+  const normalizeAvatarUrl = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+    return authService.resolveAssetUrl(value);
+  };
+
+  const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  const parseServerTimestamp = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    const formatted = value.replace(' ', 'T');
+    const candidate = `${formatted}+08:00`;
+    const parsed = Date.parse(candidate);
+    if (Number.isNaN(parsed)) {
+      const fallback = Date.parse(value);
+      return Number.isNaN(fallback) ? null : fallback;
+    }
+    return parsed;
+  };
+
+  const computeCooldownUntil = (timestampString) => {
+    const parsed = parseServerTimestamp(timestampString);
+    if (!parsed) return null;
+    const target = parsed + COOLDOWN_DURATION_MS;
+    return target > Date.now() ? target : null;
+  };
+
+  const formatCooldownMessage = (targetMs) => {
+    if (!targetMs) return '';
+    const diffMs = targetMs - Date.now();
+    if (diffMs <= 0) return '';
+    const totalMinutes = Math.ceil(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) {
+      return `You can change your photo again in ${hours}h ${minutes}m.`;
+    }
+    return `You can change your photo again in ${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}.`;
+  };
+
+  const getAvatarStorageKey = () => {
+    const identifier = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    return identifier ? `garbageCollectorAvatar:${identifier}` : null;
+  };
+
+  const handleAvatarClick = () => {
+    if (isAvatarUploading) {
+      return;
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil <= Date.now()) {
+      setAvatarCooldownUntil(null);
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil > Date.now()) {
+      setAvatarUploadError(formatCooldownMessage(avatarCooldownUntil));
+      return;
+    }
+
+    setAvatarUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const targetUserId = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    if (!targetUserId) {
+      setAvatarUploadError('Profile is still loading. Try again soon.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('Use a PNG, JPG, WEBP, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAvatarUploadError('Image must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarUploadError('');
+    const previousAvatar = avatarPreview;
+    const tempPreview = URL.createObjectURL(file);
+    setAvatarPreview(tempPreview);
+    setIsAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('user_id', targetUserId);
+      formData.append('avatar', file);
+
+      const response = await authService.uploadProfileImage(formData);
+      if (response?.status === 'success') {
+        const relativePath = response?.data?.relativePath || response?.relativePath || null;
+        const providedUrl = response?.data?.imageUrl || response?.imageUrl || tempPreview;
+        const resolvedUrl = normalizeAvatarUrl(relativePath || providedUrl);
+
+        setAvatarPreview(resolvedUrl);
+
+        const key = getAvatarStorageKey();
+        if (key && resolvedUrl) {
+          localStorage.setItem(key, resolvedUrl);
+        }
+
+        const updatedAt = response?.data?.updatedAt || null;
+        const cooldownUntil = computeCooldownUntil(updatedAt) || (Date.now() + COOLDOWN_DURATION_MS);
+        setAvatarCooldownUntil(cooldownUntil);
+
+        setUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            profile_image: relativePath || prev.profile_image || providedUrl,
+            profile_image_updated_at: updatedAt || prev?.profile_image_updated_at,
+            avatar: resolvedUrl,
+          };
+        });
+
+        try {
+          const stored = localStorage.getItem('user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.profile_image = relativePath || parsed.profile_image || providedUrl;
+            parsed.profile_image_updated_at = updatedAt || parsed.profile_image_updated_at;
+            parsed.avatar = resolvedUrl;
+            localStorage.setItem('user', JSON.stringify(parsed));
+          }
+        } catch (storageError) {
+          console.error('Unable to update stored user with new avatar:', storageError);
+        }
+      } else {
+        setAvatarPreview(previousAvatar || null);
+        setAvatarUploadError(response?.message || 'Upload failed. Please try again.');
+      }
+    } catch (error) {
+      setAvatarPreview(previousAvatar || null);
+      let fallbackMessage = error?.message || 'Upload failed. Please try again.';
+      const payload = error?.payload;
+      if (payload?.cooldownRemainingSeconds) {
+        let cooldownUntil = null;
+        if (payload?.cooldownEndsAt) {
+          cooldownUntil = payload.cooldownEndsAt * 1000;
+        } else {
+          cooldownUntil = Date.now() + payload.cooldownRemainingSeconds * 1000;
+        }
+        if (cooldownUntil) {
+          setAvatarCooldownUntil(cooldownUntil);
+          const message = formatCooldownMessage(cooldownUntil);
+          if (message) {
+            fallbackMessage = message;
+          }
+        }
+      }
+      setAvatarUploadError(fallbackMessage);
+    } finally {
+      setIsAvatarUploading(false);
+      URL.revokeObjectURL(tempPreview);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Check for URL parameters (backup method)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const routeStarted = urlParams.get('route_started');
+    const barangay = urlParams.get('barangay');
+    
+    if (routeStarted) {
+      console.log('Route started detected via URL - Route ID:', routeStarted, 'Barangay:', barangay);
+      // Clear URL parameters for clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Navigate to routes page
+      navigate('/garbagecollector/routes');
+    }
+  }, [navigate]);
+
+  // Auto-redirect removed per request
+
+
 
   // Fetch user data from database
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Get user data from localStorage first to get the user ID
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          
-          // Fetch fresh data from database using the user ID
-          if (userData.id) {
-            const response = await authService.getUserData(userData.id);
+          const parsed = JSON.parse(storedUser);
+          const fallbackId = localStorage.getItem('user_id');
+          const computedUserId = parsed.user_id || parsed.id || fallbackId;
+
+          if (computedUserId) {
+            const response = await authService.getUserData(computedUserId);
             if (response.status === 'success') {
               setUser(response.data);
+              setResolvedUserId(computedUserId);
+              const avatarKey = `garbageCollectorAvatar:${computedUserId}`;
+              const remoteAvatar = normalizeAvatarUrl(response.data?.profile_image || response.data?.avatar || response.data?.profileImage || null);
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              setAvatarPreview(remoteAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(response.data?.profile_image_updated_at));
             } else {
               console.error('Failed to fetch user data:', response.message);
-              // Fallback to stored data
-              setUser(userData);
+              setUser(parsed);
+              if (computedUserId) {
+                setResolvedUserId(computedUserId);
+                const avatarKey = `garbageCollectorAvatar:${computedUserId}`;
+                const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+                const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+                setAvatarPreview(fallbackAvatar || storedAvatar || null);
+                setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+              }
             }
           } else {
-            // Use stored data if no ID
-            setUser(userData);
+            setUser(parsed);
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `garbageCollectorAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           }
         } else {
           console.warn('No user data found in localStorage');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        // Try to use stored data as fallback
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           try {
-            const userData = JSON.parse(storedUser);
-            setUser(userData);
+            const parsed = JSON.parse(storedUser);
+            setUser(parsed);
+            const fallbackId = parsed?.user_id || parsed?.id || localStorage.getItem('user_id');
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `garbageCollectorAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
           }
@@ -77,52 +306,83 @@ export default function GarbageCollectorDashboard() {
     fetchUserData();
   }, []);
 
+
   // Fetch unread notifications count periodically
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    const uidFromUser = (() => { try { return storedUser ? JSON.parse(storedUser)?.user_id || JSON.parse(storedUser)?.id : null; } catch { return null; } })();
+    const uidFromUser = (() => {
+      try { return storedUser ? JSON.parse(storedUser)?.user_id || JSON.parse(storedUser)?.id : null; } catch { return null; }
+    })();
     const uid = localStorage.getItem('user_id') || uidFromUser || user?.user_id || user?.id;
     if (!uid) return;
 
+    setResolvedUserId((current) => (current ? current : uid));
+
     let isActive = true;
+
     const loadUnread = async () => {
       try {
-        const res = await fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
+  const res = await fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
         const data = await res.json();
         if (isActive && data?.success) {
-          const count = (data.notifications || []).reduce((acc, n) => {
-            const isUnread = n.response_status !== 'read';
-            let isPendingAssignment = false;
-            try {
-              const parsed = JSON.parse(n.message || '{}');
-              if (parsed && (parsed.type === 'assignment' || parsed.type === 'daily_assignments')) {
-                isPendingAssignment = !['accepted', 'declined'].includes((n.response_status || '').toLowerCase());
-              }
-            } catch {}
-            return acc + ((isUnread || isPendingAssignment) ? 1 : 0);
-          }, 0);
+          const notifications = data.notifications || [];
+          const count = calculateUnreadCount(notifications);
           setUnreadNotifications(count);
+          dispatchNotificationCount(uid, notifications);
         }
-      } catch {}
+      } catch (_) {
+        // ignore network errors for badge
+      }
     };
+
     loadUnread();
-    const id = setInterval(loadUnread, 60000);
-    return () => { isActive = false; clearInterval(id); };
+    const intervalId = setInterval(loadUnread, 60000); // refresh every 60s
+    return () => { isActive = false; clearInterval(intervalId); };
   }, [user]);
+
+  useEffect(() => {
+    if (!resolvedUserId) return;
+
+    const handleSync = (event) => {
+      const { userId, count } = event.detail || {};
+      if (String(userId) === String(resolvedUserId)) {
+        setUnreadNotifications(count);
+      }
+    };
+
+    window.addEventListener('notificationsUpdated', handleSync);
+    return () => window.removeEventListener('notificationsUpdated', handleSync);
+  }, [resolvedUserId]);
+
   // User profile from database
+  const fallbackName = `${user?.firstname || ''} ${user?.lastname || ''}`.trim();
+  const displayName = (user?.fullName && user.fullName.trim()) || fallbackName || 'Loading...';
+  const derivedAvatar = normalizeAvatarUrl(user?.profile_image || user?.avatar || user?.profileImage || null);
+  const effectiveAvatar = avatarPreview || derivedAvatar || null;
+  const avatarLetter = displayName && displayName !== 'Loading...' ? displayName.charAt(0).toUpperCase() : 'G';
+
   const userProfile = {
-    name: user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Loading...',
+    name: displayName,
     role: user?.role || 'Garbage Collector',
-    avatar: user && user.firstname ? user.firstname.charAt(0).toUpperCase() : 'G',
+    avatarUrl: effectiveAvatar,
+    avatarInitial: avatarLetter,
     username: user?.username || '',
     email: user?.email || '',
-    assignedArea: user?.assignedArea || '',
+    assignedArea: user?.assignedArea || ''
   };
 
-  const confirmLogout = () => {
+  const activeCooldownMessage = avatarUploadError ? '' : formatCooldownMessage(avatarCooldownUntil);
+
+  const confirmLogout = async () => {
     setShowLogoutModal(false);
     // Clear user data from localStorage
     localStorage.removeItem('user');
+    localStorage.removeItem('user_id');
+    await showLoader({
+      primaryText: 'Signing you out…',
+      secondaryText: 'We’re securely closing your session.',
+      variant: 'login'
+    });
     navigate('/login', { replace: true });
   };
 
@@ -130,19 +390,47 @@ export default function GarbageCollectorDashboard() {
     setShowLogoutModal(false);
   };
 
-  
+  const handleNavigation = (targetPath, options = {}) => {
+    const { skipLoading = false, closeSidebar = false, customAction } = options;
+
+    if (!skipLoading && targetPath && location.pathname !== targetPath) {
+      void showLoader({
+        primaryText: 'Loading your next view…',
+        secondaryText: 'We’re preparing the section you selected.',
+        variant: 'login'
+      });
+    }
+
+    if (closeSidebar) {
+      setSidebarOpen(false);
+    }
+
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
+    if (customAction) {
+      customAction();
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 w-full max-w-full relative">
+    <StatusProvider>
+      <div className="min-h-screen flex flex-col bg-gray-50 w-full max-w-full relative">
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       {/* Loading state */}
-      {loading && (
-        <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-green-700 font-medium">Loading user data...</p>
-          </div>
-        </div>
-      )}
+      <BrandedLoader
+        visible={loading}
+        primaryText="Loading your dashboard…"
+        secondaryText="Getting your collector tools ready."
+        variant="login"
+      />
 
       {/* Hamburger Menu Drawer (Mobile) */}
       {sidebarOpen && (
@@ -151,8 +439,31 @@ export default function GarbageCollectorDashboard() {
           <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
             {/* Profile Section */}
             <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg">
-                <span className="text-green-800 font-bold text-lg">{userProfile.avatar}</span>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  title="Change profile picture"
+                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                >
+                  {isAvatarUploading ? (
+                    <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                  ) : userProfile.avatarUrl ? (
+                    <img src={userProfile.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-green-800 font-bold text-lg">{userProfile.avatarInitial}</span>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Change
+                  </span>
+                </button>
+                {avatarUploadError ? (
+                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
+                ) : isAvatarUploading ? (
+                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
+                ) : activeCooldownMessage ? (
+                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
+                ) : null}
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-white font-semibold text-base truncate">{userProfile.name}</h2>
@@ -172,17 +483,16 @@ export default function GarbageCollectorDashboard() {
                   const isActive = location.pathname === item.href || 
                     (item.href !== '/garbagecollector' && location.pathname.startsWith(item.href));
                   return (
-                    <Link
+                    <button
                       key={item.name}
-                      to={item.href}
                       className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
                         ${isActive ? 'bg-green-50/80 text-green-900 border-2 border-green-700' : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'}
                       `}
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={() => handleNavigation(item.href, { closeSidebar: true, skipLoading: item.showLoading === false })}
                     >
                       <item.icon className="w-5 h-5" />
                       <span className="ml-3 text-sm font-medium">{item.name}</span>
-                    </Link>
+                    </button>
                   );
                 })}
                 
@@ -190,8 +500,11 @@ export default function GarbageCollectorDashboard() {
                 <button
                   className="flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 mt-4"
                   onClick={() => {
-                    setSidebarOpen(false);
-                    setShowLogoutModal(true);
+                    handleNavigation(undefined, {
+                      closeSidebar: true,
+                      skipLoading: true,
+                      customAction: () => setShowLogoutModal(true)
+                    });
                   }}
                 >
                   <ArrowRightOnRectangleIcon className="w-5 h-5" />
@@ -239,7 +552,7 @@ export default function GarbageCollectorDashboard() {
         </button>
         <span 
           className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
-          onClick={() => navigate('/garbagecollector')}
+          onClick={() => handleNavigation('/garbagecollector')}
         >
           KolekTrash
         </span>
@@ -248,7 +561,7 @@ export default function GarbageCollectorDashboard() {
             aria-label="Notifications"
             className="relative p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
             style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
-            onClick={() => navigate('/garbagecollector/notifications')}
+            onClick={() => handleNavigation('/garbagecollector/notifications')}
           >
             <FiBell className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
             {unreadNotifications > 0 && (
@@ -257,15 +570,18 @@ export default function GarbageCollectorDashboard() {
           </button>
         </div>
       </div>
+      
+      
       {/* Main Content */}
       <div className="flex-1 flex flex-col w-full">
         <Outlet />
       </div>
-      {/* Feedback removed for personnel application */}
+
       {/* Footer */}
       <footer className="mt-auto text-xs text-center text-white bg-green-800 py-2 w-full">
         © 2025 Municipality of Sipocot – MENRO. All rights reserved.
       </footer>
-    </div>
+      </div>
+    </StatusProvider>
   );
 }

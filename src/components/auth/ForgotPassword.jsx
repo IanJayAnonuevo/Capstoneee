@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { FiEye, FiEyeOff, FiLock, FiMail, FiShield, FiCheckCircle, FiArrowLeft } from 'react-icons/fi'
+import { FiEye, FiEyeOff, FiLock, FiMail, FiCheckCircle, FiX, FiAlertCircle, FiArrowLeft } from 'react-icons/fi'
+import logo from '../../assets/logo/logo.png'
+import { buildApiUrl } from '../../config/api'
 
-export default function ForgotPassword() {
+export default function ForgotPassword({ onBackToLogin }) {
   const [step, setStep] = useState(1)
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -14,14 +16,23 @@ export default function ForgotPassword() {
   const [passwordError, setPasswordError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState('')
+  const [modalType, setModalType] = useState('info') 
   const navigate = useNavigate()
+
+  const showAlert = (message, type = 'info') => {
+    setModalMessage(message)
+    setModalType(type)
+    setShowModal(true)
+  }
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     
     try {
-      const response = await fetch('https://koletrash.systemproj.com/backend/api/forgot_password.php', {
+  const response = await fetch(buildApiUrl('forgot_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,15 +48,22 @@ export default function ForgotPassword() {
       if (data.status === 'success') {
         setOtpSent(true)
         setStep(2)
+        const transport = data?.data?.transport ? String(data.data.transport).toLowerCase() : null
+        const deliveredViaFallback = transport && transport !== 'smtp'
+        const baseMessage = 'Reset code sent to your email! Please check your inbox and enter the 6-digit code. If you can\'t find it, please check your Spam or Junk folder.'
+        if (deliveredViaFallback) {
+          console.warn('Reset code sent using fallback mail transport. Please review SMTP credentials to restore automatic delivery.')
+        }
         // Since the API now sends the code via email, we'll show a message
         // and let the user manually enter the code they receive
-        alert('Reset code sent to your email! Please check your inbox and enter the 6-digit code.')
+        showAlert(baseMessage, deliveredViaFallback ? 'info' : 'success')
       } else {
-        alert(data.message || 'Failed to send reset code')
+        const detail = data.email_error ? `\nDetails: ${data.email_error}` : ''
+        showAlert((data.message || 'Failed to send reset code') + detail, 'error')
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      alert('Network error: ' + error.message + '. Please try again.')
+      showAlert('Network error: ' + error.message + '. Please try again.', 'error')
     } finally {
       setLoading(false)
     }
@@ -68,7 +86,7 @@ export default function ForgotPassword() {
     const resetCode = otp.join('')
     
     try {
-      const response = await fetch('https://koletrash.systemproj.com/backend/api/forgot_password.php', {
+  const response = await fetch(buildApiUrl('forgot_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,11 +103,11 @@ export default function ForgotPassword() {
       if (data.status === 'success') {
         setStep(3)
       } else {
-        alert(data.message || 'Invalid reset code')
+        showAlert(data.message || 'Invalid reset code', 'error')
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      alert('Network error: ' + error.message + '. Please try again.')
+      showAlert('Network error: ' + error.message + '. Please try again.', 'error')
     } finally {
       setLoading(false)
     }
@@ -111,7 +129,7 @@ export default function ForgotPassword() {
     const resetCode = otp.join('')
     
     try {
-      const response = await fetch('https://koletrash.systemproj.com/backend/api/forgot_password.php', {
+  const response = await fetch(buildApiUrl('forgot_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,18 +149,22 @@ export default function ForgotPassword() {
         // Clear temporary data
         localStorage.removeItem('temp_reset_code')
       } else {
-        alert(data.message || 'Failed to reset password')
+        showAlert(data.message || 'Failed to reset password', 'error')
       }
     } catch (error) {
       console.error('Fetch error:', error);
-      alert('Network error: ' + error.message + '. Please try again.')
+      showAlert('Network error: ' + error.message + '. Please try again.', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   const handleBackToLogin = () => {
-    navigate('/login')
+    if (typeof onBackToLogin === 'function') {
+      onBackToLogin()
+    } else {
+      navigate('/login')
+    }
   }
 
   return (
@@ -167,15 +189,76 @@ export default function ForgotPassword() {
         </div>
       )}
 
+      {/* Alert Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-fadeIn">
+            <div className="p-8">
+              {/* Close button - top right */}
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Centered icon */}
+              <div className="flex justify-center mb-4">
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                  modalType === 'success' ? 'bg-green-100' : 
+                  modalType === 'error' ? 'bg-red-100' : 'bg-emerald-100'
+                }`}>
+                  {modalType === 'success' ? (
+                    <FiCheckCircle className="w-8 h-8 text-green-600" />
+                  ) : modalType === 'error' ? (
+                    <FiAlertCircle className="w-8 h-8 text-red-600" />
+                  ) : (
+                    <FiMail className="w-8 h-8 text-emerald-600" />
+                  )}
+                </div>
+              </div>
+              
+              {/* Centered title */}
+              <h3 className={`text-xl font-bold mb-3 text-center ${
+                modalType === 'success' ? 'text-green-800' : 
+                modalType === 'error' ? 'text-red-800' : 'text-emerald-800'
+              }`}>
+                {modalType === 'success' ? 'Success!' : 
+                 modalType === 'error' ? 'Error' : 'Information'}
+              </h3>
+              
+              {/* Centered message */}
+              <p className="text-gray-600 mb-6 text-center leading-relaxed">{modalMessage}</p>
+              
+              {/* OK button */}
+              <button
+                onClick={() => setShowModal(false)}
+                className={`w-full py-3 rounded-lg font-semibold text-white transition ${
+                  modalType === 'success' ? 'bg-green-600 hover:bg-green-700' : 
+                  modalType === 'error' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-green-100 px-4 py-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Left side: Branding - hidden on mobile, shown on desktop */}
           <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-green-500 to-green-600 items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-black bg-opacity-10"></div>
             <div className="relative z-10 text-center text-white p-8">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <span className="inline-block w-4 h-4 bg-white rounded-full"></span>
-                <span className="inline-block w-3 h-8 bg-green-300 rounded-sm"></span>
+              <div className="flex items-center justify-center mb-6">
+                <img
+                  src={logo}
+                  alt="KolekTrash logo"
+                  className="h-20 w-auto drop-shadow-lg"
+                />
               </div>
               <h1 className="text-4xl font-bold mb-4">Password Reset</h1>
               <p className="text-green-100 text-lg mb-8">Secure & Simple Recovery</p>
@@ -198,9 +281,12 @@ export default function ForgotPassword() {
           
           {/* Mobile header - visible only on mobile */}
           <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-6 px-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="inline-block w-3 h-3 bg-white rounded-full"></span>
-              <span className="inline-block w-2 h-6 bg-green-300 rounded-sm"></span>
+            <div className="flex items-center justify-center mb-3">
+              <img
+                src={logo}
+                alt="KolekTrash logo"
+                className="h-12 w-auto drop-shadow"
+              />
             </div>
             <h1 className="text-xl font-bold">Password Reset</h1>
             <p className="text-green-100 text-sm mt-1">Recover your account</p>
@@ -213,9 +299,6 @@ export default function ForgotPassword() {
             {step === 1 && (
               <>
                 <div className="text-center mb-8">
-                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                    <FiMail className="w-8 h-8 text-green-600" />
-                  </div>
                   <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Forgot Password?</h2>
                   <p className="text-gray-600 text-sm">Enter your email to receive a reset code</p>
                 </div>
@@ -250,10 +333,7 @@ export default function ForgotPassword() {
                         <span>Sending Code...</span>
                       </>
                     ) : (
-                      <>
-                        <FiMail size={20} />
-                        <span>Send Reset Code</span>
-                      </>
+                      <span>Send Reset Code</span>
                     )}
                   </button>
                 </form>
@@ -264,9 +344,6 @@ export default function ForgotPassword() {
             {step === 2 && (
               <>
                 <div className="text-center mb-8">
-                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                    <FiShield className="w-8 h-8 text-green-600" />
-                  </div>
                   <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Enter Verification Code</h2>
                   <p className="text-gray-600 text-sm">We sent a 6-digit code to</p>
                   <p className="text-green-600 font-semibold text-sm">{email}</p>
@@ -303,10 +380,7 @@ export default function ForgotPassword() {
                         <span>Verifying...</span>
                       </>
                     ) : (
-                      <>
-                        <FiShield size={20} />
-                        <span>Verify Code</span>
-                      </>
+                      <span>Verify Code</span>
                     )}
                   </button>
                   
@@ -327,9 +401,6 @@ export default function ForgotPassword() {
             {step === 3 && !success && (
               <>
                 <div className="text-center mb-8">
-                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                    <FiLock className="w-8 h-8 text-green-600" />
-                  </div>
                   <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Create New Password</h2>
                   <p className="text-gray-600 text-sm">Enter a strong password for your account</p>
                 </div>
@@ -405,10 +476,7 @@ export default function ForgotPassword() {
                         <span>Updating Password...</span>
                       </>
                     ) : (
-                      <>
-                        <FiCheckCircle size={20} />
-                        <span>Update Password</span>
-                      </>
+                      <span>Update Password</span>
                     )}
                   </button>
                 </form>
@@ -427,13 +495,14 @@ export default function ForgotPassword() {
                   <p className="text-gray-600 text-sm">You can now login with your new password.</p>
                 </div>
                 
-                <Link
-                  to="/login"
+                <button
+                  type="button"
+                  onClick={handleBackToLogin}
                   className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-4 focus:ring-green-200 transition-all duration-200 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   <FiArrowLeft size={20} />
                   <span>Back to Login</span>
-                </Link>
+                </button>
               </>
             )}
 
@@ -441,17 +510,10 @@ export default function ForgotPassword() {
             {!success && (
               <div className="mt-6 text-center space-y-3">
                 <Link
-                  to="/login"
-                  className="text-green-600 hover:text-green-700 font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <FiArrowLeft size={16} />
-                  Back to Login
-                </Link>
-                <Link
                   to="/"
                   className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm transition-colors"
                 >
-                  ← Back to Home
+                  Back to Home
                 </Link>
               </div>
             )}

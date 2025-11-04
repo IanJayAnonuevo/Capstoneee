@@ -1,4 +1,4 @@
-# KoleTrash Hostinger Deployment Guide
+# KolekTrash Hostinger Deployment Guide
 
 ## File Upload Structure
 
@@ -103,3 +103,8 @@ After deployment, test these features:
 - Verify file permissions
 - Test database connection separately
 - Ensure all API URLs use HTTPS (not HTTP)
+
+
+
+
+

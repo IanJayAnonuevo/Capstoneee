@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api'; // Replace kolektrash.systemproj.com with your actual Hostinger domain
 
 export const truckDriverService = {
   async getTruckDriver(userId) {

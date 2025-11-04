@@ -24,6 +24,7 @@ import Section4 from './components/landingpage/Section4'
 import ResidentDashboard from './components/resident/ResidentDashboard'
 import ResidentHome from './components/resident/ResidentHome'
 import ResidentReport from './components/resident/ResidentReport'
+import ResidentIssueStatus from './components/resident/ResidentIssueStatus'
 import ResidentSchedule from './components/resident/ResidentSchedule'
 import ResidentIEC from './components/resident/ResidentIEC'
 import ResidentNotifications from './components/resident/ResidentNotifications'
@@ -34,7 +35,8 @@ import BarangayHeadNotifications from './components/barangayhead/BarangayHeadNot
 import BarangayHeadSettings from './components/barangayhead/BarangayHeadSettings'
 import Home from './components/barangayhead/Home'
 import ReportIssue from './components/barangayhead/ReportIssue'
-import Feedback from './components/barangayhead/Feedback'
+import BarangayHeadIssueStatus from './components/barangayhead/BarangayHeadIssueStatus'
+import BarangayHeadFeedback from './components/barangayhead/Feedback'
 import PickupRequest from './components/barangayhead/PickupRequest'
 import CollectionSchedule from './components/barangayhead/CollectionSchedule'
 import CollectionReports from './components/barangayhead/CollectionReports'
@@ -54,11 +56,14 @@ import GarbageCollectorHome from './components/garbagecollector/GarbageCollector
 import GarbageCollectorNotifications from './components/garbagecollector/GarbageCollectorNotifications'
 import GarbageCollectorSettings from './components/garbagecollector/GarbageCollectorSettings'
 import GarbageCollectorRoutes from './components/garbagecollector/GarbageCollectorRoutes'
+import CollectorRouteRun from './components/garbagecollector/CollectorRouteRun'
 import GarbageCollectorTasks from './components/garbagecollector/GarbageCollectorTasks'
 import GarbageCollectorSchedule from './components/garbagecollector/GarbageCollectorSchedule'
 import Issues from './components/admin/Issues'
+import AdminFeedback from './components/admin/Feedback'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useLoader } from './contexts/LoaderContext.jsx';
 
 function Placeholder({ title }) {
   return (
@@ -85,13 +90,24 @@ function App() {
   ])
   const navigate = useNavigate()
   const location = useLocation()
+  const { showLoader } = useLoader()
 
   const handleLogout = () => {
     setShowLogoutModal(true)
   }
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setShowLogoutModal(false)
+    localStorage.removeItem('user')
+    localStorage.removeItem('user_id')
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('token_expires_at')
+    localStorage.removeItem('token_type')
+    await showLoader({
+      primaryText: 'Signing you out…',
+      secondaryText: 'We’re securely closing your session.',
+      variant: 'login'
+    })
     navigate('/', { replace: true })
   }
 
@@ -125,26 +141,27 @@ function App() {
           <Route path="/signup" element={<GuestOnly><SignUp /></GuestOnly>} />
           <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
           {/* Admin routes - protected */}
-          <Route path="/admin" element={<RequireAuth><Navigate to="/admin/dashboard" replace /></RequireAuth>} />
-          <Route path="/admin/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-          <Route path="/admin/users" element={<RequireAuth><ManageUsers /></RequireAuth>} />
-          <Route path="/admin/routes" element={<RequireAuth><ManageRoute /></RequireAuth>} />
-          <Route path="/admin/schedule" element={<RequireAuth><ManageSchedule /></RequireAuth>} />
-          <Route path="/admin/pickup" element={<RequireAuth><PickupSimple /></RequireAuth>} />
-          <Route path="/admin/barangay" element={<RequireAuth><BarangayActivity /></RequireAuth>} />
-          <Route path="/admin/barangay-new" element={<RequireAuth><BarangayActivityNew /></RequireAuth>} />
-          <Route path="/admin/feedback" element={<RequireAuth><Placeholder title="Feedback" /></RequireAuth>} />
-          <Route path="/admin/issues" element={<RequireAuth><Issues /></RequireAuth>} />
-          <Route path="/admin/task-management" element={<RequireAuth><TaskManagement /></RequireAuth>} />
+          <Route path="/admin" element={<RequireAuth allowedRoles={['admin']}><Navigate to="/admin/dashboard" replace /></RequireAuth>} />
+          <Route path="/admin/dashboard" element={<RequireAuth allowedRoles={['admin']}><Dashboard /></RequireAuth>} />
+          <Route path="/admin/users" element={<RequireAuth allowedRoles={['admin']}><ManageUsers /></RequireAuth>} />
+          <Route path="/admin/routes" element={<RequireAuth allowedRoles={['admin']}><ManageRoute /></RequireAuth>} />
+          <Route path="/admin/schedule" element={<RequireAuth allowedRoles={['admin']}><ManageSchedule /></RequireAuth>} />
+          <Route path="/admin/pickup" element={<RequireAuth allowedRoles={['admin']}><PickupSimple /></RequireAuth>} />
+          <Route path="/admin/barangay" element={<RequireAuth allowedRoles={['admin']}><BarangayActivity /></RequireAuth>} />
+          <Route path="/admin/barangay-new" element={<RequireAuth allowedRoles={['admin']}><BarangayActivityNew /></RequireAuth>} />
+          <Route path="/admin/feedback" element={<RequireAuth allowedRoles={['admin']}><AdminFeedback /></RequireAuth>} />
+          <Route path="/admin/issues" element={<RequireAuth allowedRoles={['admin']}><Issues /></RequireAuth>} />
+          <Route path="/admin/task-management" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
           {/* Admin catch-all for undefined admin routes */}
-          <Route path="/admin/*" element={<RequireAuth><Placeholder title="Admin Page Not Found" /></RequireAuth>} />
+          <Route path="/admin/*" element={<RequireAuth allowedRoles={['admin']}><Placeholder title="Admin Page Not Found" /></RequireAuth>} />
           {/* Resident routes - protected */}
           <Route
             path="/resident"
-            element={<RequireAuth><ResidentDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            element={<RequireAuth allowedRoles={['resident']}><ResidentDashboard unreadNotifications={unreadCount} /></RequireAuth>}
           >
             <Route index element={<ResidentHome />} />
             <Route path="report" element={<ResidentReport />} />
+            <Route path="issue-status" element={<ResidentIssueStatus />} />
             <Route path="schedule" element={<ResidentSchedule />} />
             <Route path="iec" element={<ResidentIEC />} />
             <Route path="notifications" element={<ResidentNotifications notifications={notifications} setNotifications={setNotifications} />} />
@@ -154,11 +171,12 @@ function App() {
           {/* Barangay Head routes - protected */}
           <Route
             path="/barangayhead"
-            element={<RequireAuth><BarangayHeadDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            element={<RequireAuth allowedRoles={['barangay_head']}><BarangayHeadDashboard unreadNotifications={unreadCount} /></RequireAuth>}
           >
             <Route index element={<Home />} />
             <Route path="report" element={<ReportIssue />} />
-            <Route path="feedback" element={<Feedback />} />
+            <Route path="issue-status" element={<BarangayHeadIssueStatus />} />
+            <Route path="feedback" element={<BarangayHeadFeedback />} />
             <Route path="pickup" element={<PickupRequest />} />
             <Route path="schedule" element={<CollectionSchedule />} />
             <Route path="collection-reports" element={<CollectionReports />} />
@@ -170,7 +188,7 @@ function App() {
           {/* Truck Driver routes - protected */}
           <Route
             path="/truckdriver"
-            element={<RequireAuth><TruckDriverDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            element={<RequireAuth allowedRoles={['truck_driver']}><TruckDriverDashboard unreadNotifications={unreadCount} /></RequireAuth>}
           >
             <Route index element={<TruckDriverHome />} />
             <Route path="schedule" element={<TruckDriverCollectionSchedule />} />
@@ -184,15 +202,21 @@ function App() {
           {/* Garbage Collector routes - protected */}
           <Route
             path="/garbagecollector"
-            element={<RequireAuth><GarbageCollectorDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            element={<RequireAuth allowedRoles={['garbage_collector']}><GarbageCollectorDashboard unreadNotifications={unreadCount} /></RequireAuth>}
           >
             <Route index element={<GarbageCollectorHome />} />
             <Route path="schedule" element={<GarbageCollectorSchedule />} />
             <Route path="tasks" element={<GarbageCollectorTasks />} />
             <Route path="routes" element={<GarbageCollectorRoutes />} />
+            <Route path="route/:id" element={<CollectorRouteRun />} />
             <Route path="notifications" element={<GarbageCollectorNotifications notifications={notifications} setNotifications={setNotifications} />} />
             <Route path="settings" element={<GarbageCollectorSettings />} />
           </Route>
+          {/* Foreman routes - protected */}
+          <Route
+            path="/foreman"
+            element={<RequireAuth allowedRoles={['foreman']}><Placeholder title="Foreman Portal" /></RequireAuth>}
+          />
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -200,7 +224,7 @@ function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-[2000]">
           <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full flex flex-col items-center border border-gray-100">
             <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-4">
               <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />

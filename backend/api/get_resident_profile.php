@@ -24,12 +24,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $db = $database->connect();
 
     try {
+        // Determine optional columns available in user_profile
+        $profileColumns = [];
+        try {
+            $columnStmt = $db->query("SHOW COLUMNS FROM user_profile");
+            $profileColumns = $columnStmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (PDOException $columnCheckError) {
+            error_log('Column inspection failed in get_resident_profile.php: ' . $columnCheckError->getMessage());
+        }
+
+        $hasProfileImage = in_array('profile_image', $profileColumns, true);
+        $hasProfileUpdatedAt = in_array('profile_image_updated_at', $profileColumns, true);
+
         // Query specifically for resident profile data
-        // Debug: Log the user_id we're searching for
         error_log("Searching for user_id: " . $user_id);
-        
-        $query = "SELECT up.user_id, up.firstname, up.lastname, up.address, up.barangay_id,
-                        COALESCE(b.barangay_name, 'Not Assigneded') as barangay_name
+
+        $fields = [
+            'up.user_id',
+            'up.firstname',
+            'up.lastname',
+            'up.address',
+            'up.barangay_id'
+        ];
+
+        if ($hasProfileImage) {
+            $fields[] = 'up.profile_image';
+        }
+        if ($hasProfileUpdatedAt) {
+            $fields[] = 'up.profile_image_updated_at';
+        }
+        $fields[] = "COALESCE(b.barangay_name, 'Not Assigned') as barangay_name";
+
+        $query = "SELECT " . implode(', ', $fields) . "
                  FROM user_profile up 
                  LEFT JOIN barangay b ON up.barangay_id = b.barangay_id 
                  WHERE up.user_id = :user_id";
@@ -55,7 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         'barangay' => $result['barangay_name'],
                         'barangay_id' => $result['barangay_id'],
                         'address' => $result['address'],
-                        'user_id' => $result['user_id']
+                        'user_id' => $result['user_id'],
+                        'profile_image' => $result['profile_image'] ?? null,
+                        'profile_image_updated_at' => $result['profile_image_updated_at'] ?? null
                     ]
                 ]);
             } else {

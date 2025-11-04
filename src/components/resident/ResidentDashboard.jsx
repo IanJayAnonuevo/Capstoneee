@@ -1,70 +1,135 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiTrendingUp, FiSend } from 'react-icons/fi';
+import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiAlertCircle } from 'react-icons/fi';
 import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson, MdQuestionAnswer } from 'react-icons/md';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { authService } from '../../services/authService';
+import eventTreePlanting from '../../assets/images/users/tp.jpg';
+import eventCleanUp from '../../assets/images/users/cd.jpg';
+import eventCampaign from '../../assets/images/users/s.jpg';
+import eventCoastal from '../../assets/images/users/an.jpg';
+import BrandedLoader from '../shared/BrandedLoader';
+import { calculateUnreadCount } from '../../utils/notificationUtils';
+import { useLoader } from '../../contexts/LoaderContext';
+import { buildApiUrl } from '../../config/api';
 
-// --- QuickTips Component (copied and adapted from TruckDriverHome) ---
-function QuickTips({ tips, tipIndex, setTipIndex, showTip, setShowTip }) {
-  if (!showTip) return null;
+const FeedbackConfirmationModal = ({ isOpen, onConfirm, onCancel, isSubmitting, feedbackType, feedbackMessage }) => {
+  if (!isOpen) return null;
+
+  const formattedType = feedbackType
+    ? `${feedbackType.charAt(0).toUpperCase()}${feedbackType.slice(1)}`
+    : 'Feedback';
+
   return (
-    <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4 mb-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-green-800">{tips[tipIndex]}</p>
-            <div className="flex gap-1 mt-1">
-              {tips.map((_, index) => (
-                <div
-                  key={index}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                    index === tipIndex ? 'bg-green-500' : 'bg-green-300'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-40 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm p-6 animate-fadeIn">
+        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+          <FiAlertCircle className="text-green-600 text-3xl" />
         </div>
-        <button 
-          className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-200 rounded-full transition-colors bg-transparent" 
-          aria-label="Close tip" 
-          onClick={() => setShowTip(false)}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <h2 className="text-lg font-semibold text-gray-900 text-center mb-2">Submit Feedback?</h2>
+        <p className="text-sm text-gray-600 text-center mb-4">
+          You're about to send <span className="font-semibold text-green-700">{formattedType}</span> feedback. Please confirm to continue.
+        </p>
+        {feedbackMessage && (
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm text-gray-700 mb-4 max-h-40 overflow-y-auto whitespace-pre-line">
+            {feedbackMessage}
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="flex-1 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Sending…' : 'Send Feedback'}
+          </button>
+        </div>
       </div>
     </div>
   );
-}
+};
 
-export default function ResidentDashboard() {
+const ResidentDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [showFeedbackConfirm, setShowFeedbackConfirm] = useState(false);
   const [feedbackType, setFeedbackType] = useState('suggestion');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isFeedbackSubmitting, setIsFeedbackSubmitting] = useState(false);
+  const [pendingFeedbackData, setPendingFeedbackData] = useState(null);
   const [chatMessages, setChatMessages] = useState([
     { type: 'bot', content: 'Hello! How can I help you today?' }
   ]);
   const [messageInput, setMessageInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showTip, setShowTip] = useState(true);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [showChat, setShowChat] = useState(false);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState('');
+  const [avatarCooldownUntil, setAvatarCooldownUntil] = useState(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { showLoader } = useLoader();
+
+  const normalizeAvatarUrl = (value) => {
+    if (!value) return null;
+    if (typeof value !== 'string') return null;
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+    return authService.resolveAssetUrl(value);
+  };
+
+  const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  const parseServerTimestamp = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    const formatted = value.replace(' ', 'T');
+    const candidate = `${formatted}+08:00`;
+    const parsed = Date.parse(candidate);
+    if (Number.isNaN(parsed)) {
+      const fallback = Date.parse(value);
+      return Number.isNaN(fallback) ? null : fallback;
+    }
+    return parsed;
+  };
+
+  const computeCooldownUntil = (timestampString) => {
+    const parsed = parseServerTimestamp(timestampString);
+    if (!parsed) return null;
+    const target = parsed + COOLDOWN_DURATION_MS;
+    return target > Date.now() ? target : null;
+  };
+
+  const formatCooldownMessage = (targetMs) => {
+    if (!targetMs) return '';
+    const diffMs = targetMs - Date.now();
+    if (diffMs <= 0) return '';
+    const totalMinutes = Math.ceil(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) {
+      return `You can change your photo again in ${hours}h ${minutes}m.`;
+    }
+    return `You can change your photo again in ${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}.`;
+  };
 
   // FAQ data
   const faqData = [
@@ -101,21 +166,43 @@ export default function ResidentDashboard() {
           
           // Resolve user id from various possible keys
           const storedUserId = localStorage.getItem('user_id');
-          const resolvedUserId = userData.user_id || userData.id || storedUserId;
+          const computedUserId = userData.user_id || userData.id || storedUserId;
 
           // Fetch fresh data from database using the resolved user ID
-          if (resolvedUserId) {
-            const response = await authService.getUserData(resolvedUserId);
+          if (computedUserId) {
+            const response = await authService.getUserData(computedUserId);
             if (response.status === 'success') {
               setUser(response.data);
+              setResolvedUserId(computedUserId);
+              const avatarKey = `residentAvatar:${computedUserId}`;
+              const remoteAvatar = normalizeAvatarUrl(response.data?.profile_image || response.data?.avatar || response.data?.profileImage || null);
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              setAvatarPreview(remoteAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(response.data?.profile_image_updated_at));
             } else {
               console.error('Failed to fetch user data:', response.message);
               // Fallback to stored data
               setUser(userData);
+              if (computedUserId) {
+                setResolvedUserId(computedUserId);
+                const avatarKey = `residentAvatar:${computedUserId}`;
+                const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+                const fallbackAvatar = normalizeAvatarUrl(userData?.profile_image || userData?.avatar || userData?.profileImage || null);
+                setAvatarPreview(fallbackAvatar || storedAvatar || null);
+                setAvatarCooldownUntil(computeCooldownUntil(userData?.profile_image_updated_at));
+              }
             }
           } else {
             // Use stored data if no ID
             setUser(userData);
+            if (storedUserId) {
+              setResolvedUserId(storedUserId);
+              const avatarKey = `residentAvatar:${storedUserId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(userData?.profile_image || userData?.avatar || userData?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(userData?.profile_image_updated_at));
+            }
           }
         } else {
           console.warn('No user data found in localStorage');
@@ -128,6 +215,15 @@ export default function ResidentDashboard() {
           try {
             const userData = JSON.parse(storedUser);
             setUser(userData);
+            const fallbackId = userData.user_id || userData.id || localStorage.getItem('user_id');
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `residentAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(userData?.profile_image || userData?.avatar || userData?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(userData?.profile_image_updated_at));
+            }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
           }
@@ -144,107 +240,278 @@ export default function ResidentDashboard() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const uidFromUser = (() => { try { return storedUser ? JSON.parse(storedUser)?.user_id || JSON.parse(storedUser)?.id : null; } catch { return null; } })();
-    const uid = localStorage.getItem('user_id') || uidFromUser || user?.user_id || user?.id;
+    const uid = resolvedUserId || localStorage.getItem('user_id') || uidFromUser || user?.user_id || user?.id;
     if (!uid) return;
 
+    setResolvedUserId(uid);
     let isActive = true;
     const loadUnread = async () => {
       try {
-        const res = await fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
+        const res = await fetch(buildApiUrl(`get_notifications.php?recipient_id=${uid}`));
         const data = await res.json();
         if (isActive && data?.success) {
-          const count = (data.notifications || []).reduce((acc, n) => {
-            const isUnread = n.response_status !== 'read';
-            let isPendingAssignment = false;
-            try {
-              const parsed = JSON.parse(n.message || '{}');
-              if (parsed && (parsed.type === 'assignment' || parsed.type === 'daily_assignments')) {
-                isPendingAssignment = !['accepted', 'declined'].includes((n.response_status || '').toLowerCase());
-              }
-            } catch {}
-            return acc + ((isUnread || isPendingAssignment) ? 1 : 0);
-          }, 0);
+          const count = calculateUnreadCount(data.notifications || []);
           setUnreadNotifications(count);
         }
-      } catch {}
+      } catch (err) {
+        if (import.meta.env && import.meta.env.DEV) {
+          console.warn('Failed to load unread notifications:', err);
+        }
+      }
     };
     loadUnread();
     const id = setInterval(loadUnread, 60000);
     return () => { isActive = false; clearInterval(id); };
-  }, [user]);
+  }, [user, resolvedUserId]);
+
+  useEffect(() => {
+    if (!resolvedUserId) return;
+    const handleSync = (event) => {
+      const { userId, count } = event.detail || {};
+      if (String(userId) === String(resolvedUserId)) {
+        setUnreadNotifications(count);
+      }
+    };
+    window.addEventListener('notificationsUpdated', handleSync);
+    return () => window.removeEventListener('notificationsUpdated', handleSync);
+  }, [resolvedUserId]);
 
   // Resident info from logged-in user
   const resident = {
     name: user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Resident',
     role: user?.role || 'Resident',
-    avatar: '',
+    avatar: avatarPreview || '',
     id: user?.user_id || user?.id || '',
     username: user?.username || '',
     email: user?.email || '',
     assignedArea: user?.assignedArea || '',
   };
 
-  // Quick tips
-  const tips = [
-    'Tip: You can submit a report anytime using the menu!',
-    'Reminder: Collection is every Monday and Thursday.',
-    'Did you know? You can view IEC materials for waste segregation tips.'
-  ];
-  const [tipIndex, setTipIndex] = useState(0);
+  const getAvatarStorageKey = () => {
+    const identifier = resident.id || resolvedUserId || localStorage.getItem('user_id');
+    return identifier ? `residentAvatar:${identifier}` : null;
+  };
 
-  // Cycle tips every 8 seconds
-  React.useEffect(() => {
-    if (!showTip) return;
-    const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % tips.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [tips.length, showTip]);
+  const handleAvatarClick = () => {
+    if (isAvatarUploading) {
+      return;
+    }
 
-  // MENRO events carousel images
-  const eventImages = [
+    if (avatarCooldownUntil && avatarCooldownUntil <= Date.now()) {
+      setAvatarCooldownUntil(null);
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil > Date.now()) {
+      setAvatarUploadError(formatCooldownMessage(avatarCooldownUntil));
+      return;
+    }
+
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const targetUserId = resident.id || resolvedUserId || localStorage.getItem('user_id');
+    if (!targetUserId) {
+      setAvatarUploadError('Profile is still loading. Try again soon.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('Use a PNG, JPG, WEBP, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    const maxSize = 2 * 1024 * 1024; // 2 MB
+    if (file.size > maxSize) {
+      setAvatarUploadError('Image must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarUploadError('');
+    const previousAvatar = avatarPreview;
+    const tempPreview = URL.createObjectURL(file);
+    setAvatarPreview(tempPreview);
+    setIsAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('user_id', targetUserId);
+      formData.append('avatar', file);
+
+      const response = await authService.uploadProfileImage(formData);
+      if (response?.status === 'success') {
+        const relativePath = response?.data?.relativePath || response?.relativePath || null;
+        const providedUrl = response?.data?.imageUrl || response?.imageUrl || tempPreview;
+        const resolvedUrl = normalizeAvatarUrl(relativePath || providedUrl);
+
+        setAvatarPreview(resolvedUrl);
+
+        const key = getAvatarStorageKey();
+        if (key && resolvedUrl) {
+          localStorage.setItem(key, resolvedUrl);
+        }
+
+        const updatedAt = response?.data?.updatedAt || null;
+        const cooldownUntil = computeCooldownUntil(updatedAt) || (Date.now() + COOLDOWN_DURATION_MS);
+        setAvatarCooldownUntil(cooldownUntil);
+
+        setUser(prev => prev ? { ...prev, profile_image: relativePath || prev.profile_image || providedUrl, profile_image_updated_at: updatedAt || prev?.profile_image_updated_at, avatar: resolvedUrl } : prev);
+
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            parsedUser.profile_image = relativePath || parsedUser.profile_image || providedUrl;
+            parsedUser.profile_image_updated_at = updatedAt || parsedUser.profile_image_updated_at;
+            parsedUser.avatar = resolvedUrl;
+            localStorage.setItem('user', JSON.stringify(parsedUser));
+          }
+        } catch (storageError) {
+          console.error('Unable to update stored user with new avatar:', storageError);
+        }
+      } else {
+        setAvatarPreview(previousAvatar || null);
+        setAvatarUploadError(response?.message || 'Upload failed. Please try again.');
+      }
+    } catch (error) {
+      setAvatarPreview(previousAvatar || null);
+      let fallbackMessage = error?.message || 'Upload failed. Please try again.';
+      const payload = error?.payload;
+      if (payload?.cooldownRemainingSeconds) {
+        let cooldownUntil = null;
+        if (payload?.cooldownEndsAt) {
+          cooldownUntil = payload.cooldownEndsAt * 1000;
+        } else {
+          cooldownUntil = Date.now() + (payload.cooldownRemainingSeconds * 1000);
+        }
+        if (cooldownUntil) {
+          setAvatarCooldownUntil(cooldownUntil);
+          const message = formatCooldownMessage(cooldownUntil);
+          if (message) {
+            fallbackMessage = message;
+          }
+        }
+      }
+      setAvatarUploadError(fallbackMessage);
+    } finally {
+      setIsAvatarUploading(false);
+      URL.revokeObjectURL(tempPreview);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+
+  // Upcoming MENRO events
+  const upcomingEvents = [
     {
-      url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop',
+      image: eventTreePlanting,
       title: 'Tree Planting Activity',
-      date: 'May 15, 2025',
-      description: 'Join us in making Sipocot greener!'
+      date: 'October 20, 2025',
+      location: 'Gaongan, Sipocot, Camarines Sur'
     },
     {
-      url: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=800&auto=format&fit=crop',
-      title: 'Coastal Cleanup Drive',
-      date: 'May 20, 2025',
-      description: 'Help us keep our waters clean'
+      image: eventCleanUp,
+      title: 'Clean Up Drive',
+      date: 'October 24, 2025',
+      location: 'Impig, Sipocot, Camarines Sur'
     },
     {
-      url: 'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?w=800&auto=format&fit=crop',
-      title: 'Waste Segregation Seminar',
-      date: 'May 25, 2025',
-      description: 'Learn proper waste management'
+      image: eventCampaign,
+      title: 'Campaign Seminar',
+      date: 'October 26, 2025',
+      location: 'Caima, Sipocot, Camarines Sur'
     },
     {
-      url: 'https://images.unsplash.com/photo-1542601600647-3a722a90a76b?w=800&auto=format&fit=crop',
-      title: 'Environmental Campaign',
-      date: 'June 1, 2025',
-      description: 'Building a sustainable future'
+      image: eventCoastal,
+      title: 'Coastal Clean Up Drive',
+      date: 'October 30, 2025',
+      location: 'Anib, Sipocot, Camarines Sur'
+    }
+  ];
+
+  const handleNavigation = (targetPath, options = {}) => {
+    const { skipLoading = false, closeMenu = true, customAction } = options;
+
+    if (!skipLoading && (!targetPath || location.pathname !== targetPath)) {
+      void showLoader({
+        primaryText: 'Loading your next view…',
+        secondaryText: 'We’re preparing the section you selected.',
+        variant: 'login'
+      });
+    }
+
+    if (closeMenu) {
+      setMenuOpen(false);
+    }
+
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
+    if (customAction) {
+      customAction();
+    }
+  };
+
+  const quickActionItems = [
+    {
+      title: 'Report Issue',
+      description: 'Let MENRO know about uncollected waste or service concerns.',
+      icon: MdReport,
+      indicatorLabel: 'Submit Report',
+      onClick: () => handleNavigation('/resident/report', { closeMenu: false })
+    },
+    {
+      title: 'View Schedule',
+      description: 'Check the next pickup day for your barangay at a glance.',
+      icon: MdEvent,
+      indicatorLabel: 'View Calendar',
+      onClick: () => handleNavigation('/resident/schedule', { closeMenu: false })
+    },
+    {
+      title: 'IEC Materials',
+      description: 'Browse waste segregation guides and community reminders.',
+      icon: MdMenuBook,
+      indicatorLabel: 'Open Library',
+      onClick: () => handleNavigation('/resident/iec', { closeMenu: false })
     }
   ];
 
   // Navigation links with routing (add Settings, remove from top bar)
   const navLinks = [
-    { label: 'Home', icon: <MdHome className="w-6 h-6" />, to: '/resident', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident') navigate('/resident'); } },
-    { label: 'Submit Report Issue', icon: <MdReport className="w-6 h-6" />, to: '/resident/report', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident/report') navigate('/resident/report'); } },
-    { label: 'View Collection Schedule', icon: <MdEvent className="w-6 h-6" />, to: '/resident/schedule', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident/schedule') navigate('/resident/schedule'); } },
-    { label: 'Access IEC Materials', icon: <MdMenuBook className="w-6 h-6" />, to: '/resident/iec', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident/iec') navigate('/resident/iec'); } },
-    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/resident/settings', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident/settings') navigate('/resident/settings'); } },
-    { label: 'Feedback', icon: <FiMessageSquare className="w-6 h-6" />, to: '/resident/feedback', onClick: () => { setMenuOpen(false); if(location.pathname !== '/resident/feedback') navigate('/resident/feedback'); } },
-    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, to: '/login', onClick: () => { setMenuOpen(false); setShowLogoutModal(true); } },
+    { label: 'Home', icon: <MdHome className="w-6 h-6" />, to: '/resident', showLoading: true },
+    { label: 'Submit Report Issue', icon: <MdReport className="w-6 h-6" />, to: '/resident/report', showLoading: true },
+    { label: 'View Issue Status', icon: <FiAlertCircle className="w-6 h-6" />, to: '/resident/issue-status', showLoading: true },
+    { label: 'View Collection Schedule', icon: <MdEvent className="w-6 h-6" />, to: '/resident/schedule', showLoading: true },
+    { label: 'Access IEC Materials', icon: <MdMenuBook className="w-6 h-6" />, to: '/resident/iec', showLoading: true },
+    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/resident/settings', showLoading: true },
+    { label: 'Feedback', icon: <FiMessageSquare className="w-6 h-6" />, to: '/resident/feedback', showLoading: true },
+    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, action: () => setShowLogoutModal(true), showLoading: false },
   ];
 
-  const confirmLogout = () => {
+  const activeCooldownMessage = avatarUploadError ? '' : formatCooldownMessage(avatarCooldownUntil);
+
+  const confirmLogout = async () => {
     // Clear user data from localStorage
     localStorage.removeItem('user');
+    localStorage.removeItem('user_id');
     setUser(null);
     setShowLogoutModal(false);
+    await showLoader({
+      primaryText: 'Signing you out…',
+      secondaryText: 'We’re securely closing your session.',
+      variant: 'login'
+    });
     navigate('/login', { replace: true });
   };
 
@@ -252,11 +519,46 @@ export default function ResidentDashboard() {
     setShowLogoutModal(false);
   };
 
-  const handleFeedbackSubmit = (e) => {
-    e.preventDefault();
-    setShowFeedback(false);
-    setFeedback('');
-    alert('Thank you for your feedback!');
+  const handleFeedbackFormSubmit = (event) => {
+    event.preventDefault();
+    const trimmedMessage = feedbackMessage.trim();
+    if (!trimmedMessage) {
+      return;
+    }
+
+    setPendingFeedbackData({
+      type: feedbackType,
+      message: trimmedMessage
+    });
+    setShowFeedbackConfirm(true);
+  };
+
+  const confirmFeedbackSubmission = () => {
+    if (!pendingFeedbackData) {
+      setShowFeedbackConfirm(false);
+      return;
+    }
+
+    setIsFeedbackSubmitting(true);
+
+    try {
+      alert('Thank you for your feedback! We value your input.');
+      setShowFeedbackModal(false);
+      setFeedbackMessage('');
+      setFeedbackType('suggestion');
+    } finally {
+      setIsFeedbackSubmitting(false);
+      setPendingFeedbackData(null);
+      setShowFeedbackConfirm(false);
+    }
+  };
+
+  const cancelFeedbackSubmission = () => {
+    if (isFeedbackSubmitting) {
+      return;
+    }
+    setShowFeedbackConfirm(false);
+    setPendingFeedbackData(null);
   };
 
   // Handle chat messages
@@ -330,15 +632,20 @@ export default function ResidentDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 w-full max-w-full relative">
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
       {/* Loading state */}
-      {loading && (
-        <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-green-700 font-medium">Loading user data...</p>
-          </div>
-        </div>
-      )}
+      <BrandedLoader
+        visible={loading}
+        primaryText="Loading your dashboard…"
+        secondaryText="Preparing your personalized collections overview."
+        variant="login"
+      />
 
       {/* Hamburger Menu Drawer */}
       {menuOpen && (
@@ -347,12 +654,31 @@ export default function ResidentDashboard() {
           <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
             {/* Profile Section */}
             <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg">
-                {resident.avatar ? (
-                  <img src={resident.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <MdPerson className="w-7 h-7 text-green-800" />
-                )}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  title="Change profile picture"
+                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                >
+                  {isAvatarUploading ? (
+                    <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                  ) : resident.avatar ? (
+                    <img src={resident.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <MdPerson className="w-7 h-7 text-green-800" />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Change
+                  </span>
+                </button>
+                {avatarUploadError ? (
+                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
+                ) : isAvatarUploading ? (
+                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
+                ) : activeCooldownMessage ? (
+                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
+                ) : null}
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-white font-semibold text-base truncate">{resident.name}</h2>
@@ -380,7 +706,10 @@ export default function ResidentDashboard() {
                       }
                       ${location.pathname === link.to ? (link.label === 'Logout' ? 'border-2 border-red-400' : 'border-2 border-[#218a4c]') : 'border'}
                     `}
-                    onClick={link.onClick}
+                    onClick={() => handleNavigation(link.to, {
+                      skipLoading: link.showLoading === false,
+                      customAction: link.action
+                    })}
                   >
                     <span className={link.label === 'Logout' ? 'text-red-500' : link.label === 'Settings' ? 'text-green-700' : 'text-[#218a4c]'}>
                       {link.icon}
@@ -423,14 +752,7 @@ export default function ResidentDashboard() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-md w-full animate-fadeIn">
             <h2 className="text-2xl font-bold text-green-800 mb-4">Submit Feedback</h2>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              // Here you would typically send the feedback to your backend
-              alert('Thank you for your feedback! We value your input.');
-              setShowFeedbackModal(false);
-              setFeedbackMessage('');
-              setFeedbackType('suggestion');
-            }}>
+            <form onSubmit={handleFeedbackFormSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Feedback Type</label>
                 <select
@@ -456,13 +778,22 @@ export default function ResidentDashboard() {
               <div className="flex gap-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                  disabled={!feedbackMessage.trim()}
+                  className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                    feedbackMessage.trim()
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  }`}
                 >
                   Submit Feedback
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowFeedbackModal(false)}
+                  onClick={() => {
+                    setShowFeedbackModal(false);
+                    setShowFeedbackConfirm(false);
+                    setPendingFeedbackData(null);
+                  }}
                   className="flex-1 border border-gray-300 py-2 px-4 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
@@ -472,6 +803,14 @@ export default function ResidentDashboard() {
           </div>
         </div>
       )}
+      <FeedbackConfirmationModal
+        isOpen={showFeedbackConfirm}
+        onConfirm={confirmFeedbackSubmission}
+        onCancel={cancelFeedbackSubmission}
+        isSubmitting={isFeedbackSubmitting}
+        feedbackType={pendingFeedbackData?.type}
+        feedbackMessage={pendingFeedbackData?.message}
+      />
       {/* Top Bar */}
       <div className="flex items-center justify-between bg-green-800 px-4 py-3 sticky top-0 z-10">
         <button
@@ -484,7 +823,7 @@ export default function ResidentDashboard() {
         </button>
         <span 
           className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
-          onClick={() => navigate('/resident')}
+          onClick={() => handleNavigation('/resident', { closeMenu: false })}
         >
           KolekTrash
         </span>
@@ -493,7 +832,7 @@ export default function ResidentDashboard() {
             aria-label="Notifications"
             className="relative p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
             style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
-            onClick={() => navigate('/resident/notifications')}
+            onClick={() => handleNavigation('/resident/notifications', { closeMenu: false })}
           >
             <FiBell className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
             {unreadNotifications > 0 && (
@@ -507,9 +846,7 @@ export default function ResidentDashboard() {
         {/* --- Main Content Container: px-4 py-4, just like TruckDriverHome --- */}
         {location.pathname === '/resident' ? (
           <div className="flex-1 bg-gray-50 px-4 py-4">
-            {/* Quick Tips Section */}
-            <QuickTips tips={tips} tipIndex={tipIndex} setTipIndex={setTipIndex} showTip={showTip} setShowTip={setShowTip} />
-            {/* Event Carousel (Truck Driver style) */}
+            {/* Event Carousel */}
             <div className="relative w-full h-64 md:h-80 overflow-hidden shadow-lg mb-8 mt-4 rounded-xl">
               <Slider
                 dots={true}
@@ -522,11 +859,11 @@ export default function ResidentDashboard() {
                 arrows={false}
                 dotsClass="slick-dots custom-dots"
               >
-                {eventImages.map((event, index) => (
+                {upcomingEvents.map((event, index) => (
                   <div key={index} className="relative h-64 md:h-80">
                     <div
                       className="w-full h-full bg-cover bg-center relative rounded-xl"
-                      style={{ backgroundImage: `url(${event.url})` }}
+                      style={{ backgroundImage: `url(${event.image})` }}
                     >
                       {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl"></div>
@@ -537,7 +874,7 @@ export default function ResidentDashboard() {
                           <span className="text-sm font-medium text-green-400">{event.date}</span>
                         </div>
                         <h3 className="text-xl md:text-2xl font-bold mb-2">{event.title}</h3>
-                        <p className="text-sm md:text-base text-gray-200">{event.description}</p>
+                        <p className="text-sm md:text-base text-gray-200">{event.location}</p>
                       </div>
                     </div>
                   </div>
@@ -556,136 +893,42 @@ export default function ResidentDashboard() {
                 }
               `}</style>
             </div>
-            {/* Dashboard Title and Welcome Message (Truck Driver style) */}
-            <div className="text-left">
-              <h1 className="text-2xl md:text-3xl font-bold text-green-800 mb-2">
-                Dashboard
-              </h1>
-              <p className="text-gray-700">
-                Welcome back, {resident.name}!
-              </p>
-            </div>
-            {/* Stats Section: Two-column Grid */}
-            <div className="grid grid-cols-2 gap-4 mt-8 mb-8">
-              {/* Collections Made */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 ">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                    <MdEvent className="w-6 h-6 text-green-600" />
-                  </div>
-                  <span className="text-3xl font-bold text-green-800">8</span>
-                </div>
-                <h3 className="text-sm font-semibold text-green-700 mb-1">Collections Made</h3>
-                <p className="text-xs text-gray-500">This week</p>
+            {/* Quick Actions Section */}
+            <div className="mt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
+                <h2 className="text-xl font-bold text-green-800">Quick Actions</h2>
+                <p className="text-sm text-gray-500">
+                  Handle your most common tasks in just a few taps.
+                </p>
               </div>
-              {/* On-time Rate */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                    <FiTrendingUp className="w-6 h-6 text-green-600" />
-                  </div>
-                  <span className="text-3xl font-bold text-green-800">95%</span>
-                </div>
-                <h3 className="text-sm font-semibold text-green-700 mb-1">On-time Rate</h3>
-                <p className="text-xs text-gray-500">This week's performance</p>
-              </div>
-            </div>
-            {/* Quick Actions Section (custom layout) */}
-            <h2 className="text-xl font-bold text-green-800 mb-4">Quick Actions</h2>
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => navigate('/resident/report')}
-                  className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdReport className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">Report Issue</h3>
-                      <p className="text-xs text-white/80 mt-1">Submit a waste collection issue</p>
-                    </div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => navigate('/resident/schedule')}
-                  className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdEvent className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">View Schedule</h3>
-                      <p className="text-xs text-white/80 mt-1">See your collection schedule</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-              <button
-                onClick={() => navigate('/resident/iec')}
-                className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 w-full"
-              >
-                <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <MdMenuBook className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">Access IEC Materials</h3>
-                    <p className="text-xs text-white/80 mt-1">View waste management guides</p>
-                  </div>
-                </div>
-              </button>
-            </div>
-            {/* Today's Summary (Truck Driver style, for Resident) */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-8">
-              <h2 className="text-xl font-bold text-green-800 mb-4">Today's Summary</h2>
-              <div className="space-y-4">
-                {/* Next Collection */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <MdEvent className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-green-800">Next Collection</p>
-                      <p className="text-sm text-gray-500">Monday, June 10, 2025</p>
-                      <p className="text-sm text-green-700 font-semibold">Basura <span className='text-gray-500 font-normal'>at 7:00 AM</span></p>
-                    </div>
-                  </div>
-                  <div className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {quickActionItems.map((item) => {
+                  const IconComponent = item.icon;
+                  return (
                     <button
-                      onClick={() => navigate('/resident/schedule')}
-                      className="p-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors flex items-center justify-center"
-                      aria-label="View Details"
+                      key={item.title}
+                      type="button"
+                      onClick={item.onClick}
+                      className="group relative flex flex-col justify-between rounded-2xl bg-gradient-to-br from-green-700 to-green-600 p-6 text-left shadow-lg text-white transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
-                      <FiChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-                {/* Upcoming Events */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <MdEvent className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-green-800 mb-1">Upcoming Events</p>
-                      {eventImages.slice(0, 2).map((event, i) => (
-                        <div key={i} className="mb-1">
-                          <span className="font-medium text-gray-800">{event.title}</span>
-                          <span className="ml-2 text-xs text-gray-500">{event.date}</span>
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-white">
+                          <IconComponent className="h-6 w-6" />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <button
-                      onClick={() => navigate('/resident')}
-                      className="p-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors flex items-center justify-center"
-                      aria-label="View All Events"
-                    >
-                      <FiChevronRight className="w-5 h-5" />
+                        <div className="flex-1">
+                          <h3 className="text-base font-semibold text-white">{item.title}</h3>
+                          <p className="mt-2 text-sm text-white/80 leading-relaxed">{item.description}</p>
+                        </div>
+                      </div>
+                      <div className="mt-5 flex items-center justify-between text-sm font-medium text-white/90">
+                        <span>{item.indicatorLabel}</span>
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors group-hover:bg-white group-hover:text-green-700">
+                          <FiChevronRight className="h-4 w-4" />
+                        </span>
+                      </div>
                     </button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -843,7 +1086,9 @@ export default function ResidentDashboard() {
       </footer>
     </div>
   );
-}
+};
+
+export default ResidentDashboard;
 
 // Add animations to App.css if not present:
 // .animate-fadeInLeft { animation: fadeInLeft 0.2s ease; }

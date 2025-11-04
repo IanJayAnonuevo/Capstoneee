@@ -1,27 +1,61 @@
 import { Navigate, useLocation } from 'react-router-dom'
 
-export function isAuthenticated() {
+const ROLE_PATH_MAP = {
+  admin: '/admin/dashboard',
+  resident: '/resident',
+  barangay_head: '/barangayhead',
+  truck_driver: '/truckdriver',
+  garbage_collector: '/garbagecollector',
+  foreman: '/foreman'
+}
+
+export function getStoredUser() {
   try {
     const raw = localStorage.getItem('user')
-    if (!raw) return false
-    const user = JSON.parse(raw)
-    return Boolean(user && user.user_id)
+    if (!raw) return null
+    return JSON.parse(raw)
   } catch {
-    return false
+    return null
   }
 }
 
-export default function RequireAuth({ children }) {
+export function getUserRole() {
+  const user = getStoredUser()
+  if (!user || !user.role) return null
+  return String(user.role).toLowerCase()
+}
+
+export function getDefaultRouteForRole(role) {
+  if (!role) return '/'
+  return ROLE_PATH_MAP[role] || '/'
+}
+
+export function isAuthenticated() {
+  const user = getStoredUser()
+  return Boolean(user && user.user_id)
+}
+
+export default function RequireAuth({ children, allowedRoles }) {
   const location = useLocation()
-  if (!isAuthenticated()) {
+  const user = getStoredUser()
+
+  if (!user || !user.user_id) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
+
+  const role = getUserRole()
+  if (Array.isArray(allowedRoles) && allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    const redirectPath = getDefaultRouteForRole(role)
+    return <Navigate to={redirectPath} replace />
+  }
+
   return children
 }
 
 export function GuestOnly({ children }) {
-  if (isAuthenticated()) {
-    return <Navigate to="/" replace />
+  const role = getUserRole()
+  if (role) {
+    return <Navigate to={getDefaultRouteForRole(role)} replace />
   }
   return children
 }

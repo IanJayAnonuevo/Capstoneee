@@ -2,6 +2,9 @@
 // Set timezone to Philippines
 date_default_timezone_set('Asia/Manila');
 
+// Configuration
+const RESET_CODE_TTL_MINUTES = 30; // Duration before reset codes expire
+
 // Turn on error display temporarily for debugging
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
@@ -82,6 +85,8 @@ switch ($action) {
 
 function handleSendResetCode($pdo, $input) {
     $email = $input['email'] ?? '';
+    // Normalize email to avoid case/space mismatches
+    $email = strtolower(trim($email));
     
     if (empty($email)) {
         echo json_encode(['status' => 'error', 'message' => 'Email is required']);
@@ -100,53 +105,56 @@ function handleSendResetCode($pdo, $input) {
     
     // Generate 6-digit reset code
     $resetCode = sprintf('%06d', mt_rand(0, 999999));
-    $expiryTime = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+    $expiryTime = date('Y-m-d H:i:s', strtotime('+' . RESET_CODE_TTL_MINUTES . ' minutes'));
     
     // Store reset code in database
-    $stmt = $pdo->prepare("INSERT INTO password_resets (email, reset_code, expiry_time, created_at) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE reset_code = ?, expiry_time = ?, created_at = NOW()");
-    $stmt->execute([$email, $resetCode, $expiryTime, $resetCode, $expiryTime]);
+    $stmt = $pdo->prepare("INSERT INTO password_resets (email, reset_code, expiry_time, verified, used, created_at) VALUES (?, ?, ?, 0, 0, NOW()) ON DUPLICATE KEY UPDATE reset_code = VALUES(reset_code), expiry_time = VALUES(expiry_time), verified = 0, used = 0, created_at = NOW()");
+    $stmt->execute([$email, $resetCode, $expiryTime]);
     
     // Send email with reset code
     try {
         require_once '../lib/EmailHelper.php';
         $emailHelper = new EmailHelper();
-        $emailHelper->sendPasswordResetCode($email, $user['username'], $resetCode, $expiryTime);
+        $sendResult = $emailHelper->sendPasswordResetCode($email, $user['username'], $resetCode, $expiryTime);
         
         echo json_encode([
             'status' => 'success',
             'message' => 'Reset code sent successfully to your email',
             'data' => [
                 'email' => $email,
-                'expiry_time' => $expiryTime
+                'expiry_time' => $expiryTime,
+                'transport' => $sendResult['transport'] ?? null,
             ]
         ]);
     } catch (Exception $e) {
-        // If email fails, still return success but log the error
         error_log("Email sending failed: " . $e->getMessage());
-        
+
         echo json_encode([
-            'status' => 'success',
-            'message' => 'Reset code generated successfully (email delivery failed)',
+            'status' => 'error',
+            'message' => 'We generated a reset code but sending the email failed. Please try again shortly or contact support.',
             'data' => [
-                'reset_code' => $resetCode, // Fallback: return code in response
+                'email' => $email,
                 'expiry_time' => $expiryTime,
-                'email_error' => $e->getMessage()
-            ]
+            ],
+            'email_error' => $e->getMessage()
         ]);
     }
 }
 
 function handleVerifyResetCode($pdo, $input) {
     $email = $input['email'] ?? '';
+    // Normalize email to avoid case/space mismatches
+    $email = strtolower(trim($email));
     $resetCode = $input['reset_code'] ?? '';
+    $resetCode = trim($resetCode);
     
     if (empty($email) || empty($resetCode)) {
         echo json_encode(['status' => 'error', 'message' => 'Email and reset code are required']);
         return;
     }
     
-    // Check if reset code is valid and not expired
-    $stmt = $pdo->prepare("SELECT * FROM password_resets WHERE email = ? AND reset_code = ? AND expiry_time > NOW() AND used = 0");
+    // Check if reset code is valid and not expired (NULL-safe for used)
+    $stmt = $pdo->prepare("SELECT * FROM password_resets WHERE email = ? AND reset_code = ? AND expiry_time > NOW() AND COALESCE(used, 0) = 0");
     $stmt->execute([$email, $resetCode]);
     $reset = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -167,7 +175,10 @@ function handleVerifyResetCode($pdo, $input) {
 
 function handleResetPassword($pdo, $input) {
     $email = $input['email'] ?? '';
+    // Normalize email to avoid case/space mismatches
+    $email = strtolower(trim($email));
     $resetCode = $input['reset_code'] ?? '';
+    $resetCode = trim($resetCode);
     $newPassword = $input['new_password'] ?? '';
     
     if (empty($email) || empty($resetCode) || empty($newPassword)) {
@@ -180,8 +191,8 @@ function handleResetPassword($pdo, $input) {
         return;
     }
     
-    // Verify reset code again
-    $stmt = $pdo->prepare("SELECT * FROM password_resets WHERE email = ? AND reset_code = ? AND expiry_time > NOW() AND verified = 1 AND used = 0");
+    // Verify reset code again (NULL-safe for verified and used)
+    $stmt = $pdo->prepare("SELECT * FROM password_resets WHERE email = ? AND reset_code = ? AND expiry_time > NOW() AND COALESCE(verified, 0) = 1 AND COALESCE(used, 0) = 0");
     $stmt->execute([$email, $resetCode]);
     $reset = $stmt->fetch(PDO::FETCH_ASSOC);
     

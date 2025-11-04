@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiUser, FiLock, FiLogIn } from 'react-icons/fi'
+import { FiUser, FiLock, FiAlertCircle, FiX } from 'react-icons/fi'
 import SignUp from './SignUp'
 import ForgotPassword from './ForgotPassword'
+import logo from '../../assets/logo/logo.png'
+
+const MIN_LOADING_DURATION_MS = 2000
+
+const waitForMinimumDuration = async (startTime, minDuration = MIN_LOADING_DURATION_MS) => {
+  const elapsed = Date.now() - startTime
+  if (elapsed < minDuration) {
+    await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed))
+  }
+}
 
 function Login() {
   const navigate = useNavigate();
@@ -13,69 +23,119 @@ function Login() {
 
   const [showSignUp, setShowSignUp] = useState(false)
   const [showForgot, setShowForgot] = useState(false)
-  const [error, setError] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [errorTitle, setErrorTitle] = useState('Sign-in Error')
+  const [showErrorModal, setShowErrorModal] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const openErrorModal = (message, title = 'Sign-in Error') => {
+    setErrorTitle(title)
+    setErrorMessage(message)
+    setShowErrorModal(true)
+  }
   
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+    e.preventDefault()
+    setErrorMessage('')
+    setShowErrorModal(false)
+    setLoading(true)
+
+    const startTime = Date.now()
+    let redirectPath = null
+    let shouldReloadAfterRedirect = false
 
     try {
-      console.log('Sending login request...', { username: formData.username, password: formData.password });
-      
+      console.log('Sending login request...', { username: formData.username, password: formData.password })
+
       // Use the authService instead of direct fetch
-      const { authService } = await import('../../services/authService.js');
+      const { authService } = await import('../../services/authService.js')
       const data = await authService.login({
         username: formData.username,
         password: formData.password
-      });
-      
-      console.log('Login response:', data);
-      
+      })
+
+      console.log('Login response:', data)
+
       if (data.status === 'success' && data.data) {
+        if (data.access_token) {
+          try {
+            localStorage.setItem('access_token', data.access_token)
+            if (typeof data.expires_in === 'number') {
+              const expiresAt = Date.now() + data.expires_in * 1000
+              localStorage.setItem('token_expires_at', String(expiresAt))
+            } else {
+              localStorage.removeItem('token_expires_at')
+            }
+            if (data.token_type) {
+              localStorage.setItem('token_type', data.token_type)
+            } else {
+              localStorage.removeItem('token_type')
+            }
+          } catch (storageError) {
+            console.error('Unable to persist session token:', storageError)
+          }
+        }
+
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(data.data))
-        localStorage.setItem('user_id', data.data.user_id); // Use 'user_id' as the user ID
-        
-        const userRole = (data.data.role || '').toLowerCase();
-        console.log('User role:', userRole); // Debug log
+        localStorage.setItem('user_id', data.data.user_id) // Use 'user_id' as the user ID
+
+        const userRole = (data.data.role || '').toLowerCase()
+        console.log('User role:', userRole) // Debug log
 
         // Redirect based on user role
         switch (userRole) {
           case 'admin':
-            console.log('Redirecting to admin dashboard...');
-            navigate('/admin/dashboard', { replace: true });
-            break;
+            console.log('Redirecting to admin dashboard...')
+            redirectPath = '/admin/dashboard'
+            break
           case 'resident':
-            navigate('/resident', { replace: true });
-            break;
+            redirectPath = '/resident'
+            break
           case 'barangay_head':
-            navigate('/barangayhead', { replace: true });
-            break;
+            redirectPath = '/barangayhead'
+            break
           case 'truck_driver':
-            navigate('/truckdriver', { replace: true });
-            break;
+            redirectPath = '/truckdriver'
+            break
           case 'garbage_collector':
-            navigate('/garbagecollector', { replace: true });
-            break;
+            redirectPath = '/garbagecollector'
+            break
+          case 'foreman':
+            redirectPath = '/foreman'
+            break
           default:
-            console.error('Invalid role:', userRole);
-            setError('Invalid user role: ' + data.data.role)
+            console.error('Invalid role:', userRole)
+            openErrorModal('Invalid user role: ' + data.data.role, 'Role Not Supported')
         }
-        
-        // Force a page reload as backup
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
+
+        if (redirectPath) {
+          shouldReloadAfterRedirect = true
+        }
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.')
+        openErrorModal(data.message || 'Login failed. Please check your credentials.', 'Invalid Credentials')
       }
     } catch (err) {
       console.error('Login error:', err)
-      setError(err instanceof Error ? err.message : 'Network error. Please try again later.')
-    } finally {
-      setLoading(false)
+      const fallbackMessage = err instanceof Error ? err.message : 'Network error. Please try again later.'
+      const title = err instanceof Error && err.message.toLowerCase().includes('network')
+        ? 'Network Error'
+        : 'Sign-in Error'
+      openErrorModal(fallbackMessage, title)
+    }
+
+    if (redirectPath) {
+      await waitForMinimumDuration(startTime)
+    }
+    setLoading(false)
+
+    if (redirectPath) {
+      navigate(redirectPath, { replace: true })
+      if (shouldReloadAfterRedirect) {
+        setTimeout(() => {
+          window.location.reload()
+        }, 100)
+      }
     }
   }
 
@@ -111,43 +171,68 @@ function Login() {
           </div>
         </div>
       )}
+
+      {showErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative animate-fadeIn">
+            <button
+              type="button"
+              onClick={() => setShowErrorModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+              aria-label="Close error dialog"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <FiAlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-red-700">{errorTitle}</h3>
+                <p className="text-gray-600 mt-2 leading-relaxed">
+                  {errorMessage || 'Login failed. Please check your credentials and try again.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowErrorModal(false)}
+                className="w-full py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-green-100 px-4 py-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Left side: Branding or image placeholder */}
           <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-green-500 to-green-600 items-center justify-center relative overflow-hidden">
             <div className="text-center text-white p-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <span className="inline-block w-4 h-4 bg-white rounded-full"></span>
-                <span className="inline-block w-3 h-8 bg-green-300 rounded-sm"></span>
+              <div className="flex items-center justify-center mb-6">
+                <img
+                  src={logo}
+                  alt="KolekTrash logo"
+                  className="h-20 w-auto drop-shadow-lg"
+                />
               </div>
-              <h1 className="text-4xl font-bold mb-4">KolekTrash</h1>
-              <p className="text-green-100 text-lg">Smart Waste Management System</p>
-              <div className="mt-8 space-y-2 text-green-100">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-200 rounded-full"></span>
-                  <span>Efficient Collection</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-200 rounded-full"></span>
-                  <span>Real-time Tracking</span>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-200 rounded-full"></span>
-                  <span>Community Management</span>
-                </div>
-              </div>
+              <h1 className="text-4xl font-bold tracking-[0.2em] uppercase mb-3">KOLEKTRASH</h1>
+              <p className="text-green-100 text-lg font-medium">MENRO Waste Collection System</p>
             </div>
           </div>
           
           {/* Mobile header - visible only on mobile */}
           <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-8 px-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="inline-block w-3 h-3 bg-white rounded-full"></span>
-              <span className="inline-block w-2 h-6 bg-green-300 rounded-sm"></span>
+            <div className="flex items-center justify-center mb-4">
+              <img
+                src={logo}
+                alt="KolekTrash logo"
+                className="h-14 w-auto drop-shadow"
+              />
             </div>
-            <h1 className="text-2xl font-bold">KolekTrash</h1>
-            <p className="text-green-100 text-sm mt-2">Smart Waste Management System</p>
+            <h1 className="text-2xl font-bold tracking-[0.25em] uppercase">KOLEKTRASH</h1>
+            <p className="text-green-100 text-sm mt-2 font-medium">MENRO Waste Collection System</p>
           </div>
           
           {/* Right side: Login form */}
@@ -156,15 +241,6 @@ function Login() {
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Welcome Back!</h2>
               <p className="text-gray-600 text-sm">Sign in to your account to continue</p>
             </div>
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-r-md mb-6 shadow-sm">
-                <div className="flex items-center">
-                  <span className="text-red-500 mr-2">⚠️</span>
-                  <span className="text-sm">{error}</span>
-                </div>
-              </div>
-            )}
-            
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-1">
                 <label htmlFor="username" className="block text-sm font-semibold text-gray-700">
@@ -236,10 +312,7 @@ function Login() {
                     <span>Signing In...</span>
                   </>
                 ) : (
-                  <>
-                    <FiLogIn size={20} />
-                    <span>Sign In</span>
-                  </>
+                  <span>Sign In</span>
                 )}
               </button>
             </form>

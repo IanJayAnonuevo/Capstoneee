@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$taskName = 'Koletrash-NextDayPredefined'
+$taskName = 'KolekTrash-NextDayPredefined'
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $psPath = Join-Path $scriptDir 'run_generate_predefined_nextday.ps1'
 

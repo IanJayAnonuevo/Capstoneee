@@ -4,6 +4,9 @@ if (!ini_get('date.timezone')) {
     date_default_timezone_set('Asia/Manila');
 }
 
+// Configuration
+const SIGNUP_CODE_TTL_MINUTES = 30; // Duration before signup verification codes expire
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -77,7 +80,7 @@ function ensureEmailVerificationTable($pdo)
 
 function handleSendVerificationCode($pdo, $input)
 {
-    $email = trim($input['email'] ?? '');
+    $email = strtolower(trim($input['email'] ?? ''));
     $name = trim(($input['firstname'] ?? '') . ' ' . ($input['lastname'] ?? ''));
 
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -108,7 +111,7 @@ function handleSendVerificationCode($pdo, $input)
     }
 
     $verificationCode = sprintf('%06d', random_int(0, 999999));
-    $expiryTime = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+    $expiryTime = date('Y-m-d H:i:s', strtotime('+' . SIGNUP_CODE_TTL_MINUTES . ' minutes'));
 
     $stmt = $pdo->prepare('INSERT INTO email_verifications (email, verification_code, expiry_time, verified, used, resend_count, created_at, last_sent_at)
         VALUES (?, ?, ?, 0, 0, 0, NOW(), NOW())
@@ -116,20 +119,25 @@ function handleSendVerificationCode($pdo, $input)
     $stmt->execute([$email, $verificationCode, $expiryTime]);
 
     $emailError = null;
+    $deliveryStatus = 'sent';
+    $transportUsed = null;
 
     try {
         $mailer = new EmailHelper();
-        $mailer->sendSignupVerificationCode($email, $name, $verificationCode, $expiryTime);
+        $sendResult = $mailer->sendSignupVerificationCode($email, $name, $verificationCode, $expiryTime);
+        $transportUsed = $sendResult['transport'] ?? null;
     } catch (Exception $e) {
         error_log('Failed to send signup verification email: ' . $e->getMessage());
         $emailError = $e->getMessage();
+        $deliveryStatus = 'failed';
     }
 
     echo json_encode([
         'status' => 'success',
         'message' => 'Verification code sent successfully.',
         'expiry_time' => $expiryTime,
-        'delivery' => $emailError ? 'failed' : 'sent',
+        'delivery' => $deliveryStatus,
+        'transport' => $transportUsed,
         'email_error' => $emailError,
         'verification_code' => $emailError ? $verificationCode : null
     ]);
@@ -137,7 +145,7 @@ function handleSendVerificationCode($pdo, $input)
 
 function handleVerifyCode($pdo, $input)
 {
-    $email = trim($input['email'] ?? '');
+    $email = strtolower(trim($input['email'] ?? ''));
     $code = trim($input['verification_code'] ?? '');
 
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -150,7 +158,15 @@ function handleVerifyCode($pdo, $input)
         return;
     }
 
-    $stmt = $pdo->prepare('SELECT * FROM email_verifications WHERE email = ? AND verification_code = ? AND expiry_time > NOW() AND used = 0');
+    // Block verification if email already registered
+    $stmt = $pdo->prepare('SELECT 1 FROM user WHERE email = ? LIMIT 1');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        echo json_encode(['status' => 'error', 'message' => 'This email is already registered. Please log in instead.']);
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM email_verifications WHERE email = ? AND verification_code = ? AND expiry_time > NOW() AND COALESCE(used,0) = 0');
     $stmt->execute([$email, $code]);
     $record = $stmt->fetch(PDO::FETCH_ASSOC);
 

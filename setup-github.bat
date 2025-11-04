@@ -52,12 +52,12 @@ echo           NEXT STEPS
 echo ========================================
 echo.
 echo 1. Go to https://github.com and create a new repository
-echo    Name it: koletrash
+echo    Name it: kolektrash
 echo    Make it Private (recommended)
 echo    Do NOT initialize with README
 echo.
 echo 2. After creating the repository, copy the URL and run:
-echo    git remote add origin https://github.com/yourusername/koletrash.git
+echo    git remote add origin https://github.com/yourusername/kolektrash.git
 echo    git branch -M main
 echo    git push -u origin main
 echo    git push origin v1.0.0

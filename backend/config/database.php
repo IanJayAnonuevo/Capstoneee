@@ -1,10 +1,10 @@
 <?php
 class Database {
     // Database Parameters
-    private $host = 'localhost'; // Hostinger usually uses localhost
-    private $db_name = 'u366677621_kolektrash_db'; // Replace with your actual database name
-    private $username = 'u366677621_kolektrash'; // Replace with your database username
-    private $password = 'Kolektrash2025'; // Replace with your database password
+    private $host = 'localhost'; // Local XAMPP MySQL
+    private $db_name = 'kolektrash_db'; // Local database name
+    private $username = 'root'; // Default XAMPP username
+    private $password = ''; // Default XAMPP password (empty)
     private $conn;
 
     // Database Connect
@@ -19,7 +19,9 @@ class Database {
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch(PDOException $e) {
-            echo "Connection Error: " . $e->getMessage();
+            // Don't echo directly - let the calling code handle the error
+            error_log("Database connection error: " . $e->getMessage());
+            return null;
         }
 
         return $this->conn;

@@ -4,8 +4,8 @@ header("Content-Type: application/json");
 require_once("../config/database.php");
 
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=kolektrash_db", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $database = new Database();
+    $pdo = $database->connect();
     $stmt = $pdo->prepare("SELECT * FROM barangay");
     $stmt->execute();
     $barangays = $stmt->fetchAll(PDO::FETCH_ASSOC);

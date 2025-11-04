@@ -6,14 +6,9 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 
-// Import scheduleData from ManageSchedule component
 import ManageSchedule from './ManageSchedule';
 
-// Import the conversion function from the service
 import { convertScheduleToRoutes } from '../../services/scheduleService';
-
-// Import the schedule data from the data file
-import { scheduleData } from '../../data/scheduleData';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -49,13 +44,12 @@ const SIPOCOT_BOUNDS = [
   [13.8266, 123.0326]  // Northeast bounds
 ];
 
-// API base URL - adjust this to match your backend setup
-const API_BASE_URL = 'https://koletrash.systemproj.combackend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+import { buildApiUrl } from '../../config/api';
 
 // Function to fetch scheduled routes from API (daily generated routes)
 const fetchScheduledRoutes = async (date) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/get_routes.php?date=${date}`);
+  const response = await fetch(buildApiUrl(`get_routes.php?date=${date}`));
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -101,7 +95,7 @@ const fetchScheduledRoutes = async (date) => {
 // Fetch full route details including ordered stops
 const fetchRouteDetails = async (routeId) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/get_route_details.php?id=${routeId}`);
+  const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`));
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -557,7 +551,7 @@ const ManageRoute = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/regenerate_routes.php`, {
+  const res = await fetch(buildApiUrl('regenerate_routes.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, policy: 'preserve_manual', scope: 'all' })
@@ -578,7 +572,7 @@ const ManageRoute = () => {
     if (!selectedRoute?.id) return;
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_BASE_URL}/get_assignment_options.php`);
+  const res = await fetch(buildApiUrl('get_assignment_options.php'));
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Failed to load assignment options');
       setAssignData({ trucks: data.trucks || [], teams: data.teams || [] });
@@ -595,7 +589,7 @@ const ManageRoute = () => {
     e?.preventDefault?.();
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_BASE_URL}/update_route_assignment.php`, {
+  const res = await fetch(buildApiUrl('update_route_assignment.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(assignForm)
@@ -620,7 +614,7 @@ const ManageRoute = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/get_assignment_options.php`);
+  const res = await fetch(buildApiUrl('get_assignment_options.php'));
         const data = await res.json();
         if (data.success) setAssignData({ trucks: data.trucks || [], teams: data.teams || [] });
       } catch (e) {
@@ -883,7 +877,7 @@ const ManageRoute = () => {
   async function submitAssign(e){
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE_URL}/update_route_assignment.php`, {
+  const res = await fetch(buildApiUrl('update_route_assignment.php'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(assignForm)
       });
@@ -1555,7 +1549,7 @@ const ManageRoute = () => {
       )}
 
       {/* Add/Edit Route Modal */}
-      {showForm && (
+      {showForm && formRoute && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
           onClick={closeForm}
         >
@@ -1571,7 +1565,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Route Name</label>
                   <input 
                     name="name" 
-                    value={formRoute.name} 
+                    value={formRoute.name ?? ''} 
                     onChange={handleFormChange} 
                     required 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
@@ -1581,7 +1575,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Truck</label>
                   <input 
                     name="truck" 
-                    value={formRoute.truck} 
+                    value={formRoute.truck ?? ''} 
                     onChange={handleFormChange} 
                     required 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
@@ -1591,7 +1585,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Driver</label>
                   <select 
                     name="driver" 
-                    value={formRoute.driver} 
+                    value={formRoute.driver ?? ''} 
                     onChange={handleFormChange} 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
@@ -1602,7 +1596,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Barangay</label>
                   <select 
                     name="barangay" 
-                    value={formRoute.barangay} 
+                    value={formRoute.barangay ?? ''} 
                     onChange={handleFormChange} 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
@@ -1613,7 +1607,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Date & Time</label>
                   <input 
                     name="datetime" 
-                    value={formRoute.datetime} 
+                    value={formRoute.datetime ?? ''} 
                     onChange={handleFormChange} 
                     required 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
@@ -1623,7 +1617,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Total Volume (tons)</label>
                   <input 
                     name="volume" 
-                    value={formRoute.volume} 
+                    value={formRoute.volume ?? ''} 
                     onChange={handleFormChange} 
                     required 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
@@ -1633,7 +1627,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Status</label>
                   <select 
                     name="status" 
-                    value={formRoute.status} 
+                    value={formRoute.status ?? ''} 
                     onChange={handleFormChange} 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
@@ -1646,7 +1640,7 @@ const ManageRoute = () => {
                   <label className="block mb-1 font-medium text-xs text-gray-800">Driver Notes</label>
                   <textarea 
                     name="driverNotes" 
-                    value={formRoute.driverNotes} 
+                    value={formRoute.driverNotes ?? ''} 
                     onChange={handleFormChange} 
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 min-h-[60px] text-sm bg-green-50 text-gray-800 outline-none resize-y transition-all duration-200 focus:border-green-800"
                   />

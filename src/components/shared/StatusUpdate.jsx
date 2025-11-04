@@ -1,51 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { FiClock, FiCheckCircle, FiXCircle, FiUserCheck } from "react-icons/fi";
+import { useStatus } from "../../contexts/StatusContext";
 
-const StatusUpdate = ({ userId, currentStatus, onStatusUpdate }) => {
-  const [status, setStatus] = useState(currentStatus || 'Off Duty');
-  const [isUpdating, setIsUpdating] = useState(false);
+const StatusUpdate = ({ userId, currentStatus, onStatusUpdate, showAutoUpdate = true }) => {
+  const { status, updateStatus, isUpdating } = useStatus();
   const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
-    setStatus(currentStatus || 'Off Duty');
-  }, [currentStatus]);
+    if (currentStatus) {
+      // Update context status when currentStatus prop changes
+      updateStatus(currentStatus, userId);
+    }
+  }, [currentStatus, userId, updateStatus]);
 
-  const updateStatus = async (newStatus) => {
+  const handleStatusUpdate = async (newStatus) => {
     if (!userId) {
       showStatusMessage("Error: User ID is missing", 'error');
       return;
     }
     
-    setIsUpdating(true);
-    try {
-      const response = await fetch("https://koletrash.systemproj.com/backend/api/update_user_status.php", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          status: newStatus
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setStatus(newStatus);
-        setLastUpdate(new Date().toLocaleTimeString());
-        if (onStatusUpdate) {
-          onStatusUpdate(newStatus);
-        }
-        // Show success message
-        showStatusMessage(`Status updated to ${newStatus}`, 'success');
-      } else {
-        showStatusMessage(data.message || "Failed to update status", 'error');
+    const success = await updateStatus(newStatus, userId);
+    
+    if (success) {
+      setLastUpdate(new Date().toLocaleTimeString());
+      if (onStatusUpdate) {
+        onStatusUpdate(newStatus);
       }
-    } catch (error) {
-      showStatusMessage("Error updating status: " + error.message, 'error');
-    } finally {
-      setIsUpdating(false);
+      showStatusMessage(`Status updated to ${newStatus}`, 'success');
+    } else {
+      showStatusMessage("Failed to update status", 'error');
     }
   };
 
@@ -92,58 +75,19 @@ const StatusUpdate = ({ userId, currentStatus, onStatusUpdate }) => {
 
       <div className="space-y-2">
         <p className="text-sm text-gray-600 mb-3">
-          Update your current work status:
+          Your status is managed automatically based on your route activity.
         </p>
-        
-        <div className="grid grid-cols-1 gap-2">
-          <button
-            onClick={() => updateStatus('On Duty')}
-            disabled={isUpdating || status === 'On Duty'}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-              status === 'On Duty'
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-green-50 hover:border-green-200'
-            } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <FiCheckCircle className="text-green-600" />
-            <div className="text-left">
-              <div className="font-medium">Check In - On Duty</div>
-              <div className="text-xs text-gray-500">Start your work shift</div>
+        {showAutoUpdate && (
+          <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <FiCheckCircle className="text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">Auto Status Update</span>
             </div>
-          </button>
-
-          <button
-            onClick={() => updateStatus('Off Duty')}
-            disabled={isUpdating || status === 'Off Duty'}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-              status === 'Off Duty'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-red-50 hover:border-red-200'
-            } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <FiXCircle className="text-red-600" />
-            <div className="text-left">
-              <div className="font-medium">Check Out - Off Duty</div>
-              <div className="text-xs text-gray-500">End your work shift</div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => updateStatus('On Leave')}
-            disabled={isUpdating || status === 'On Leave'}
-            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-              status === 'On Leave'
-                ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-yellow-50 hover:border-yellow-200'
-            } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <FiClock className="text-yellow-600" />
-            <div className="text-left">
-              <div className="font-medium">On Leave</div>
-              <div className="text-xs text-gray-500">Taking time off or break</div>
-            </div>
-          </button>
-        </div>
+            <p className="text-xs text-blue-700">
+              It switches to "On Duty" when you start a route and back to "Off Duty" when you complete it.
+            </p>
+          </div>
+        )}
 
         {lastUpdate && (
           <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">

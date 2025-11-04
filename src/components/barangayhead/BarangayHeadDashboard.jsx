@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend } from 'react-icons/fi';
+import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiBarChart2, FiClipboard } from 'react-icons/fi';
 import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson, MdQuestionAnswer } from 'react-icons/md';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { authService } from '../../services/authService';
+import eventTreePlanting from '../../assets/images/users/tp.jpg';
+import eventCleanUp from '../../assets/images/users/cd.jpg';
+import eventCampaign from '../../assets/images/users/s.jpg';
+import eventCoastal from '../../assets/images/users/an.jpg';
+import { calculateUnreadCount } from '../../utils/notificationUtils';
+import BrandedLoader from '../shared/BrandedLoader';
+import { useLoader } from '../../contexts/LoaderContext';
 
 const faqData = [
   {
@@ -37,36 +44,30 @@ const faqData = [
   },
 ];
 
-const tips = [
-  'Tip: Monitor collection schedules and reports from residents!',
-  'Reminder: Coordinate with MENRO for upcoming events.',
-  'Did you know? You can review feedback and suggestions from your barangay.',
-];
-
 const eventImages = [
   {
-    url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop',
+    image: eventTreePlanting,
     title: 'Tree Planting Activity',
-    date: 'May 15, 2025',
-    description: 'Join us in making Sipocot greener!',
+    date: 'October 20, 2025',
+    location: 'Gaongan, Sipocot, Camarines Sur',
   },
   {
-    url: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=800&auto=format&fit=crop',
-    title: 'Coastal Cleanup Drive',
-    date: 'May 20, 2025',
-    description: 'Help us keep our waters clean',
+    image: eventCleanUp,
+    title: 'Clean Up Drive',
+    date: 'October 24, 2025',
+    location: 'Impig, Sipocot, Camarines Sur',
   },
   {
-    url: 'https://images.unsplash.com/photo-1544928147-79a2dbc1f389?w=800&auto=format&fit=crop',
-    title: 'Waste Segregation Seminar',
-    date: 'May 25, 2025',
-    description: 'Learn proper waste management',
+    image: eventCampaign,
+    title: 'Campaign Seminar',
+    date: 'October 26, 2025',
+    location: 'Caima, Sipocot, Camarines Sur',
   },
   {
-    url: 'https://images.unsplash.com/photo-1542601600647-3a722a90a76b?w=800&auto=format&fit=crop',
-    title: 'Environmental Campaign',
-    date: 'June 1, 2025',
-    description: 'Building a sustainable future',
+    image: eventCoastal,
+    title: 'Coastal Clean Up Drive',
+    date: 'October 30, 2025',
+    location: 'Anib, Sipocot, Camarines Sur',
   },
 ];
 
@@ -85,6 +86,7 @@ const carouselSettings = {
 export default function BarangayHeadDashboard({ unreadNotifications: initialUnread = 0 }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showLoader } = useLoader();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -94,15 +96,193 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
   ]);
   const [messageInput, setMessageInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showTip, setShowTip] = useState(true);
-  const [tipIndex, setTipIndex] = useState(0);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(initialUnread);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState('');
+  const [avatarCooldownUntil, setAvatarCooldownUntil] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setUnreadNotifications(initialUnread);
   }, [initialUnread]);
+
+  const normalizeAvatarUrl = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+    return authService.resolveAssetUrl(value);
+  };
+
+  const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  const parseServerTimestamp = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    const formatted = value.replace(' ', 'T');
+    const candidate = `${formatted}+08:00`;
+    const parsed = Date.parse(candidate);
+    if (Number.isNaN(parsed)) {
+      const fallback = Date.parse(value);
+      return Number.isNaN(fallback) ? null : fallback;
+    }
+    return parsed;
+  };
+
+  const computeCooldownUntil = (timestampString) => {
+    const parsed = parseServerTimestamp(timestampString);
+    if (!parsed) return null;
+    const target = parsed + COOLDOWN_DURATION_MS;
+    return target > Date.now() ? target : null;
+  };
+
+  const formatCooldownMessage = (targetMs) => {
+    if (!targetMs) return '';
+    const diffMs = targetMs - Date.now();
+    if (diffMs <= 0) return '';
+    const totalMinutes = Math.ceil(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) {
+      return `You can change your photo again in ${hours}h ${minutes}m.`;
+    }
+    return `You can change your photo again in ${totalMinutes} minute${totalMinutes === 1 ? '' : 's'}.`;
+  };
+
+  const getAvatarStorageKey = () => {
+    const identifier = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    return identifier ? `barangayHeadAvatar:${identifier}` : null;
+  };
+
+  const handleAvatarClick = () => {
+    if (isAvatarUploading) {
+      return;
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil <= Date.now()) {
+      setAvatarCooldownUntil(null);
+    }
+
+    if (avatarCooldownUntil && avatarCooldownUntil > Date.now()) {
+      setAvatarUploadError(formatCooldownMessage(avatarCooldownUntil));
+      return;
+    }
+
+    setAvatarUploadError('');
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const targetUserId = resolvedUserId || user?.user_id || user?.id || localStorage.getItem('user_id');
+    if (!targetUserId) {
+      setAvatarUploadError('Profile is still loading. Try again soon.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('Use a PNG, JPG, WEBP, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setAvatarUploadError('Image must be smaller than 2 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarUploadError('');
+    const previousAvatar = avatarPreview;
+    const tempPreview = URL.createObjectURL(file);
+    setAvatarPreview(tempPreview);
+    setIsAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('user_id', targetUserId);
+      formData.append('avatar', file);
+
+      const response = await authService.uploadProfileImage(formData);
+      if (response?.status === 'success') {
+        const relativePath = response?.data?.relativePath || response?.relativePath || null;
+        const providedUrl = response?.data?.imageUrl || response?.imageUrl || tempPreview;
+        const resolvedUrl = normalizeAvatarUrl(relativePath || providedUrl);
+
+        setAvatarPreview(resolvedUrl);
+
+        const key = getAvatarStorageKey();
+        if (key && resolvedUrl) {
+          localStorage.setItem(key, resolvedUrl);
+        }
+
+        const updatedAt = response?.data?.updatedAt || null;
+        const cooldownUntil = computeCooldownUntil(updatedAt) || (Date.now() + COOLDOWN_DURATION_MS);
+        setAvatarCooldownUntil(cooldownUntil);
+
+        setUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            profile_image: relativePath || prev.profile_image || providedUrl,
+            profile_image_updated_at: updatedAt || prev?.profile_image_updated_at,
+            avatar: resolvedUrl,
+          };
+        });
+
+        try {
+          const stored = localStorage.getItem('user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            parsed.profile_image = relativePath || parsed.profile_image || providedUrl;
+            parsed.profile_image_updated_at = updatedAt || parsed.profile_image_updated_at;
+            parsed.avatar = resolvedUrl;
+            localStorage.setItem('user', JSON.stringify(parsed));
+          }
+        } catch (storageError) {
+          console.error('Unable to update stored user with new avatar:', storageError);
+        }
+      } else {
+        setAvatarPreview(previousAvatar || null);
+        setAvatarUploadError(response?.message || 'Upload failed. Please try again.');
+      }
+    } catch (error) {
+      setAvatarPreview(previousAvatar || null);
+      let fallbackMessage = error?.message || 'Upload failed. Please try again.';
+      const payload = error?.payload;
+      if (payload?.cooldownRemainingSeconds) {
+        let cooldownUntil = null;
+        if (payload?.cooldownEndsAt) {
+          cooldownUntil = payload.cooldownEndsAt * 1000;
+        } else {
+          cooldownUntil = Date.now() + payload.cooldownRemainingSeconds * 1000;
+        }
+        if (cooldownUntil) {
+          setAvatarCooldownUntil(cooldownUntil);
+          const message = formatCooldownMessage(cooldownUntil);
+          if (message) {
+            fallbackMessage = message;
+          }
+        }
+      }
+      setAvatarUploadError(fallbackMessage);
+    } finally {
+      setIsAvatarUploading(false);
+      URL.revokeObjectURL(tempPreview);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -111,18 +291,40 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           const fallbackId = localStorage.getItem('user_id');
-          const resolvedUserId = parsed.user_id || parsed.id || fallbackId;
+          const computedUserId = parsed.user_id || parsed.id || fallbackId;
 
-          if (resolvedUserId) {
-            const response = await authService.getUserData(resolvedUserId);
+          if (computedUserId) {
+            const response = await authService.getUserData(computedUserId);
             if (response.status === 'success') {
               setUser(response.data);
+              setResolvedUserId(computedUserId);
+              const avatarKey = `barangayHeadAvatar:${computedUserId}`;
+              const remoteAvatar = normalizeAvatarUrl(response.data?.profile_image || response.data?.avatar || response.data?.profileImage || null);
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              setAvatarPreview(remoteAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(response.data?.profile_image_updated_at));
             } else {
               console.error('Failed to fetch user data:', response.message);
               setUser(parsed);
+              if (computedUserId) {
+                setResolvedUserId(computedUserId);
+                const avatarKey = `barangayHeadAvatar:${computedUserId}`;
+                const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+                const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+                setAvatarPreview(fallbackAvatar || storedAvatar || null);
+                setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+              }
             }
           } else {
             setUser(parsed);
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `barangayHeadAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           }
         } else {
           console.warn('No user data found in localStorage');
@@ -133,6 +335,16 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
         if (storedUser) {
           try {
             setUser(JSON.parse(storedUser));
+            const parsed = JSON.parse(storedUser);
+            const fallbackId = parsed?.user_id || parsed?.id || localStorage.getItem('user_id');
+            if (fallbackId) {
+              setResolvedUserId(fallbackId);
+              const avatarKey = `barangayHeadAvatar:${fallbackId}`;
+              const storedAvatar = normalizeAvatarUrl(localStorage.getItem(avatarKey));
+              const fallbackAvatar = normalizeAvatarUrl(parsed?.profile_image || parsed?.avatar || parsed?.profileImage || null);
+              setAvatarPreview(fallbackAvatar || storedAvatar || null);
+              setAvatarCooldownUntil(computeCooldownUntil(parsed?.profile_image_updated_at));
+            }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
           }
@@ -154,28 +366,17 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
         return null;
       }
     })();
-    const uid = localStorage.getItem('user_id') || resolvedFromStorage || user?.user_id || user?.id;
+    const uid = resolvedUserId || localStorage.getItem('user_id') || resolvedFromStorage || user?.user_id || user?.id;
     if (!uid) return;
 
+    setResolvedUserId(uid);
     let active = true;
     const loadUnread = async () => {
       try {
-        const res = await fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
+  const res = await fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
         const data = await res.json();
         if (active && data?.success) {
-          const count = (data.notifications || []).reduce((acc, notification) => {
-            const isUnread = notification.response_status !== 'read';
-            let pendingAssignment = false;
-            try {
-              const parsedMessage = JSON.parse(notification.message || '{}');
-              if (parsedMessage && (parsedMessage.type === 'assignment' || parsedMessage.type === 'daily_assignments')) {
-                pendingAssignment = !['accepted', 'declined'].includes((notification.response_status || '').toLowerCase());
-              }
-            } catch (err) {
-              console.warn('Notification parse error', err);
-            }
-            return acc + ((isUnread || pendingAssignment) ? 1 : 0);
-          }, 0);
+          const count = calculateUnreadCount(data.notifications || []);
           setUnreadNotifications(count);
         }
       } catch (error) {
@@ -189,15 +390,19 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
       active = false;
       clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user, resolvedUserId]);
 
   useEffect(() => {
-    if (!showTip) return;
-    const intervalId = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % tips.length);
-    }, 8000);
-    return () => clearInterval(intervalId);
-  }, [showTip]);
+    if (!resolvedUserId) return;
+    const handleSync = (event) => {
+      const { userId, count } = event.detail || {};
+      if (String(userId) === String(resolvedUserId)) {
+        setUnreadNotifications(count);
+      }
+    };
+    window.addEventListener('notificationsUpdated', handleSync);
+    return () => window.removeEventListener('notificationsUpdated', handleSync);
+  }, [resolvedUserId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -221,31 +426,103 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showChat]);
 
+  const resolvedRole = (() => {
+    const rawRole = user?.role;
+    if (!rawRole) return 'Barangay Head';
+    const normalized = rawRole.toLowerCase().replace(/[_\s-]+/g, '');
+    if (normalized === 'barangayhead') return 'Barangay Head';
+    return rawRole;
+  })();
+
   const barangayHead = {
     name: user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : 'Loading...',
-    role: user?.role || 'Barangay Head',
-    avatar: user?.avatar || '',
+    role: resolvedRole,
+    avatar: avatarPreview || '',
+    id: user?.user_id || user?.id || resolvedUserId || '',
     username: user?.username || '',
     email: user?.email || '',
     assignedArea: user?.assignedArea || '',
   };
 
+  const handleNavigation = (targetPath, options = {}) => {
+    const { skipLoading = false, closeMenu = true, customAction } = options;
+
+    if (!skipLoading && targetPath && location.pathname !== targetPath) {
+      void showLoader({
+        primaryText: 'Loading your next view…',
+        secondaryText: 'We’re preparing the section you selected.',
+        variant: 'login'
+      });
+    }
+
+    if (closeMenu) {
+      setMenuOpen(false);
+    }
+
+    if (targetPath && location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
+    if (customAction) {
+      customAction();
+    }
+  };
+
   const navLinks = [
-    { label: 'Home', icon: <MdHome className="w-6 h-6" />, to: '/barangayhead', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead') navigate('/barangayhead'); } },
-    { label: 'Submit Report Issue', icon: <MdReport className="w-6 h-6" />, to: '/barangayhead/report', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/report') navigate('/barangayhead/report'); } },
-    { label: 'Submit Special Pick-up Request', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/pickup', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/pickup') navigate('/barangayhead/pickup'); } },
-    { label: 'View Collection Schedule', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/schedule', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/schedule') navigate('/barangayhead/schedule'); } },
-    { label: 'View Collection Reports', icon: <MdMenuBook className="w-6 h-6" />, to: '/barangayhead/collection-reports', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/collection-reports') navigate('/barangayhead/collection-reports'); } },
-    { label: 'View Appointment Request', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/appointments', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/appointments') navigate('/barangayhead/appointments'); } },
-    { label: 'Access IEC Materials', icon: <MdMenuBook className="w-6 h-6" />, to: '/barangayhead/iec', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/iec') navigate('/barangayhead/iec'); } },
-    { label: 'Feedback', icon: <FiMessageSquare className="w-6 h-6" />, to: '/barangayhead/feedback', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/feedback') navigate('/barangayhead/feedback'); } },
-    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/barangayhead/settings', onClick: () => { setMenuOpen(false); if (location.pathname !== '/barangayhead/settings') navigate('/barangayhead/settings'); } },
-    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, to: '/login', onClick: () => { setMenuOpen(false); setShowLogoutModal(true); } },
+    { label: 'Home', icon: <MdHome className="w-6 h-6" />, to: '/barangayhead', showLoading: true },
+    { label: 'Submit Report Issue', icon: <MdReport className="w-6 h-6" />, to: '/barangayhead/report', showLoading: true },
+    { label: 'View Issue Status', icon: <FiClipboard className="w-6 h-6" />, to: '/barangayhead/issue-status', showLoading: true },
+    { label: 'Submit Special Pick-up Request', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/pickup', showLoading: true },
+    { label: 'View Collection Schedule', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/schedule', showLoading: true },
+    { label: 'Access IEC Materials', icon: <MdMenuBook className="w-6 h-6" />, to: '/barangayhead/iec', showLoading: true },
+    { label: 'Feedback', icon: <FiMessageSquare className="w-6 h-6" />, to: '/barangayhead/feedback', showLoading: true },
+    { label: 'Settings', icon: <FiSettings className="w-6 h-6" />, to: '/barangayhead/settings', showLoading: true },
+    { label: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, action: () => setShowLogoutModal(true), showLoading: false },
   ];
 
-  const confirmLogout = () => {
+  // Compute cooldown message for avatar upload
+  const activeCooldownMessage = avatarUploadError ? '' : formatCooldownMessage(avatarCooldownUntil);
+
+  const quickActionItems = [
+    {
+      id: 'reports',
+      title: 'Submit Report Issue',
+      icon: MdReport,
+      indicatorLabel: 'Submit Report',
+      onClick: () => handleNavigation('/barangayhead/report', { closeMenu: false }),
+    },
+    {
+      id: 'special-pickup',
+      title: 'Submit Special Pick-up',
+      icon: MdEvent,
+      indicatorLabel: 'Submit Special Requests',
+      onClick: () => handleNavigation('/barangayhead/pickup', { closeMenu: false }),
+    },
+    {
+      id: 'schedule',
+      title: 'Collection Schedule',
+      icon: FiClipboard,
+      indicatorLabel: 'Open Schedule',
+      onClick: () => handleNavigation('/barangayhead/schedule', { closeMenu: false }),
+    },
+    {
+      id: 'iec',
+      title: 'IEC Materials',
+      icon: MdMenuBook,
+      indicatorLabel: 'Open Library',
+      onClick: () => handleNavigation('/barangayhead/iec', { closeMenu: false }),
+    },
+  ];
+
+  const confirmLogout = async () => {
     setShowLogoutModal(false);
     localStorage.removeItem('user');
+    localStorage.removeItem('user_id');
+    await showLoader({
+      primaryText: 'Signing you out…',
+      secondaryText: 'We’re securely closing your session.',
+      variant: 'login'
+    });
     navigate('/login', { replace: true });
   };
 
@@ -285,26 +562,50 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 w-full max-w-full relative">
-      {loading && (
-        <div className="fixed inset-0 bg-white/90 flex items-center justify-center z-50">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-green-700 font-medium">Loading user data...</p>
-          </div>
-        </div>
-      )}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
+      <BrandedLoader
+        visible={loading}
+        primaryText="Loading your dashboard…"
+        secondaryText="Preparing your barangay insights."
+        variant="login"
+      />
 
       {menuOpen && (
         <div className="fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black/30" onClick={() => setMenuOpen(false)} />
           <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
             <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg">
-                {barangayHead.avatar ? (
-                  <img src={barangayHead.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <MdPerson className="w-7 h-7 text-green-800" />
-                )}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  title="Change profile picture"
+                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                >
+                  {isAvatarUploading ? (
+                    <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                  ) : barangayHead.avatar ? (
+                    <img src={barangayHead.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <MdPerson className="w-7 h-7 text-green-800" />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Change
+                  </span>
+                </button>
+                {avatarUploadError ? (
+                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
+                ) : isAvatarUploading ? (
+                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
+                ) : activeCooldownMessage ? (
+                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
+                ) : null}
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-white font-semibold text-base truncate">{barangayHead.name}</h2>
@@ -320,22 +621,28 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
 
             <nav className="flex-1 overflow-y-auto py-4 px-2">
               <div className="space-y-1">
-                {navLinks.map((link) => (
+                {navLinks.map((link) => {
+                  const isActive = link.to && location.pathname === link.to;
+                  return (
                   <button
                     key={link.label}
                     className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors ${
                       link.label === 'Logout'
                         ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
                         : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
-                    } ${location.pathname === link.to ? 'border-2' : 'border'}`}
-                    onClick={link.onClick}
+                    } ${isActive ? 'border-2' : 'border'}`}
+                    onClick={() => handleNavigation(link.to, {
+                      skipLoading: link.showLoading === false,
+                      customAction: link.action
+                    })}
                   >
                     <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>{link.icon}</span>
                     <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
                       {link.label}
                     </span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </nav>
           </div>
@@ -396,23 +703,24 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
       </div>
 
       <div className="flex-1 flex flex-col w-full">
-        {location.pathname === '/barangayhead' ? (
+        {location.pathname === '/barangayhead' && (
           <div className="flex-1 bg-gray-50 px-4 py-4">
-            <QuickTips tips={tips} tipIndex={tipIndex} showTip={showTip} setShowTip={setShowTip} />
-
-            <div className="relative w-full h-64 md:h-80 overflow-hidden shadow-lg mb-8 mt-4">
+            <div className="relative w-full h-64 md:h-80 overflow-hidden shadow-lg mb-8 mt-4 rounded-xl">
               <Slider {...carouselSettings} className="h-full">
                 {eventImages.map((event) => (
                   <div key={event.title} className="relative h-64 md:h-80">
-                    <div className="w-full h-full bg-cover bg-center relative" style={{ backgroundImage: `url(${event.url})` }}>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    <div
+                      className="w-full h-full bg-cover bg-center relative rounded-xl"
+                      style={{ backgroundImage: `url(${event.image})` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                         <div className="flex items-center gap-2 mb-2">
                           <MdEvent className="w-4 h-4 text-green-400" />
                           <span className="text-sm font-medium text-green-400">{event.date}</span>
                         </div>
                         <h3 className="text-xl md:text-2xl font-bold mb-2">{event.title}</h3>
-                        <p className="text-sm md:text-base text-gray-200">{event.description}</p>
+                        <p className="text-sm md:text-base text-gray-200">{event.location}</p>
                       </div>
                     </div>
                   </div>
@@ -421,146 +729,36 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
             </div>
 
             <div className="px-0 py-0 space-y-8">
-              <div className="text-left">
-                <h1 className="text-2xl md:text-3xl font-bold text-green-800 mb-2">Dashboard</h1>
-                <p className="text-gray-700">Welcome back, {barangayHead.name}!</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                      <MdEvent className="w-6 h-6 text-green-600" />
-                    </div>
-                    <span className="text-3xl font-bold text-green-800">8</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-green-700 mb-1">Collections Made</h3>
-                  <p className="text-xs text-gray-500">This month's total</p>
+              <div className="mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-4">
+                  <h2 className="text-xl font-bold text-green-800">Quick Actions</h2>
+                  <p className="text-sm text-gray-500">Handle your priority barangay tasks in just a few taps.</p>
                 </div>
-
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                      <MdMenuBook className="w-6 h-6 text-green-600" />
-                    </div>
-                    <span className="text-3xl font-bold text-green-800">95%</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-green-700 mb-1">On-time Rate</h3>
-                  <p className="text-xs text-gray-500">Collection efficiency</p>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-green-800 mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <button
-                    onClick={() => navigate('/barangayhead/report')}
-                    className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex flex-col items-center text-center space-y-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdReport className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">Report Issue</h3>
-                      <p className="text-xs text-white/80 mt-1">Submit a report</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => navigate('/barangayhead/pickup')}
-                    className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex flex-col items-center text-center space-y-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdEvent className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">Special Pick-up</h3>
-                      <p className="text-xs text-white/80 mt-1">Request pick-up</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => navigate('/barangayhead/schedule')}
-                    className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex flex-col items-center text-center space-y-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdEvent className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">View Schedule</h3>
-                      <p className="text-xs text-white/80 mt-1">See schedule</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => navigate('/barangayhead/collection-reports')}
-                    className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex flex-col items-center text-center space-y-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdMenuBook className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">View Collection Reports</h3>
-                      <p className="text-xs text-white/80 mt-1">See reports</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => navigate('/barangayhead/appointments')}
-                    className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex flex-col items-center text-center space-y-3"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                      <MdEvent className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-sm">View Appointment Request</h3>
-                      <p className="text-xs text-white/80 mt-1">See requests</p>
-                    </div>
-                  </button>
-                </div>
-                <button
-                  onClick={() => navigate('/barangayhead/iec')}
-                  className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-xl shadow-sm transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 w-full flex flex-col items-center text-center space-y-3"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <MdMenuBook className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">Access IEC Materials</h3>
-                    <p className="text-xs text-white/80 mt-1">View educational materials</p>
-                  </div>
-                </button>
-              </div>
-
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <h2 className="text-xl font-bold text-green-800 mb-4">Today's Summary</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <MdEvent className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-medium text-green-800">Next Collection</p>
-                        <p className="text-sm text-gray-500">Monday, June 10, 2025</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-green-800">7:00 AM</p>
-                      <p className="text-sm text-gray-500">Basura</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <FiMessageSquare className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="font-medium text-green-800">Pending Reports</p>
-                        <p className="text-sm text-gray-500">{unreadNotifications} unread</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => navigate('/barangayhead/notifications')}
-                      className="p-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors flex items-center justify-center"
-                      aria-label="View Details"
-                    >
-                      <FiChevronRight className="w-5 h-5" />
-                    </button>
-                  </div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {quickActionItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={item.onClick}
+                        className="group flex flex-col items-center justify-between rounded-2xl bg-gradient-to-br from-green-700 to-green-600 p-4 sm:p-5 text-center shadow-lg text-white transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 min-h-[160px]"
+                      >
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-white">
+                            <Icon className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                        </div>
+                        <div className="inline-flex items-center justify-center gap-2 text-xs font-medium text-white/90 bg-white/10 rounded-full px-3 py-1 mt-4 group-hover:bg-white group-hover:text-green-700 transition-colors">
+                          <span>{item.indicatorLabel}</span>
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition-colors group-hover:bg-green-100 group-hover:text-green-700">
+                            <FiChevronRight className="h-4 w-4" />
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -573,12 +771,9 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                 color: white !important;
                 font-size: 12px !important;
               }
-              .custom-dots li.slick-active button:before {
-                color: white !important;
-              }
             `}</style>
           </div>
-        ) : null}
+        )}
 
         <div className="flex-1 flex flex-col">
           <Outlet />
@@ -586,31 +781,36 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
       </div>
 
       <button
-        className="chat-button fixed bottom-6 right-6 z-50 bg-[#218a4c] text-white p-3 rounded-full shadow-lg hover:bg-[#1a6d3d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center gap-2 transition-all duration-200 hover:scale-110"
-        aria-label="Open Chat"
-        onClick={() => setShowChat(true)}
+        className={`chat-button fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 ${showChat ? 'bg-red-500 hover:bg-red-600' : 'bg-[#218a4c] hover:bg-[#1a6d3d]'} text-white p-2.5 sm:p-3 rounded-full shadow-lg focus:outline-[#218a4c] flex items-center gap-2 transition-all duration-200 hover:scale-110`}
+        aria-label={showChat ? 'Close KolekTrash Assistant' : 'Open KolekTrash Assistant'}
+        onClick={() => setShowChat((prev) => !prev)}
       >
-        <MdQuestionAnswer className="w-6 h-6" />
+        {showChat ? <FiX className="w-5 h-5 sm:w-6 sm:h-6" /> : <MdQuestionAnswer className="w-5 h-5 sm:w-6 sm:h-6" />}
       </button>
 
       {showChat && (
-        <div className="chat-container fixed bottom-24 right-6 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-sm animate-fadeInUp">
+        <div className="chat-container fixed inset-x-2 bottom-16 sm:inset-auto sm:bottom-24 sm:right-6 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 w-[calc(100%-16px)] sm:w-full sm:max-w-[320px] animate-fadeInUp">
           <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-green-800 to-green-700 rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shadow-lg">
-                <MdQuestionAnswer className="w-6 h-6 text-white" />
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shadow-lg">
+                <MdQuestionAnswer className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">KolekTrash Assistant</h2>
-                <p className="text-xs text-green-100">Ask me anything about waste management</p>
+                <h2 className="text-base font-semibold text-white">KolekTrash Assistant</h2>
+                <p className="text-xs text-green-100">Ask anything about barangay operations</p>
               </div>
             </div>
-            <button onClick={() => setShowChat(false)} className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+            <button
+              type="button"
+              onClick={() => setShowChat(false)}
+              className="text-white/80 hover:text-white transition-colors"
+              aria-label="Close chat"
+            >
               <FiX className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="p-4 h-[400px] overflow-y-auto space-y-4 bg-gray-50/50">
+          <div className="p-4 h-[320px] overflow-y-auto space-y-4 bg-gray-50/50">
             {chatMessages.map((message, index) => (
               <div key={`${message.type}-${index}`} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}>
                 {message.type === 'bot' && (
@@ -639,8 +839,8 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
             )}
           </div>
 
-          <div className="p-4 bg-white border-t border-gray-100 rounded-b-2xl">
-            <div className="mb-3 skylight flex flex-wrap gap-2">
+          <div className="p-4 border-t border-gray-100 rounded-b-2xl">
+            <div className="mb-3 flex flex-wrap gap-2">
               {faqData.slice(0, 3).map((faq) => (
                 <button
                   key={faq.question}
@@ -707,36 +907,3 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
   );
 }
 
-function QuickTips({ tips, tipIndex, showTip, setShowTip }) {
-  if (!showTip) return null;
-  return (
-    <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4 mb-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-green-800">{tips[tipIndex]}</p>
-            <div className="flex gap-1 mt-1">
-              {tips.map((_, index) => (
-                <div key={index} className={`w-1.5 h-1.5 rounded-full transition-colors ${index === tipIndex ? 'bg-green-500' : 'bg-green-300'}`} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <button
-          className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-200 rounded-full transition-colors bg-transparent"
-          aria-label="Close tip"
-          onClick={() => setShowTip(false)}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}

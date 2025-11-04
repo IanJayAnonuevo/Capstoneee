@@ -1,8 +1,10 @@
-// filepath: c:\Users\Emiruuu\Desktop\KOLETRASH\src\components\truckdriver\TruckDriverNotifications.jsx
+// filepath: c:\Users\Emiruuu\Desktop\KOLEKTRASH\src\components\truckdriver\TruckDriverNotifications.jsx
 import React, { useEffect, useState } from 'react';
 import { Typography, Button, Stack, Box, Snackbar, Alert, Dialog, DialogActions } from '@mui/material';
 import { NotificationsNone as NotificationsNoneIcon, MarkEmailRead as MarkEmailReadIcon, DirectionsCar as DirectionsCarIcon, Schedule as ScheduleIcon, Build as BuildIcon, Security as SecurityIcon, Assessment as AssessmentIcon, School as SchoolIcon } from '@mui/icons-material';
 import NotificationItem from '../shared/NotificationItem';
+import { dispatchNotificationCount } from '../../utils/notificationUtils';
+import { buildApiUrl } from '../../config/api';
 // Standardized modal replaces custom per-role modals
 
 function getNotificationIcon(type) {
@@ -40,31 +42,36 @@ export default function TruckDriverNotifications({ userId }) {
   useEffect(() => {
     if (!effectiveUserId) return;
     setLoading(true);
-    fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+  fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setNotifications(data.notifications);
           setError(null);
+          dispatchNotificationCount(effectiveUserId, data.notifications || []);
         } else {
           setNotifications([]);
           setError(data.message || 'Failed to fetch notifications.');
+          dispatchNotificationCount(effectiveUserId, []);
         }
       })
       .catch(() => {
         setNotifications([]);
         setError('Failed to fetch notifications.');
+        dispatchNotificationCount(effectiveUserId, []);
       })
       .finally(() => setLoading(false));
   }, [effectiveUserId]);
 
   const markAllAsRead = async () => {
     const prev = notifications;
-    setNotifications(prev.map(n => ({ ...n, response_status: 'read' })));
+    const updated = prev.map(n => ({ ...n, response_status: 'read' }));
+    setNotifications(updated);
+    dispatchNotificationCount(resolveUserId(), updated);
     try {
       for (const n of prev) {
         if (n.response_status !== 'read') {
-          await fetch('https://koletrash.systemproj.com/backend/api/mark_notification_read.php', {
+          await fetch(buildApiUrl('mark_notification_read.php'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ notification_id: n.notification_id })
@@ -75,9 +82,13 @@ export default function TruckDriverNotifications({ userId }) {
   };
 
   const deleteNotification = async (id) => {
-    setNotifications(prev => prev.filter(n => n.notification_id !== id));
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.notification_id !== id);
+      dispatchNotificationCount(resolveUserId(), updated);
+      return updated;
+    });
     try {
-      await fetch('https://koletrash.systemproj.com/backend/api/delete_notification.php', {
+  await fetch(buildApiUrl('delete_notification.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notification_id: id })
@@ -105,7 +116,7 @@ export default function TruckDriverNotifications({ userId }) {
     });
     
     try {
-      const res = await fetch('https://koletrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignment_id, user_id: userId, response_status, role }),
@@ -115,9 +126,13 @@ export default function TruckDriverNotifications({ userId }) {
       
           if (data.success) {
         // Update the notification status in the UI
-        setNotifications(notifications.map(n => 
-          n.notification_id === notification_id ? { ...n, response_status: 'read' } : n
-        ));
+        setNotifications(prev => {
+          const updated = prev.map(n => 
+            n.notification_id === notification_id ? { ...n, response_status: 'read' } : n
+          );
+          dispatchNotificationCount(userId, updated);
+          return updated;
+        });
         
         setSnackbar({ 
           open: true, 
@@ -130,11 +145,12 @@ export default function TruckDriverNotifications({ userId }) {
         
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
             .then(res => res.json())
             .then(data => {
               if (data.success) {
                 setNotifications(data.notifications);
+                dispatchNotificationCount(effectiveUserId, data.notifications || []);
               }
             })
             .catch(() => {});
@@ -160,14 +176,18 @@ export default function TruckDriverNotifications({ userId }) {
   const bulkRespond = async (date, response_status, role, notification_id) => {
     const userId = resolveUserId();
     try {
-      const res = await fetch('https://koletrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date, user_id: userId, response_status, role })
       });
       const data = await res.json();
       if (data.success) {
-        setNotifications(prev => prev.map(n => n.notification_id === notification_id ? { ...n, response_status: 'read' } : n));
+        setNotifications(prev => {
+          const updated = prev.map(n => n.notification_id === notification_id ? { ...n, response_status: 'read' } : n);
+          dispatchNotificationCount(userId, updated);
+          return updated;
+        });
         setSnackbar({ open: true, message: `All assignments for ${date} ${response_status}.`, severity: 'success' });
         
         // Close modal
@@ -175,11 +195,12 @@ export default function TruckDriverNotifications({ userId }) {
 
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
             .then(res => res.json())
             .then(data => {
               if (data.success) {
                 setNotifications(data.notifications);
+                dispatchNotificationCount(effectiveUserId, data.notifications || []);
               }
             })
             .catch(() => {});
@@ -208,18 +229,20 @@ export default function TruckDriverNotifications({ userId }) {
   const markNotificationAsRead = async (notificationId) => {
     console.log('Mark as read:', notificationId); // Debug: check value
     try {
-      const res = await fetch('https://koletrash.systemproj.com/backend/api/mark_notification_read.php', {
+  const res = await fetch(buildApiUrl('mark_notification_read.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notification_id: notificationId }),
       });
       const data = await res.json();
       if (data.success) {
-        setNotifications(notifications =>
-          notifications.map(n =>
+        setNotifications(prev => {
+          const updated = prev.map(n =>
             n.notification_id === notificationId ? { ...n, response_status: 'read' } : n
-          )
-        );
+          );
+          dispatchNotificationCount(resolveUserId(), updated);
+          return updated;
+        });
         setSnackbar({ open: true, message: 'Notification marked as read', severity: 'success' });
       } else {
         setSnackbar({ open: true, message: data.message || 'Failed to mark as read', severity: 'error' });

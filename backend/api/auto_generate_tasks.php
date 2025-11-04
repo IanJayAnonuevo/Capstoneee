@@ -29,7 +29,8 @@ if (!$start_date || !$end_date) {
 
 try {
     // Kumonekta sa database at simulan ang transaction
-    $pdo = new PDO("mysql:host=localhost;dbname=kolektrash_db", "root", "");
+    $database = new Database();
+    $pdo = $database->connect();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->beginTransaction();
 

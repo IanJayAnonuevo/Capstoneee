@@ -1,12 +1,17 @@
+// filepath: c:\Users\Emiruuu\Desktop\KOLEKTRASH\src\components\garbagecollector\GarbageCollectorNotifications.jsx
 import React, { useEffect, useState } from 'react';
 import { Typography, Button, Stack, Box, Snackbar, Alert, Dialog, DialogActions } from '@mui/material';
-import { NotificationsNone as NotificationsNoneIcon, MarkEmailRead as MarkEmailReadIcon, Build as BuildIcon, Schedule as ScheduleIcon, Security as SecurityIcon, Assessment as AssessmentIcon, School as SchoolIcon } from '@mui/icons-material';
+import { NotificationsNone as NotificationsNoneIcon, MarkEmailRead as MarkEmailReadIcon, DirectionsCar as DirectionsCarIcon, Schedule as ScheduleIcon, Build as BuildIcon, Security as SecurityIcon, Assessment as AssessmentIcon, School as SchoolIcon } from '@mui/icons-material';
 import NotificationItem from '../shared/NotificationItem';
-import AssignmentModal from '../shared/AssignmentModal';
+import { dispatchNotificationCount } from '../../utils/notificationUtils';
+// Standardized modal replaces custom per-role modals
 
 function getNotificationIcon(type) {
   switch (type) {
-    case 'schedule': return <ScheduleIcon sx={{ color: '#059669' }} />;
+  case 'assignment':
+  case 'route':
+  case 'daily_assignments': return <DirectionsCarIcon sx={{ color: '#059669' }} />;
+  case 'schedule': return <ScheduleIcon sx={{ color: '#059669' }} />;
     case 'maintenance': return <BuildIcon sx={{ color: '#f59e0b' }} />;
     case 'safety': return <SecurityIcon sx={{ color: '#dc2626' }} />;
     case 'report': return <AssessmentIcon sx={{ color: '#16a34a' }} />;
@@ -31,7 +36,6 @@ export default function GarbageCollectorNotifications({ userId }) {
   const [openModal, setOpenModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [expandedId, setExpandedId] = useState(null);
 
   const effectiveUserId = userId || localStorage.getItem('user_id');
 
@@ -50,20 +54,23 @@ export default function GarbageCollectorNotifications({ userId }) {
   useEffect(() => {
     if (!effectiveUserId) return;
     setLoading(true);
-    fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+  fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setNotifications(data.notifications);
           setError(null);
+          dispatchNotificationCount(effectiveUserId, data.notifications || []);
         } else {
           setNotifications([]);
           setError(data.message || 'Failed to fetch notifications.');
+          dispatchNotificationCount(effectiveUserId, []);
         }
       })
       .catch(() => {
         setNotifications([]);
         setError('Failed to fetch notifications.');
+        dispatchNotificationCount(effectiveUserId, []);
       })
       .finally(() => setLoading(false));
   }, [effectiveUserId]);
@@ -71,12 +78,14 @@ export default function GarbageCollectorNotifications({ userId }) {
   const markAllAsRead = async () => {
     // Optimistic UI
     const prev = notifications;
-    setNotifications(prev.map(n => ({ ...n, response_status: 'read' })));
+    const updated = prev.map(n => ({ ...n, response_status: 'read' }));
+    setNotifications(updated);
+    dispatchNotificationCount(resolveUserId(), updated);
     // Backend: mark each notification as read
     try {
       for (const n of prev) {
         if (n.response_status !== 'read') {
-          await fetch('https://koletrash.systemproj.com/backend/api/mark_notification_read.php', {
+          await fetch('https://kolektrash.systemproj.com/backend/api/mark_notification_read.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ notification_id: n.notification_id })
@@ -87,9 +96,13 @@ export default function GarbageCollectorNotifications({ userId }) {
   };
 
   const deleteNotification = async (id) => {
-    setNotifications(prev => prev.filter(n => n.notification_id !== id));
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.notification_id !== id);
+      dispatchNotificationCount(resolveUserId(), updated);
+      return updated;
+    });
     try {
-      await fetch('https://koletrash.systemproj.com/backend/api/delete_notification.php', {
+  await fetch('https://kolektrash.systemproj.com/backend/api/delete_notification.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notification_id: id })
@@ -98,82 +111,73 @@ export default function GarbageCollectorNotifications({ userId }) {
   };
 
   // Respond to assignment function
-  const respondAssignment = async (team_id, response_status, role, notification_id) => {
+  const respondAssignment = async (assignment_id, response_status, role, notification_id) => {
     const uid = resolveUserId();
     try {
-      const res = await fetch('https://koletrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch('https://kolektrash.systemproj.com/backend/api/respond_assignment.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignment_id: team_id,
-          user_id: uid,
-          response_status,
-          role
-        })
+        body: JSON.stringify({ assignment_id, user_id: uid, response_status, role })
       });
       const data = await res.json();
       if (data.success) {
-        setNotifications(notifications =>
-          notifications.map(n =>
+        setNotifications(prev => {
+          const updated = prev.map(n =>
             n.notification_id === notification_id ? { ...n, response_status: 'read' } : n
-          )
-        );
-        setSnackbar({ 
-          open: true, 
-          message: `Assignment ${response_status} successfully!`, 
-          severity: 'success' 
+          );
+          dispatchNotificationCount(uid, updated);
+          return updated;
         });
-        setModalOpen(false);
-        
-        // Refresh notifications to get updated data
+        setSnackbar({ open: true, message: `Assignment ${response_status} successfully!`, severity: 'success' });
+        setOpenModal(false);
+
         setTimeout(() => {
-          fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`)
+          fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
             .then(res => res.json())
             .then(data => {
               if (data.success) {
                 setNotifications(data.notifications);
+                dispatchNotificationCount(effectiveUserId, data.notifications || []);
               }
             })
             .catch(() => {});
         }, 1000);
       } else {
-        setSnackbar({ 
-          open: true, 
-          message: data.message || 'Failed to respond to assignment', 
-          severity: 'error' 
-        });
+        setSnackbar({ open: true, message: data.message || 'Failed to respond to assignment', severity: 'error' });
       }
     } catch (err) {
       console.error('Error responding to assignment:', err);
-      setSnackbar({ 
-        open: true, 
-        message: 'Network error while responding to assignment', 
-        severity: 'error' 
-      });
+      setSnackbar({ open: true, message: 'Network error while responding to assignment', severity: 'error' });
     }
   };
 
   // Bulk respond for daily assignments (accept/decline all for the date)
   const bulkRespond = async (date, response_status, role, notification_id) => {
-    const uid = resolveUserId();
     try {
-      const res = await fetch('https://koletrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch('https://kolektrash.systemproj.com/backend/api/respond_assignment.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, user_id: uid, response_status, role })
+        body: JSON.stringify({ date, user_id: resolveUserId(), response_status, role })
       });
       const data = await res.json();
       if (data.success) {
-        setNotifications(prev => prev.map(n => n.notification_id === notification_id ? { ...n, response_status: 'read' } : n));
+        const uid = resolveUserId();
+        setNotifications(prev => {
+          const updated = prev.map(n => n.notification_id === notification_id ? { ...n, response_status: 'read' } : n);
+          dispatchNotificationCount(uid, updated);
+          return updated;
+        });
         setSnackbar({ open: true, message: `All assignments for ${date} ${response_status}.`, severity: 'success' });
+        setOpenModal(false);
         
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(`https://koletrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`)
+          fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
             .then(res => res.json())
             .then(data => {
               if (data.success) {
                 setNotifications(data.notifications);
+                dispatchNotificationCount(effectiveUserId, data.notifications || []);
               }
             })
             .catch(() => {});
@@ -195,6 +199,32 @@ export default function GarbageCollectorNotifications({ userId }) {
   });
 
   const collectorNotifications = notifications.map(transformNotification);
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+  const res = await fetch('https://kolektrash.systemproj.com/backend/api/mark_notification_read.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_id: notificationId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const uid = resolveUserId();
+        setNotifications(prev => {
+          const updated = prev.map(n =>
+            n.notification_id === notificationId ? { ...n, response_status: 'read' } : n
+          );
+          dispatchNotificationCount(uid, updated);
+          return updated;
+        });
+        setSnackbar({ open: true, message: 'Notification marked as read', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: data.message || 'Failed to mark as read', severity: 'error' });
+      }
+    } catch (err) {
+      setSnackbar({ open: true, message: 'Network error', severity: 'error' });
+    }
+  };
 
   if (loading) return <div>Loading notifications...</div>;
   if (error) return <div style={{ color: 'red' }}>{error}</div>;
@@ -237,7 +267,7 @@ export default function GarbageCollectorNotifications({ userId }) {
             parsedMsg = { message: notif.message };
           }
           // Check for team_id in assignment notifications
-          const isAssignment = parsedMsg.type === 'assignment' && parsedMsg.team_id;
+          const isAssignment = parsedMsg.type === 'assignment' && (parsedMsg.team_id || parsedMsg.assignment_id);
           const isDaily = parsedMsg.type === 'daily_assignments' && Array.isArray(parsedMsg.assignments);
           const title = parsedMsg.type === 'daily_assignments'
             ? `Daily Assignments • ${parsedMsg.date || ''}`.trim()
@@ -248,7 +278,8 @@ export default function GarbageCollectorNotifications({ userId }) {
                   const time = a.time ? a.time.slice(0,5) : '';
                   const brgy = a.barangay || a.barangay_name || 'Barangay';
                   const cluster = a.cluster ? ` (${a.cluster})` : '';
-                  return `${time} • ${brgy}${cluster}`;
+                  const truck = a.truck ? ` – Truck ${a.truck}` : '';
+                  return `${time} • ${brgy}${cluster}${truck}`;
                 });
                 return list.length ? `${list.length} stops:\n` + list.join('\n') : 'No assignments in list.';
               })()
@@ -257,7 +288,7 @@ export default function GarbageCollectorNotifications({ userId }) {
           return (
             <li key={notif.notification_id} style={{ marginBottom: 16 }}>
               <NotificationItem
-                icon={getNotificationIcon('schedule')}
+                icon={getNotificationIcon(parsedMsg.type || 'schedule')}
                 title={title}
                 description={description}
                 createdAt={notif.created_at}
@@ -265,19 +296,10 @@ export default function GarbageCollectorNotifications({ userId }) {
                 priorityColor={getNotificationColor(priority)}
                 isRead={notif.response_status === 'read'}
                 onClick={async () => {
-                if (notif.response_status !== 'read') {
-                    await fetch('https://koletrash.systemproj.com/backend/api/mark_notification_read.php', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ notification_id: notif.notification_id })
-                    });
-                    setNotifications(prev => prev.map(n =>
-                      n.notification_id === notif.notification_id
-                        ? { ...n, response_status: 'read' }
-                        : n
-                    ));
+                  if (notif.notification_id && notif.response_status !== 'read') {
+                    await markNotificationAsRead(notif.notification_id);
                   }
-                  setSelectedNotification({ notification: notif, parsedMsg, isAssignment, isDaily, title, description });
+                  setSelectedNotification({ notif, parsedMsg, isAssignment, isDaily, title, description });
                   setOpenModal(true);
                 }}
                 onDelete={() => deleteNotification(notif.notification_id)}
@@ -343,31 +365,31 @@ export default function GarbageCollectorNotifications({ userId }) {
           )}
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Box sx={{ px: 1, py: 0.5, borderRadius: 1, bgcolor: '#e2e8f0', color: '#475569', fontSize: 12, fontWeight: 600 }}>
-              {selectedNotification?.notification?.created_at}
+              {selectedNotification?.notif?.created_at}
             </Box>
           </Box>
         </Box>
         <DialogActions sx={{ width: '100%', bgcolor: 'white', justifyContent: 'center', p: 2, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
           {selectedNotification?.isDaily ? (
             <>
-              <Button onClick={() => bulkRespond(selectedNotification?.parsedMsg?.date, 'declined', 'collector', selectedNotification?.notification?.notification_id)} sx={{ color: '#059669', bgcolor: 'white', border: '1px solid #059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#f0fdf4' } }}>
+              <Button onClick={() => bulkRespond(selectedNotification?.parsedMsg?.date, 'declined', 'collector', selectedNotification?.notif?.notification_id)} sx={{ color: '#059669', bgcolor: 'white', border: '1px solid #059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#f0fdf4' } }}>
                 Decline
               </Button>
-              <Button onClick={() => bulkRespond(selectedNotification?.parsedMsg?.date, 'accepted', 'collector', selectedNotification?.notification?.notification_id)} sx={{ color: 'white', bgcolor: '#059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#047857' } }}>
+              <Button onClick={() => bulkRespond(selectedNotification?.parsedMsg?.date, 'accepted', 'collector', selectedNotification?.notif?.notification_id)} sx={{ color: 'white', bgcolor: '#059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#047857' } }}>
                 Accept
               </Button>
             </>
           ) : selectedNotification?.isAssignment ? (
             <>
               <Button onClick={() => {
-                const teamId = selectedNotification?.parsedMsg?.team_id;
-                if (teamId) respondAssignment(teamId, 'declined', 'collector', selectedNotification?.notification?.notification_id);
+                const teamId = selectedNotification?.parsedMsg?.team_id || selectedNotification?.parsedMsg?.assignment_id;
+                if (teamId) respondAssignment(teamId, 'declined', 'collector', selectedNotification?.notif?.notification_id);
               }} sx={{ color: '#059669', bgcolor: 'white', border: '1px solid #059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#f0fdf4' } }}>
                 Decline
               </Button>
               <Button onClick={() => {
-                const teamId = selectedNotification?.parsedMsg?.team_id;
-                if (teamId) respondAssignment(teamId, 'accepted', 'collector', selectedNotification?.notification?.notification_id);
+                const teamId = selectedNotification?.parsedMsg?.team_id || selectedNotification?.parsedMsg?.assignment_id;
+                if (teamId) respondAssignment(teamId, 'accepted', 'collector', selectedNotification?.notif?.notification_id);
               }} sx={{ color: 'white', bgcolor: '#059669', fontWeight: 700, fontSize: 14, px: 3, py: 1, borderRadius: 2, textTransform: 'none', boxShadow: 'none', '&:hover': { bgcolor: '#047857' } }}>
                 Accept
               </Button>

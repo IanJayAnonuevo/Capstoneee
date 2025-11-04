@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { FiUser, FiMail, FiLock, FiMapPin, FiChevronDown, FiUserPlus, FiCheck, FiX, FiCheckCircle, FiAlertTriangle, FiArrowLeft, FiArrowRight, FiShield, FiRefreshCcw, FiClock } from 'react-icons/fi'
 import axios from "axios";
-
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'
+import logo from '../../assets/logo/logo.png'
+import { buildApiUrl } from '../../config/api'
 
 const barangays = [
   'Aldezar',
@@ -54,6 +54,15 @@ const barangays = [
   'Yabo'
 ]
 
+const MIN_LOADING_DURATION_MS = 2000
+
+const waitForMinimumDuration = async (startTime, minDuration = MIN_LOADING_DURATION_MS) => {
+  const elapsed = Date.now() - startTime
+  if (elapsed < minDuration) {
+    await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed))
+  }
+}
+
 export default function SignUp({ onLoginClick } = {}) {
   const [form, setForm] = useState({
     firstname: '',
@@ -77,13 +86,14 @@ export default function SignUp({ onLoginClick } = {}) {
   const [redirectCountdown, setRedirectCountdown] = useState(0)
   const [verificationCode, setVerificationCode] = useState(new Array(6).fill(''))
   const [verificationError, setVerificationError] = useState('')
-  const [verificationNotice, setVerificationNotice] = useState('')
   const [verificationSent, setVerificationSent] = useState(false)
   const [verifiedEmail, setVerifiedEmail] = useState('')
   const [verificationExpiry, setVerificationExpiry] = useState(null)
   const [verificationDevCode, setVerificationDevCode] = useState(null)
   const [resendTimer, setResendTimer] = useState(0)
   const [loadingState, setLoadingState] = useState(null)
+  const [checkingEmail, setCheckingEmail] = useState(false)
+  const [emailAvailable, setEmailAvailable] = useState(null) // null = unknown, true/false when checked
   const navigate = useNavigate()
 
   const steps = [
@@ -116,6 +126,30 @@ export default function SignUp({ onLoginClick } = {}) {
   const [currentStep, setCurrentStep] = useState(0)
   const totalSteps = steps.length
 
+  const handleGoToLogin = useCallback(() => {
+  const base = window.location.pathname.startsWith('/kolektrash') ? '/kolektrash' : ''
+    const loginUrl = `${base}/login`
+
+    setFeedbackModal(prev => ({ ...prev, open: false }))
+    setRedirectCountdown(0)
+
+    if (typeof onLoginClick === 'function') {
+      onLoginClick()
+    }
+
+    try {
+      navigate('/login', { replace: true })
+    } catch (err) {
+      console.error('Navigate fallback triggered:', err)
+    }
+
+    window.setTimeout(() => {
+      if (window.location.pathname !== loginUrl) {
+        window.location.href = loginUrl
+      }
+    }, 150)
+  }, [navigate, onLoginClick])
+
   useEffect(() => {
     let timer
     if (feedbackModal.open && feedbackModal.type === 'success') {
@@ -135,7 +169,7 @@ export default function SignUp({ onLoginClick } = {}) {
     return () => {
       if (timer) clearInterval(timer)
     }
-  }, [feedbackModal.open, feedbackModal.type])
+  }, [feedbackModal.open, feedbackModal.type, handleGoToLogin])
 
   useEffect(() => {
     if (!verificationSent || resendTimer <= 0) return
@@ -231,6 +265,11 @@ export default function SignUp({ onLoginClick } = {}) {
     if (name === 'email' && verificationSent) {
       resetVerificationState()
     }
+
+    if (name === 'email') {
+      // Reset availability state until rechecked
+      setEmailAvailable(null)
+    }
   }
 
   // Handle field blur with validation
@@ -240,6 +279,11 @@ export default function SignUp({ onLoginClick } = {}) {
     
     const error = validateField(name, value)
     setErrors(prev => ({ ...prev, [name]: error }))
+
+    // On email blur, check server-side availability when format is valid
+    if (name === 'email' && !error) {
+      void checkEmailAvailability(value)
+    }
   }
 
   const markFieldsTouched = (fields) =>
@@ -258,6 +302,15 @@ export default function SignUp({ onLoginClick } = {}) {
       if (error) stepErrors[field] = error
     })
 
+    // Also enforce email availability on step 0
+    if (stepIndex === 0) {
+      if (checkingEmail) {
+        stepErrors.email = stepErrors.email || 'Checking email availability...'
+      } else if (emailAvailable === false) {
+        stepErrors.email = 'Email already in use.'
+      }
+    }
+
     if (Object.keys(stepErrors).length > 0) {
       setErrors(prev => ({ ...prev, ...stepErrors }))
       setTouched(prev => ({ ...prev, ...markFieldsTouched(step.fields) }))
@@ -267,10 +320,45 @@ export default function SignUp({ onLoginClick } = {}) {
     return true
   }
 
+  // Server-side email availability check
+  const checkEmailAvailability = async (value) => {
+    const normalized = (value || '').trim().toLowerCase()
+    if (!normalized) {
+      setEmailAvailable(null)
+      return false
+    }
+    // If format invalid, do not call backend
+    if (validateField('email', normalized)) {
+      setEmailAvailable(null)
+      return false
+    }
+
+    try {
+      setCheckingEmail(true)
+      const res = await axios.post(buildApiUrl('check_email.php'), { email: normalized })
+      const data = res.data || {}
+      if (data.success && data.available === true) {
+        setEmailAvailable(true)
+        // clear only our availability error
+        setErrors(prev => ({ ...prev, email: prev.email && prev.email !== 'Email already in use.' ? prev.email : null }))
+        return true
+      } else {
+        setEmailAvailable(false)
+        setErrors(prev => ({ ...prev, email: data.message || 'Email already in use.' }))
+        return false
+      }
+    } catch {
+      setEmailAvailable(null)
+      setErrors(prev => ({ ...prev, email: 'Unable to validate email right now.' }))
+      return false
+    } finally {
+      setCheckingEmail(false)
+    }
+  }
+
   const resetVerificationState = () => {
     setVerificationCode(new Array(6).fill(''))
     setVerificationError('')
-    setVerificationNotice('')
     setVerificationSent(false)
     setVerifiedEmail('')
     setVerificationExpiry(null)
@@ -290,18 +378,18 @@ export default function SignUp({ onLoginClick } = {}) {
       resetVerificationState()
     }
 
-    setVerificationNotice('')
     setVerificationError('')
     setError('')
     setLoading(true)
     setLoadingState('sending-code')
+  const startTime = Date.now()
 
     try {
       if (!isResend && form.email !== verifiedEmail && verificationSent) {
         resetVerificationState()
       }
 
-      const response = await axios.post(`${API_BASE_URL}/signup_verification.php`, {
+      const response = await axios.post(buildApiUrl('signup_verification.php'), {
         action: 'send_verification_code',
         email: form.email,
         firstname: form.firstname,
@@ -310,13 +398,8 @@ export default function SignUp({ onLoginClick } = {}) {
 
       const data = response.data ?? {}
       const deliveryFailed = (data.delivery || '').toLowerCase() === 'failed'
-      const baseMessage = data.message || 'Verification code generated.'
 
-      setVerificationNotice(
-        deliveryFailed
-          ? `${baseMessage} We couldn't deliver the email automatically.`
-          : baseMessage
-      )
+
       setVerificationSent(true)
       setVerifiedEmail(form.email)
       setVerificationCode(new Array(6).fill(''))
@@ -354,6 +437,7 @@ export default function SignUp({ onLoginClick } = {}) {
       }
       setVerificationDevCode(null)
     } finally {
+      await waitForMinimumDuration(startTime)
       setLoading(false)
       setLoadingState(null)
     }
@@ -404,9 +488,10 @@ export default function SignUp({ onLoginClick } = {}) {
     setError('')
     setLoading(true)
     setLoadingState('verifying-code')
+    const startTime = Date.now()
 
     try {
-      await axios.post(`${API_BASE_URL}/signup_verification.php`, {
+      await axios.post(buildApiUrl('signup_verification.php'), {
         action: 'verify_code',
         email: form.email,
         verification_code: code
@@ -414,7 +499,7 @@ export default function SignUp({ onLoginClick } = {}) {
 
       setLoadingState('creating-account')
 
-      const res = await axios.post(`${API_BASE_URL}/register_resident.php`, {
+      const res = await axios.post(buildApiUrl('register_resident.php'), {
         ...form,
         verification_code: code
       })
@@ -461,6 +546,7 @@ export default function SignUp({ onLoginClick } = {}) {
         setRedirectCountdown(0)
       }
     } finally {
+      await waitForMinimumDuration(startTime)
       setLoading(false)
       setLoadingState(null)
     }
@@ -491,12 +577,27 @@ export default function SignUp({ onLoginClick } = {}) {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep >= 2) return
 
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1))
+    // Validate current step fields first
+    const isValid = validateStep(currentStep)
+    if (!isValid) return
+
+    // On step 0, ensure server-side email availability check is done and passed
+    if (currentStep === 0) {
+      const emailError = validateField('email', form.email)
+      if (!emailError) {
+        // Always ensure we have a fresh result; rely on the function's return
+        const ok = await checkEmailAvailability(form.email)
+        if (!ok) {
+          // Error message should already be set by the checker; block advance
+          return
+        }
+      }
     }
+
+    setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1))
   }
 
   const handleBack = () => {
@@ -524,30 +625,6 @@ export default function SignUp({ onLoginClick } = {}) {
     if (currentStep === 3) {
       await completeRegistration()
     }
-  }
-
-  const handleGoToLogin = () => {
-    const base = window.location.pathname.startsWith('/koletrash') ? '/koletrash' : ''
-    const loginUrl = `${base}/login`
-
-    setFeedbackModal(prev => ({ ...prev, open: false }))
-    setRedirectCountdown(0)
-
-    if (typeof onLoginClick === 'function') {
-      onLoginClick()
-    }
-
-    try {
-      navigate('/login', { replace: true })
-    } catch (err) {
-      console.error('Navigate fallback triggered:', err)
-    }
-
-    window.setTimeout(() => {
-      if (window.location.pathname !== loginUrl) {
-        window.location.href = loginUrl
-      }
-    }, 150)
   }
 
   // Helper function to get field status
@@ -668,37 +745,29 @@ export default function SignUp({ onLoginClick } = {}) {
           {/* Left side: Branding - hidden on mobile, shown on desktop */}
           <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-green-500 to-green-600 items-center justify-center relative overflow-hidden">
             <div className="text-center text-white p-8">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <span className="inline-block w-5 h-5 bg-white rounded-full"></span>
-                <span className="inline-block w-4 h-10 bg-green-300 rounded-sm"></span>
+              <div className="flex items-center justify-center mb-6">
+                <img
+                  src={logo}
+                  alt="KolekTrash logo"
+                  className="h-20 w-auto drop-shadow-lg"
+                />
               </div>
-              <h1 className="text-4xl font-bold mb-4">Join KolekTrash</h1>
-              <p className="text-green-100 text-lg mb-8">Smart Waste Management System</p>
-              <div className="space-y-3 text-green-100">
-                <div className="flex items-center justify-center gap-3">
-                  <span className="w-3 h-3 bg-green-200 rounded-full"></span>
-                  <span>Easy Account Setup</span>
-                </div>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="w-3 h-3 bg-green-200 rounded-full"></span>
-                  <span>Community Access</span>
-                </div>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="w-3 h-3 bg-green-200 rounded-full"></span>
-                  <span>Waste Tracking</span>
-                </div>
-              </div>
+              <h1 className="text-4xl font-bold tracking-[0.2em] uppercase mb-3">KOLEKTRASH</h1>
+              <p className="text-green-100 text-lg font-medium">MENRO Waste Collection System</p>
             </div>
           </div>
           
           {/* Mobile header - visible only on mobile */}
           <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-6 px-6 border-b border-white/10">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="inline-block w-3 h-3 bg-white rounded-full"></span>
-              <span className="inline-block w-2 h-6 bg-green-300 rounded-sm"></span>
+            <div className="flex items-center justify-center mb-3">
+              <img
+                src={logo}
+                alt="KolekTrash logo"
+                className="h-12 w-auto drop-shadow"
+              />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Join KolekTrash</h1>
-            <p className="text-green-100 text-sm mt-1">Create your account</p>
+            <h1 className="text-2xl font-bold tracking-[0.25em] uppercase">KOLEKTRASH</h1>
+            <p className="text-green-100 text-sm mt-1 font-medium">MENRO Waste Collection System</p>
           </div>
           
           {/* Right side: SignUp form */}
@@ -1129,27 +1198,18 @@ export default function SignUp({ onLoginClick } = {}) {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                      <FiShield className="w-8 h-8 text-green-600" />
-                    </div>
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Verify your email</h2>
                     <p className="text-gray-600 text-sm">
                       Enter the 6-digit code we sent to{' '}
                       <span className="text-green-600 font-semibold">{verifiedEmail || form.email}</span>
                     </p>
                     {verificationExpiry && (
-                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1 justify-center">
-                        <FiClock size={12} />
-                        Code expires at {verificationExpiry} (Asia/Manila)
+                      <p className="text-xs text-gray-500 mt-1 text-center">
+                        Code expires at {verificationExpiry}
                       </p>
                     )}
                   </div>
 
-                  {verificationNotice && (
-                    <div className="bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-xl text-sm shadow-sm">
-                        {verificationNotice}
-                    </div>
-                  )}
 
                   {verificationError && (
                     <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm shadow-sm">
@@ -1191,7 +1251,6 @@ export default function SignUp({ onLoginClick } = {}) {
                       disabled={loading || resendTimer > 0}
                       className="inline-flex items-center justify-center gap-2 text-sm font-medium text-green-600 hover:text-green-700 disabled:text-gray-400 transition-colors"
                     >
-                      <FiRefreshCcw size={14} />
                       {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend verification code'}
                     </button>
                     <p className="text-xs text-gray-500">
@@ -1209,7 +1268,6 @@ export default function SignUp({ onLoginClick } = {}) {
                     disabled={loading}
                     className="w-full sm:w-auto sm:mr-auto inline-flex items-center justify-center gap-2 border border-gray-200 text-gray-600 hover:border-green-500 hover:text-green-600 font-semibold py-3 px-5 rounded-xl transition-all duration-200 bg-white shadow-sm hover:shadow"
                   >
-                    <FiArrowLeft size={18} />
                     Back
                   </button>
                 )}
@@ -1217,11 +1275,10 @@ export default function SignUp({ onLoginClick } = {}) {
                   <button
                     type="button"
                     onClick={handleNext}
-                    disabled={loading}
+                    disabled={loading || (currentStep === 0 && (checkingEmail || emailAvailable === false))}
                     className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-4 focus:ring-green-200 disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                   >
-                    Next Step
-                    <FiArrowRight size={18} />
+                    Next
                   </button>
                 ) : currentStep === 2 ? (
                   <button
@@ -1235,10 +1292,7 @@ export default function SignUp({ onLoginClick } = {}) {
                         <span>Sending Code...</span>
                       </>
                     ) : (
-                      <>
-                        <FiShield size={20} />
-                        <span>Send Verification Code</span>
-                      </>
+                      <span>Send Verification Code</span>
                     )}
                   </button>
                 ) : (
@@ -1258,10 +1312,7 @@ export default function SignUp({ onLoginClick } = {}) {
                         <span>Verifying Code...</span>
                       </>
                     ) : (
-                      <>
-                        <FiUserPlus size={20} />
-                        <span>Complete Registration</span>
-                      </>
+                      <span>Complete Registration</span>
                     )}
                   </button>
                 )}
@@ -1273,7 +1324,7 @@ export default function SignUp({ onLoginClick } = {}) {
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
                 <a
-                  href={window.location.pathname.startsWith('/koletrash') ? '/koletrash/login' : '/login'}
+                  href={window.location.pathname.startsWith('/kolektrash') ? '/kolektrash/login' : '/login'}
                   className="text-green-600 hover:text-green-700 font-medium transition-colors underline focus:outline-none focus:ring-0"
                 >
                   Sign in here
@@ -1283,7 +1334,7 @@ export default function SignUp({ onLoginClick } = {}) {
                 to="/"
                 className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm transition-colors"
               >
-                ← Back to Home
+                Back to Home
               </Link>
             </div>
 

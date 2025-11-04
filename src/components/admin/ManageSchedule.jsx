@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl } from '../../config/api';
 
 const trucks = ['Truck 1', 'Truck 2'];
 
@@ -26,6 +27,11 @@ export default function ManageSchedule() {
   const [editForm, setEditForm] = useState({ day_of_week: '', start_time: '', end_time: '', week_of_month: '' });
   const [editError, setEditError] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
+  // Add schedule modal state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addError, setAddError] = useState(null);
+  const [addSaving, setAddSaving] = useState(false);
+  const [addForm, setAddForm] = useState({ date: '', start_time: '', end_time: '', barangay_id: '' });
 
   // Get the start of the current week (Monday)
   const getWeekStart = (date) => {
@@ -104,8 +110,8 @@ export default function ManageSchedule() {
       }
       // Limit to visible weekdays
       params.set('days', ['Monday','Tuesday','Wednesday','Thursday','Friday'].join(','));
-      const url = `https://koletrash.systemproj.com/backend/api/get_predefined_schedules.php?${params.toString()}`;
-      const res = await fetch(url);
+  const url = buildApiUrl(`get_predefined_schedules.php?${params.toString()}`);
+    const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setPredefinedSchedules(Array.isArray(data.schedules) ? data.schedules : []);
@@ -129,7 +135,7 @@ export default function ManageSchedule() {
 
   // Fetch barangays for mapping
   useEffect(() => {
-    fetch('https://koletrash.systemproj.com/backend/api/get_barangays.php')
+  fetch(buildApiUrl('get_barangays.php'))
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -143,7 +149,7 @@ export default function ManageSchedule() {
 
   // Fetch clusters
   useEffect(() => {
-    fetch('https://koletrash.systemproj.com/backend/api/get_clusters.php')
+  fetch(buildApiUrl('get_clusters.php'))
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -337,13 +343,20 @@ export default function ManageSchedule() {
                 onChange={e => setSelectedCluster(e.target.value)}
                 title="Select cluster for Truck 2"
               >
-                <option value="2C-CA">Cluster A (2C-CA)</option>
-                <option value="3C-CB">Cluster B (3C-CB)</option>
-                <option value="4C-CC">Cluster C (4C-CC)</option>
-                <option value="5C-CD">Cluster D (5C-CD)</option>
+                <option value="2C-CA">Cluster A</option>
+                <option value="3C-CB">Cluster B</option>
+                <option value="4C-CC">Cluster C</option>
+                <option value="5C-CD">Cluster D</option>
               </select>
             </div>
           )}
+          <button
+            onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '' }); setAddError(null); setAddOpen(true); }}
+            className="ml-4 px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700"
+            title="Add schedule"
+          >
+            Add Schedule
+          </button>
         </div>
       </div>
 
@@ -535,7 +548,7 @@ export default function ManageSchedule() {
                   let res;
                   if (!idVal) {
                     console.warn('No schedule id found; updating by fields', editingSchedule);
-                    res = await fetch('https://koletrash.systemproj.com/backend/api/update_predefined_schedule_by_fields.php', {
+                    res = await fetch('https://kolektrash.systemproj.com/backend/api/update_predefined_schedule_by_fields.php', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -554,7 +567,7 @@ export default function ManageSchedule() {
                     });
                   } else {
                     console.log('Updating predefined schedule id:', idVal, editingSchedule);
-                    res = await fetch('https://koletrash.systemproj.com/backend/api/update_predefined_schedule.php', {
+                    res = await fetch('https://kolektrash.systemproj.com/backend/api/update_predefined_schedule.php', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -694,7 +707,7 @@ export default function ManageSchedule() {
                             week_of_month: nextWeek,
                             is_active: 1
                           };
-                          const res = await fetch('https://koletrash.systemproj.com/backend/api/create_predefined_schedule.php', {
+                          const res = await fetch('https://kolektrash.systemproj.com/backend/api/create_predefined_schedule.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -703,7 +716,7 @@ export default function ManageSchedule() {
                           if (!data.success) throw new Error(data.message || 'Failed to copy schedule');
                           // Refresh list
                           setSchedulesLoading(true);
-                          const ref = await fetch('https://koletrash.systemproj.com/backend/api/get_predefined_schedules.php');
+                          const ref = await fetch('https://kolektrash.systemproj.com/backend/api/get_predefined_schedules.php');
                           const refData = await ref.json();
                           if (refData.success) {
                             setPredefinedSchedules(Array.isArray(refData.schedules) ? refData.schedules : []);
@@ -735,6 +748,127 @@ export default function ManageSchedule() {
                     {editSaving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Add Schedule Modal */}
+      {addOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-green-700"
+              onClick={() => setAddOpen(false)}
+              aria-label="Close"
+            >✕</button>
+            <h2 className="text-lg font-semibold text-green-800 mb-4">Add Schedule</h2>
+            {addError && (
+              <div className="text-red-600 text-sm mb-3">{addError}</div>
+            )}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setAddError(null);
+                if (!addForm.date || !addForm.start_time || !addForm.end_time || !addForm.barangay_id) {
+                  setAddError('Please fill out date, time, and barangay.');
+                  return;
+                }
+                if (addForm.start_time >= addForm.end_time) {
+                  setAddError('Start time must be earlier than end time.');
+                  return;
+                }
+                try {
+                  setAddSaving(true);
+                  const dayIndex = new Date(addForm.date).getDay();
+                  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                  const dayOfWeek = dayNames[dayIndex];
+                  const wom = getWeekOfMonth(addForm.date);
+                  const isTruck1 = selectedTruck === 'Truck 1';
+                  const schedule_type = isTruck1 ? 'daily_priority' : 'weekly_cluster';
+                  const cluster_id = isTruck1 ? '1C-PB' : selectedCluster;
+                  const payload = {
+                    barangay_id: addForm.barangay_id,
+                    cluster_id,
+                    schedule_type,
+                    day_of_week: dayOfWeek,
+                    start_time: addForm.start_time,
+                    end_time: addForm.end_time,
+                    frequency_per_day: 1,
+                    week_of_month: schedule_type === 'weekly_cluster' ? wom : undefined,
+                    is_active: 1
+                  };
+                  const res = await fetch('https://kolektrash.systemproj.com/backend/api/create_predefined_schedule.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  });
+                  const data = await res.json();
+                  if (!data.success) throw new Error(data.message || 'Failed to create schedule');
+                  await fetchSchedules();
+                  setAddOpen(false);
+                } catch (err) {
+                  setAddError(err.message);
+                } finally {
+                  setAddSaving(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm text-green-700 mb-1">Barangay</label>
+                <select
+                  className="w-full border border-green-200 rounded px-3 py-2"
+                  value={addForm.barangay_id}
+                  onChange={(e) => setAddForm({ ...addForm, barangay_id: e.target.value })}
+                  required
+                >
+                  <option value="">Select barangay</option>
+                  {barangayList
+                    .filter(b => selectedTruck === 'Truck 1' ? b.cluster_id === '1C-PB' : true)
+                    .filter(b => selectedTruck === 'Truck 2' ? b.cluster_id === selectedCluster : true)
+                    .map(b => (
+                      <option key={b.barangay_id} value={b.barangay_id}>{b.barangay_name}</option>
+                    ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-green-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    className="w-full border border-green-200 rounded px-3 py-2"
+                    value={addForm.date}
+                    onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-green-700 mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    className="w-full border border-green-200 rounded px-3 py-2"
+                    value={addForm.start_time}
+                    onChange={(e) => setAddForm({ ...addForm, start_time: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-green-700 mb-1">End Time</label>
+                <input
+                  type="time"
+                  className="w-full border border-green-200 rounded px-3 py-2"
+                  value={addForm.end_time}
+                  onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button type="button" className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setAddOpen(false)}>Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={addSaving}>
+                  {addSaving ? 'Saving...' : 'Create Schedule'}
+                </button>
               </div>
             </form>
           </div>

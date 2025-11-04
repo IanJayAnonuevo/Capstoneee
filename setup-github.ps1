@@ -62,11 +62,11 @@ Write-Host "✅ Version tag v1.0.0 created" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "🎯 Next Steps:" -ForegroundColor Cyan
-Write-Host "1. Go to https://github.com and create a new repository called 'koletrash'" -ForegroundColor White
-Write-Host "2. Copy the repository URL (e.g., https://github.com/yourusername/koletrash.git)" -ForegroundColor White
+Write-Host "1. Go to https://github.com and create a new repository called 'kolektrash'" -ForegroundColor White
+Write-Host "2. Copy the repository URL (e.g., https://github.com/yourusername/kolektrash.git)" -ForegroundColor White
 Write-Host "3. Run the following commands:" -ForegroundColor White
 Write-Host ""
-Write-Host "   git remote add origin https://github.com/yourusername/koletrash.git" -ForegroundColor Yellow
+Write-Host "   git remote add origin https://github.com/yourusername/kolektrash.git" -ForegroundColor Yellow
 Write-Host "   git branch -M main" -ForegroundColor Yellow
 Write-Host "   git push -u origin main" -ForegroundColor Yellow
 Write-Host "   git push origin v1.0.0" -ForegroundColor Yellow

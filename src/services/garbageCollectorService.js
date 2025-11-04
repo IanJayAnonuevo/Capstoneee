@@ -1,9 +1,9 @@
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+import { buildApiUrl } from '../config/api';
 
 export const garbageCollectorService = {
   async getGarbageCollector(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_garbage_collector.php?id=${userId}`, {
+      const response = await fetch(buildApiUrl(`get_garbage_collector.php?id=${userId}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -24,7 +24,7 @@ export const garbageCollectorService = {
 
   async updateGarbageCollector(updateData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/update_garbage_collector.php`, {
+      const response = await fetch(buildApiUrl('update_garbage_collector.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ export const garbageCollectorService = {
 
   async changePassword(passwordData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/change_password.php`, {
+      const response = await fetch(buildApiUrl('change_password.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

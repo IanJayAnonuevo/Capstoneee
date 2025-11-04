@@ -11,11 +11,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once '../config/Database.php';
+require_once '../config/database.php';
 
 // Instantiate DB & connect
 $database = new Database();
 $db = $database->connect();
+
+if (!$db) {
+    http_response_code(500);
+    echo json_encode(array(
+        'status' => 'error',
+        'message' => 'Database connection failed'
+    ));
+    exit();
+}
 
 // Get barangay from query parameter
 $barangay = isset($_GET['barangay']) ? $_GET['barangay'] : null;
@@ -28,15 +37,47 @@ if (!$barangay) {
     exit();
 }
 
+$normalizedBarangay = trim($barangay);
+
 try {
-    // Query to get barangay head data by assigned barangay
-    $query = "SELECT e.id, e.fullName, e.email, e.phone, e.bh_barangay, e.term_start, e.term_end 
-              FROM employees e 
-              WHERE e.role = 'barangayhead' AND e.bh_barangay = :barangay 
+    // Query to get barangay head data by assigned barangay using multiple possible columns
+    $query = "SELECT 
+                e.id,
+                e.fullName,
+                e.email,
+                e.phone,
+                COALESCE(bh.barangay_assigned, e.bh_barangay, e.assignedArea) AS barangay_name,
+                COALESCE(bh.term_start, e.term_start) AS term_start,
+                COALESCE(bh.term_end, e.term_end) AS term_end
+              FROM employees e
+              LEFT JOIN barangay_heads bh ON e.id = bh.employee_id
+              WHERE e.role = 'barangayhead'
+                AND LOWER(COALESCE(bh.barangay_assigned, e.bh_barangay, e.assignedArea)) = LOWER(:barangay)
               LIMIT 1";
     $stmt = $db->prepare($query);
-    $stmt->bindParam(':barangay', $barangay);
-    $stmt->execute();
+    $stmt->bindParam(':barangay', $normalizedBarangay);
+        $stmt->execute();
+
+        if ($stmt->rowCount() === 0) {
+                // Fallback: try partial match in case of spacing or casing differences
+                $fallbackQuery = "SELECT 
+                                                        e.id,
+                                                        e.fullName,
+                                                        e.email,
+                                                        e.phone,
+                                                        COALESCE(bh.barangay_assigned, e.bh_barangay, e.assignedArea) AS barangay_name,
+                                                        COALESCE(bh.term_start, e.term_start) AS term_start,
+                                                        COALESCE(bh.term_end, e.term_end) AS term_end
+                                                    FROM employees e
+                                                    LEFT JOIN barangay_heads bh ON e.id = bh.employee_id
+                                                    WHERE e.role = 'barangayhead'
+                                                        AND LOWER(COALESCE(bh.barangay_assigned, e.bh_barangay, e.assignedArea)) LIKE LOWER(:barangay_like)
+                                                    LIMIT 1";
+                $stmt = $db->prepare($fallbackQuery);
+                $likeParam = '%' . $normalizedBarangay . '%';
+                $stmt->bindParam(':barangay_like', $likeParam);
+                $stmt->execute();
+        }
 
     if ($stmt->rowCount() > 0) {
         $barangayHead = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -48,7 +89,7 @@ try {
                 'name' => $barangayHead['fullName'],
                 'email' => $barangayHead['email'],
                 'phone' => $barangayHead['phone'],
-                'barangay' => $barangayHead['bh_barangay'],
+                'barangay' => $barangayHead['barangay_name'],
                 'termStart' => $barangayHead['term_start'],
                 'termEnd' => $barangayHead['term_end']
             )

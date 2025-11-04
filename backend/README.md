@@ -57,14 +57,14 @@ CREATE TABLE IF NOT EXISTS users (
 ### 3. File Structure
 
 Place the entire `backend` folder in your web server's document root:
-- For XAMPP: `C:\xampp\htdocs\koletrash\backend\`
-- For WAMP: `C:\wamp64\www\koletrash\backend\`
-- For MAMP: `/Applications/MAMP/htdocs/koletrash/backend/`
+- For XAMPP: `C:\xampp\htdocs\kolektrash\backend\`
+- For WAMP: `C:\wamp64\www\kolektrash\backend\`
+- For MAMP: `/Applications/MAMP/htdocs/kolektrash/backend/`
 
 ### 4. API Endpoints
 
 #### Signup
-- **URL**: `http://localhost/koletrash/backend/signup.php`
+- **URL**: `http://localhost/kolektrash/backend/signup.php`
 - **Method**: POST
 - **Content-Type**: application/json
 - **Body**:
@@ -87,7 +87,7 @@ You can test the API using tools like:
 
 Example cURL command:
 ```bash
-curl -X POST http://localhost/koletrash/backend/signup.php \
+curl -X POST http://localhost/kolektrash/backend/signup.php \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Test User",
@@ -102,7 +102,7 @@ curl -X POST http://localhost/koletrash/backend/signup.php \
 
 The React frontend is configured to connect to the backend at:
 ```javascript
-const API_BASE_URL = 'http://localhost/koletrash/backend';
+const API_BASE_URL = 'http://localhost/kolektrash/backend';
 ```
 
 Make sure this URL matches your local server setup.

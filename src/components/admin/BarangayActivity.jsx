@@ -23,7 +23,7 @@ function Spinner() {
 }
 
 export default function BarangayActivity() {
-  console.log('BarangayActivity component rendering');
+  // Removed debug log
   
   const [selectedBarangay, setSelectedBarangay] = useState('All');
   const [activityType, setActivityType] = useState('All');

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { buildApiUrl } from '../../config/api';
 
 function MyAssignments({ userId }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`https://koletrash.systemproj.com/backend/api/get_my_assignments.php?user_id=${userId}&role=driver`)
+  fetch(buildApiUrl(`get_my_assignments.php?user_id=${userId}&role=driver`))
       .then(res => res.json())
       .then(data => {
         if (data.success) setAssignments(data.assignments);
@@ -14,7 +15,7 @@ function MyAssignments({ userId }) {
   }, [userId]);
 
   const respond = (assignment_id, response_status) => {
-    fetch('https://koletrash.systemproj.com/backend/api/respond_assignment.php', {
+  fetch(buildApiUrl('respond_assignment.php'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignment_id, user_id: userId, response_status, role: 'driver' }),

@@ -1,4 +1,5 @@
-const API_URL = 'https://koletrash.systemproj.com/backend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+import { buildApiUrl } from '../config/api';
+
 
 export const feedbackService = {
     submitFeedback: async (feedbackData) => {
@@ -17,7 +18,7 @@ export const feedbackService = {
             // Ensure rating is a number
             feedbackData.rating = parseInt(feedbackData.rating);
 
-            const response = await fetch(`${API_URL}/submit_feedback.php`, {
+            const response = await fetch(buildApiUrl('submit_feedback.php'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -27,7 +28,7 @@ export const feedbackService = {
 
             // Always get the response text first
             const responseText = await response.text();
-            console.log('Raw server response:', responseText); // Debug log
+            // Removed logDebug
 
             // Try to parse the response
             let data;
@@ -57,6 +58,53 @@ export const feedbackService = {
             return {
                 success: false,
                 error: error.message
+            };
+        }
+    },
+
+    getAllFeedback: async () => {
+        try {
+            // Removed logDebug
+            const response = await fetch(buildApiUrl('get_all_feedback.php'), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            // Removed logDebug
+            const responseText = await response.text();
+            // Removed logDebug
+
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON Parse Error:', parseError);
+                throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+            }
+
+            // Removed logDebug
+
+            if (!response.ok) {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            }
+
+            if (data.status === 'success') {
+                return {
+                    success: true,
+                    data: data.data || [],
+                    message: data.message
+                };
+            } else {
+                throw new Error(data.message || 'Failed to fetch feedback');
+            }
+        } catch (error) {
+            console.error('Error in getAllFeedback:', error);
+            return {
+                success: false,
+                error: error.message,
+                data: []
             };
         }
     }

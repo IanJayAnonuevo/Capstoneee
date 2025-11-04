@@ -8,7 +8,7 @@
 git init
 git add .
 git commit -m "Initial commit - KolekTrash v1.0"
-git remote add origin https://github.com/yourusername/koletrash.git
+git remote add origin https://github.com/yourusername/kolektrash.git
 git push -u origin main
 ```
 

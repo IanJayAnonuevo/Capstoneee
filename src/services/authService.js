@@ -1,13 +1,65 @@
-const API_BASE_URL = 'https://koletrash.systemproj.com/backend/api'; // Replace koletrash.systemproj.com with your actual Hostinger domain
+import { API_BASE_URL, buildApiUrl } from '../config/api';
+
+const getAccessToken = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return localStorage.getItem('access_token');
+  } catch (error) {
+    console.warn('Unable to access stored token:', error);
+    return null;
+  }
+};
+
+const withAuthHeaders = (headers = {}) => {
+  const token = getAccessToken();
+  if (token) {
+    return {
+      ...headers,
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return { ...headers };
+};
+
+const ASSET_ROOT_URL = (() => {
+  try {
+  const normalized = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
+    // Navigate two levels up (remove /backend/api)
+    const backendUrl = new URL('../', normalized);
+    const rootUrl = new URL('../', backendUrl);
+    return rootUrl.href.replace(/\/$/, '');
+  } catch (error) {
+    console.error('Failed to compute asset root URL:', error);
+    return '';
+  }
+})();
+
+const resolveAssetUrl = (path) => {
+  if (!path) return null;
+  if (typeof path !== 'string') return null;
+  if (/^https?:\/\//i.test(path) || path.startsWith('blob:') || path.startsWith('data:')) {
+    return path;
+  }
+  const sanitized = path.replace(/^\/+/, '');
+  if (!ASSET_ROOT_URL) {
+    return `/${sanitized}`;
+  }
+  return `${ASSET_ROOT_URL}/${sanitized}`;
+};
 
 export const authService = {
+  resolveAssetUrl(path) {
+    return resolveAssetUrl(path);
+  },
   async signup(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/register.php`, {
+  const response = await fetch(buildApiUrl('register.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(userData),
       });
 
@@ -25,7 +77,7 @@ export const authService = {
 
   async login({ username, password }) {
     try {
-      const response = await fetch(`${API_BASE_URL}/login.php`, {
+  const response = await fetch(buildApiUrl('login.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,11 +99,11 @@ export const authService = {
 
   async getUserData(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_user.php?id=${userId}`, {
+  const response = await fetch(buildApiUrl(`get_user.php?id=${userId}`), {
         method: 'GET',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       });
 
       const data = await response.json();
@@ -68,11 +120,11 @@ export const authService = {
 
   async updateProfile(userId, profileData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/update_profile.php`, {
+  const response = await fetch(buildApiUrl('update_profile.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({
           id: userId,
           ...profileData
@@ -93,11 +145,11 @@ export const authService = {
 
   async changePassword(userId, currentPassword, newPassword) {
     try {
-      const response = await fetch(`${API_BASE_URL}/change_password.php`, {
+  const response = await fetch(buildApiUrl('change_password.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify({
           id: userId,
           currentPassword: currentPassword,
@@ -119,20 +171,27 @@ export const authService = {
 
   async getBarangayHead(barangay) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_barangay_head.php?barangay=${encodeURIComponent(barangay)}`, {
+  const response = await fetch(buildApiUrl(`get_barangay_head.php?barangay=${encodeURIComponent(barangay)}`), {
         method: 'GET',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers?.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      const payload = isJson ? await response.json() : await response.text();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch barangay head data');
+        const message = isJson ? (payload?.message || 'Failed to fetch barangay head data') : 'Failed to fetch barangay head data';
+        throw new Error(message);
       }
 
-      return data;
+      if (!isJson) {
+        return { status: 'success', data: null };
+      }
+
+      return payload;
     } catch (error) {
       throw error;
     }
@@ -140,11 +199,11 @@ export const authService = {
 
   async submitIssueReport(reportData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/submit_issue_report.php`, {
+  const response = await fetch(buildApiUrl('submit_issue_report.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(reportData),
       });
 
@@ -162,11 +221,11 @@ export const authService = {
 
   async submitPickupRequest(requestData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/submit_pickup_request.php`, {
+  const response = await fetch(buildApiUrl('submit_pickup_request.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestData),
       });
 
@@ -184,11 +243,11 @@ export const authService = {
 
   async getUserDetails(userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/get_user_details.php?user_id=${userId}`, {
+  const response = await fetch(buildApiUrl(`get_user_details.php?user_id=${userId}`), {
         method: 'GET',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       });
 
       const data = await response.json();
@@ -212,11 +271,11 @@ export const authService = {
         }
       });
 
-      const response = await fetch(`${API_BASE_URL}/get_pickup_requests.php?${params}`, {
+  const response = await fetch(buildApiUrl(`get_pickup_requests.php?${params}`), {
         method: 'GET',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
       });
 
       const data = await response.json();
@@ -241,11 +300,11 @@ export const authService = {
       
       console.log('Sending to API:', requestBody);
       
-      const response = await fetch(`${API_BASE_URL}/update_pickup_request_status.php`, {
+  const response = await fetch(buildApiUrl('update_pickup_request_status.php'), {
         method: 'POST',
-        headers: {
+        headers: withAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(requestBody),
       });
 
@@ -253,6 +312,29 @@ export const authService = {
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to update pickup request status');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async uploadProfileImage(formData) {
+    try {
+  const response = await fetch(buildApiUrl('upload_profile_image.php'), {
+        method: 'POST',
+        headers: withAuthHeaders(),
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const error = new Error(data?.message || 'Failed to upload profile image');
+        error.status = response.status;
+        error.payload = data;
+        throw error;
       }
 
       return data;

@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import oneImg from '../../assets/images/landingpage/one.png';
+import twoImg from '../../assets/images/landingpage/two.png';
+import threeImg from '../../assets/images/landingpage/three.png';
+import fourImg from '../../assets/images/landingpage/four.png';
+import fiveImg from '../../assets/images/landingpage/five.png';
+import sixImg from '../../assets/images/landingpage/six.png';
 
-const images = [
-  'https://www.xinsurance.com/wp-content/uploads/sites/5/2018/04/GettyImages-495351035.jpg',
-  'https://www.firstdiscoverers.co.uk/wp-content/uploads/2019/08/recycling.jpg',
-  'https://www.nistglobal.com/blog/wp-content/uploads/2023/05/Benefits-of-Implementing-an-Environmental-Management-System%E2%80%AF-05-05.jpg',
-  '',
-  '',
-  '',
-  // Add more image URLs as you like
-];
+const images = [oneImg, twoImg, threeImg, fourImg, fiveImg, sixImg];
+const CTA_LOADING_DURATION_MS = 2000;
 
 const Section1 = () => {
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState(null);
   const [fade, setFade] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    setTimeout(() => navigate('/signup'), CTA_LOADING_DURATION_MS);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -33,28 +40,67 @@ const Section1 = () => {
       {prev !== null && prev !== current && !fade && (
         <div
           className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-100 z-10`}
-          style={{ backgroundImage: `url('${images[prev]}')` }}
+          style={{
+            backgroundImage: `url(${images[prev]})`,
+            filter: 'contrast(1.05) saturate(1.05) brightness(1.05)'
+          }}
         >
-          <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+          <div className="absolute inset-0 bg-black/35 mix-blend-multiply"></div>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.65) 100%)'
+            }}
+          ></div>
         </div>
       )}
       <div
         className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${fade ? 'opacity-100 z-20' : 'opacity-0 z-0'}`}
-        style={{ backgroundImage: `url('${images[current]}')` }}
+        style={{
+          backgroundImage: `url(${images[current]})`,
+          filter: 'contrast(1.08) saturate(1.08) brightness(1.05)'
+        }}
       >
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        <div className="absolute inset-0 bg-black/35 mix-blend-multiply"></div>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.65) 100%)'
+          }}
+        ></div>
       </div>
-      <div className="relative z-30 flex flex-col items-center justify-center h-full text-center text-white px-4 space-y-4">
-        <h1 className="text-3xl md:text-5xl font-bold landing-fade">
-          Let's Keep Sipocot Clean, Green, and Waste-Free
-        </h1>
-        <p className="text-lg md:text-xl landing-fade landing-delay-100">Join the change today.</p>
-        <Link
-          to="/login"
-          className="bg-white text-green-700 px-6 py-2 rounded hover:bg-gray-200 transition-colors duration-200 landing-fade landing-delay-200"
+      <div className="relative z-30 flex flex-col items-center justify-center h-full text-center text-white px-6 md:px-12 space-y-6">
+        <h1
+          className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight landing-fade"
+          style={{
+            textShadow: '0 14px 40px rgba(0,0,0,0.65), 0 3px 12px rgba(0,0,0,0.55)'
+          }}
         >
-          Get Started
-        </Link>
+          Kolektrash: Waste Collection Made Simple.
+        </h1>
+        <p
+          className="text-lg md:text-xl lg:text-2xl font-medium text-white/90 max-w-2xl landing-fade landing-delay-100"
+          style={{ textShadow: '0 8px 28px rgba(0,0,0,0.55), 0 2px 12px rgba(0,0,0,0.45)' }}
+        >
+          For a Cleaner, Healthier Sipocot
+        </p>
+        <button
+          type="button"
+          onClick={handleGetStarted}
+          disabled={isNavigating}
+          className="inline-flex items-center justify-center gap-3 bg-white text-green-700 px-8 py-3 rounded-full text-base md:text-lg font-semibold shadow-[0_18px_35px_rgba(0,0,0,0.3)] hover:bg-green-50 hover:shadow-[0_22px_48px_rgba(0,0,0,0.35)] transition-all duration-200 landing-fade landing-delay-200 disabled:opacity-80 disabled:cursor-wait"
+        >
+          {isNavigating ? (
+            <>
+              <span className="flex h-5 w-5 items-center justify-center">
+                <span className="h-5 w-5 rounded-full border-2 border-green-200 border-t-green-600 animate-spin"></span>
+              </span>
+              <span>Loading...</span>
+            </>
+          ) : (
+            <span>Sign up now</span>
+          )}
+        </button>
       </div>
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4 z-40">
         {images.map((_, idx) => (

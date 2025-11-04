@@ -16,8 +16,13 @@ try {
   $truckFull = isset($input['truck_full']) ? (bool)$input['truck_full'] : false;
 
   $allowed = ['pending','in_progress','completed','paused'];
+  
+  // Debug logging
+  error_log("Update route status debug - route_id: " . $routeId . ", status: " . $status);
+  error_log("Raw input: " . file_get_contents('php://input'));
+  
   if ($routeId <= 0 || ($status !== '' && !in_array($status, $allowed))) {
-    throw new Exception('Invalid route_id or status');
+    throw new Exception('Invalid route_id or status. route_id: ' . $routeId . ', status: ' . $status);
   }
 
   $db = (new Database())->connect();

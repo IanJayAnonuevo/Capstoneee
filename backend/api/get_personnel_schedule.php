@@ -41,11 +41,13 @@ try {
                     ct.status as team_status,
                     t.plate_num,
                     t.truck_type,
-                    t.capacity
+                    t.capacity,
+                    dr.id as route_id
                   FROM collection_team ct
                   JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
                   JOIN barangay b ON cs.barangay_id = b.barangay_id
                   LEFT JOIN truck t ON ct.truck_id = t.truck_id
+                  LEFT JOIN daily_route dr ON dr.team_id = ct.team_id
                   WHERE ct.driver_id = ? 
                     AND ct.status IN ('accepted', 'confirmed')
                     AND cs.status IN ('scheduled', 'pending')
@@ -55,39 +57,45 @@ try {
         $stmt->execute([$user_id]);
         $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-    } elseif ($role === 'collector') {
+        } elseif ($role === 'collector') {
         // Get unique team/schedule rows for this collector using EXISTS to avoid duplicates from member joins
-        $query = "SELECT 
-                    cs.schedule_id,
-                    cs.scheduled_date,
-                    cs.start_time,
-                    cs.end_time,
-                    cs.status as schedule_status,
-                    b.barangay_name,
-                    ct.team_id,
-                    ct.status as team_status,
-                    uctm.response_status,
-                    t.plate_num,
-                    t.truck_type,
-                    t.capacity,
-                    u.username as driver_username
-                  FROM collection_team ct
-                  JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
-                  JOIN barangay b ON cs.barangay_id = b.barangay_id
-                  LEFT JOIN truck t ON ct.truck_id = t.truck_id
-                  LEFT JOIN user u ON ct.driver_id = u.user_id
-                  JOIN (
-                    SELECT DISTINCT ctm.team_id, ctm.response_status
-                    FROM collection_team_member ctm
-                    WHERE ctm.collector_id = :uid
-                      AND ctm.response_status IN ('accepted','confirmed','pending')
-                  ) uctm ON uctm.team_id = ct.team_id
-                  WHERE ct.status IN ('accepted', 'confirmed', 'pending')
-                    AND cs.status IN ('scheduled', 'pending')
-                  ORDER BY cs.scheduled_date ASC, cs.start_time ASC";
+                $query = "SELECT 
+                                        cs.schedule_id,
+                                        cs.scheduled_date,
+                                        cs.start_time,
+                                        cs.end_time,
+                                        cs.status AS schedule_status,
+                                        b.barangay_name,
+                                        ct.team_id,
+                                        ct.status AS team_status,
+                                        uctm.response_status,
+                                        t.plate_num,
+                                        t.truck_type,
+                                        t.capacity,
+                                        u.username AS driver_username,
+                                        dr_map.route_id
+                                    FROM collection_team ct
+                                    JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
+                                    JOIN barangay b ON cs.barangay_id = b.barangay_id
+                                    LEFT JOIN truck t ON ct.truck_id = t.truck_id
+                                    LEFT JOIN user u ON ct.driver_id = u.user_id
+                                    LEFT JOIN (
+                                        SELECT dr_inner.team_id, DATE(dr_inner.date) AS route_date, MIN(dr_inner.id) AS route_id
+                                        FROM daily_route dr_inner
+                                        GROUP BY dr_inner.team_id, DATE(dr_inner.date)
+                                    ) dr_map ON dr_map.team_id = ct.team_id AND dr_map.route_date = DATE(cs.scheduled_date)
+                                    JOIN (
+                                        SELECT DISTINCT ctm.team_id, ctm.response_status
+                                        FROM collection_team_member ctm
+                                        WHERE ctm.collector_id = :uid
+                                            AND ctm.response_status IN ('accepted','confirmed','pending')
+                                    ) uctm ON uctm.team_id = ct.team_id
+                                    WHERE ct.status IN ('accepted', 'confirmed', 'pending')
+                                        AND cs.status IN ('scheduled', 'pending')
+                                    ORDER BY cs.scheduled_date ASC, cs.start_time ASC";
 
-        $stmt = $db->prepare($query);
-        $stmt->execute([':uid' => $user_id]);
+                $stmt = $db->prepare($query);
+                $stmt->execute([':uid' => $user_id]);
         $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
         echo json_encode([
@@ -110,6 +118,7 @@ try {
         
         $formattedSchedules[] = [
             'schedule_id' => $schedule['schedule_id'],
+            'route_id' => $schedule['route_id'], // This is the daily_route ID
             'team_id' => $schedule['team_id'],
             'date' => $schedule['scheduled_date'],
             'time' => $schedule['start_time'],

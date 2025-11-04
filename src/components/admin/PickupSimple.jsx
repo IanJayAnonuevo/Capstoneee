@@ -17,10 +17,10 @@ export default function PickupSimple() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('Fetching data...');
+  // Removed debug log
         
         const response = await authService.getPickupRequests();
-        console.log('Response:', response);
+  // Removed debug log
         
         if (response && response.status === 'success') {
           setRequests(response.data || []);
@@ -80,8 +80,8 @@ export default function PickupSimple() {
   const handleSchedule = async (request) => {
     try {
       setActionLoading(true);
-      console.log('Scheduling request:', request);
-      console.log('Request ID:', request.id || request.request_id);
+  // Removed debug log
+  // Removed debug log
       
       const response = await authService.updatePickupRequestStatus(
         request.id || request.request_id,

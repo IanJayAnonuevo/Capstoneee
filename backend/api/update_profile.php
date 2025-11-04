@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once '../config/Database.php';
+require_once '../config/database.php';
 
 $database = new Database();
 $db = $database->connect();
@@ -42,8 +42,19 @@ try {
     $stmtUser->bindParam(':email', $data->email);
     $stmtUser->execute();
 
+    // Determine optional profile columns to avoid errors on older databases
+    $profileImageExistsStmt = $db->query("SHOW COLUMNS FROM user_profile LIKE 'profile_image'");
+    $profileImageUpdatedExistsStmt = $db->query("SHOW COLUMNS FROM user_profile LIKE 'profile_image_updated_at'");
+
+    $profileImageSelect = ($profileImageExistsStmt && $profileImageExistsStmt->rowCount() > 0)
+        ? 'up.profile_image'
+        : 'NULL';
+    $profileImageUpdatedSelect = ($profileImageUpdatedExistsStmt && $profileImageUpdatedExistsStmt->rowCount() > 0)
+        ? 'up.profile_image_updated_at'
+        : 'NULL';
+
     // Get updated user data (join user, user_profile, role)
-    $userQuery = "SELECT u.user_id, u.username, u.email, up.firstname, up.lastname, up.contact_num as phone, up.address, up.barangay_id, r.role_name as role FROM user u LEFT JOIN user_profile up ON u.user_id = up.user_id LEFT JOIN role r ON u.role_id = r.role_id WHERE u.user_id = :id";
+    $userQuery = "SELECT u.user_id, u.user_id as id, u.username, u.email, up.firstname, up.lastname, up.contact_num as phone, up.address, up.barangay_id, {$profileImageSelect} AS profile_image, {$profileImageUpdatedSelect} AS profile_image_updated_at, r.role_name as role FROM user u LEFT JOIN user_profile up ON u.user_id = up.user_id LEFT JOIN role r ON u.role_id = r.role_id WHERE u.user_id = :id";
     $userStmt = $db->prepare($userQuery);
     $userStmt->bindParam(':id', $data->id);
     $userStmt->execute();
@@ -59,4 +70,4 @@ try {
         'message' => 'Database error: ' . $e->getMessage()
     ]);
 }
-?> 
+?>
