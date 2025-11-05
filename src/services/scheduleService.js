@@ -383,7 +383,8 @@ export function mapPredefinedSchedulesToResidentStructure(rawSchedules = []) {
 }
 
 export async function fetchResidentScheduleMap({ signal } = {}) {
-  const response = await fetch(buildApiUrl('get_predefined_schedules.php'), { signal });
+  const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+  const response = await fetch(buildApiUrl('get_predefined_schedules.php'), { signal, headers: token ? { Authorization: `Bearer ${token}` } : undefined });
 
   if (!response.ok) {
     throw new Error(`Failed to load predefined schedules: ${response.status}`);

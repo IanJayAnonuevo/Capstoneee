@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiMap, FiCheckCircle } from 'react-icons/fi';
-
-const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
+import { buildApiUrl } from '../../config/api';
 
 function normalizeId(value) {
   if (value === undefined || value === null) return null;
@@ -94,11 +93,15 @@ export default function GarbageCollectorTasks() {
     }
   }, []);
 
+  const authHeaders = () => {
+    try { const t = localStorage.getItem('access_token'); return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  };
+
   useEffect(() => {
     async function fetchTasks() {
       setLoading(true); setError(null);
       try {
-  const res = await fetch(`https://kolektrash.systemproj.com/backend/api/get_personnel_schedule.php?user_id=${userId}&role=collector`);
+  const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=collector`), { headers: { ...authHeaders() } });
         const data = await res.json();
         if (data.success) {
           const mapped = (data.schedules || []).map((s, idx) => {
@@ -186,9 +189,9 @@ export default function GarbageCollectorTasks() {
 
   const acceptDecline = async (teamId, response) => {
     try {
-  const res = await fetch('https://kolektrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id: teamId, user_id: userId, response_status: response, role: 'collector' })
       });
       const data = await res.json();
@@ -266,7 +269,7 @@ export default function GarbageCollectorTasks() {
     (async () => {
       const entries = await Promise.all(uniqueDates.map(async (dateKey) => {
         try {
-          const res = await fetch(`https://kolektrash.systemproj.com/backend/api/get_routes.php?date=${dateKey}&role=collector&user_id=${userId}`);
+          const res = await fetch(buildApiUrl(`get_routes.php?date=${dateKey}&role=collector&user_id=${userId}`), { headers: { ...authHeaders() } });
           const data = await res.json();
           if (!data?.success) return [dateKey, null];
           const barangayList = (data.routes || []).map((r, idx) => ({
@@ -337,13 +340,13 @@ export default function GarbageCollectorTasks() {
 
     const fetchRoutes = async (includeUserContext) => {
       try {
-        const url = new URL(`${API_BASE_URL}/get_routes.php`);
+        const url = new URL(buildApiUrl('get_routes.php'));
         url.searchParams.set('date', dateKey);
         if (includeUserContext && userId) {
           url.searchParams.set('role', 'collector');
           url.searchParams.set('user_id', userId);
         }
-        const res = await fetch(url.toString());
+        const res = await fetch(url.toString(), { headers: { ...authHeaders() } });
         const data = await res.json();
         if (!data?.success) return null;
         const barangayList = mapRoutes(data.routes);

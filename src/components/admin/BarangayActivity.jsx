@@ -23,7 +23,7 @@ function Spinner() {
 }
 
 export default function BarangayActivity() {
-  // Removed debug log
+  console.log('BarangayActivity component rendering');
   
   const [selectedBarangay, setSelectedBarangay] = useState('All');
   const [activityType, setActivityType] = useState('All');
@@ -434,45 +434,37 @@ export default function BarangayActivity() {
 
   return (
     <div className="p-6 max-w-full overflow-x-auto bg-green-50 min-h-screen font-sans">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl text-green-800 mb-2 font-normal tracking-tight">
-          Barangay Activity Overview
-        </h1>
-        <p className="text-sm md:text-base lg:text-lg text-gray-600 m-0 font-normal">
-          Monitor, analyze, and manage barangay-level waste activities and compliance.
-        </p>
-      </div>
+      {/* Header removed - using global admin header */}
 
       {/* Action Buttons - Minimal Design */}
-      <div className="flex gap-3 my-6 flex-wrap justify-start">
+      <div className="flex gap-3 my-3 flex-wrap justify-start">
         <button 
           onClick={handleAddActivity}
-          className="px-5 py-2.5 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-600"
+          className="px-4 py-2 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-600"
         >
           Log New Activity
         </button>
         <button 
           onClick={handleSendAdvisory}
-          className="px-5 py-2.5 bg-green-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-500"
+          className="px-4 py-2 bg-green-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-500"
         >
           Send Advisory
         </button>
         <button 
           onClick={handleExportCSV}
-          className="px-5 py-2.5 bg-green-400 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-300"
+          className="px-4 py-2 bg-green-400 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-300"
         >
           Export CSV
         </button>
         <button 
           onClick={handlePrint}
-          className="px-5 py-2.5 bg-amber-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-amber-700"
+          className="px-4 py-2 bg-amber-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-amber-700"
         >
           Print
         </button>
         <button 
           onClick={handleExportData}
-          className="px-5 py-2.5 bg-purple-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-purple-500"
+          className="px-4 py-2 bg-purple-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-purple-500"
         >
           Export Data
         </button>
@@ -526,7 +518,7 @@ export default function BarangayActivity() {
       </div>
 
       {/* Summary Cards - Minimal Design */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-3">
         <div className="bg-white p-5 rounded-lg border border-green-200 text-center">
           <div className="text-sm text-gray-600 mb-2">Total Waste/Day</div>
           <div className="text-2xl font-normal text-green-800">{totalWaste.toFixed(1)} tons</div>

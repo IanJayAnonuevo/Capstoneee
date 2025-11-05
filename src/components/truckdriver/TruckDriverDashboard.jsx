@@ -432,9 +432,15 @@ export default function TruckDriverDashboard() {
   const avatarInitial = displayName && displayName !== 'Loading...' ? displayName.charAt(0).toUpperCase() : 'D';
 
   // Driver info from database
+  const toTitleCase = (value) => {
+    if (!value) return '';
+    const cleaned = String(value).replace(/_/g, ' ');
+    return cleaned.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+  };
+
   const driver = {
     name: displayName,
-    role: user?.role || 'Truck Driver',
+    role: toTitleCase(user?.role || 'Truck Driver'),
     id: user?.user_id || 'TD-001',
     truck: 'Truck #05',
     shift: 'Morning Shift',
@@ -445,7 +451,7 @@ export default function TruckDriverDashboard() {
     avatarInitial,
   };
 
-  const activeCooldownMessage = avatarUploadError ? '' : formatCooldownMessage(avatarCooldownUntil);
+  const activeCooldownMessage = '';
 
   // MENRO events carousel images - same as other dashboards for consistency
   const eventImages = [
@@ -566,15 +572,22 @@ export default function TruckDriverDashboard() {
       {menuOpen && (
         <div className="fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setMenuOpen(false)} />
-          <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
-            {/* Profile Section */}
-            <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="flex flex-col items-center gap-1">
+          <div className="relative bg-white w-[320px] max-w-[88%] h-full shadow-2xl z-50 animate-fadeInLeft flex flex-col rounded-r-2xl overflow-hidden">
+            {/* Profile Section - left-aligned like sample */}
+            <div className="bg-gradient-to-b from-green-800 to-green-700 px-5 pt-6 pb-5 relative">
+              <button 
+                onClick={() => setMenuOpen(false)}
+                className="absolute right-3 top-3 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close menu"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+              <div className="flex items-center text-left gap-3">
                 <button
                   type="button"
                   onClick={handleAvatarClick}
                   title="Change profile picture"
-                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-xl overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
                 >
                   {isAvatarUploading ? (
                     <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
@@ -583,62 +596,57 @@ export default function TruckDriverDashboard() {
                   ) : (
                     <span className="text-green-800 font-bold text-lg">{driver.avatarInitial}</span>
                   )}
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Change
-                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">Change</span>
                 </button>
-                {avatarUploadError ? (
-                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
-                ) : isAvatarUploading ? (
-                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
-                ) : activeCooldownMessage ? (
-                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
-                ) : null}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-white font-semibold text-[15px] leading-tight truncate w-full">{driver.name}</h2>
+                  <p className="mt-0.5 text-emerald-50/90 text-[12px]">{driver.role}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-white font-semibold text-base truncate">{driver.name}</h2>
-                <p className="text-green-100 text-sm">{driver.role}</p>
-                <p className="text-green-200 text-xs">ID: {driver.id} • {driver.truck}</p>
-              </div>
-              <button 
-                onClick={() => setMenuOpen(false)}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Navigation Menu */}
-            <nav className="flex-1 overflow-y-auto py-4 px-2">
-              <div className="space-y-1">
-                {navLinks.map((link) => {
+            <nav className="flex-1 overflow-y-auto py-4 px-3 bg-gradient-to-b from-white to-emerald-50/30">
+              <div className="space-y-2">
+                {navLinks.filter(l => l.label !== 'Logout').map((link) => {
                   const isActive = link.to && location.pathname === link.to;
                   return (
                     <button
                       key={link.label}
-                      className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
-                        ${link.label === 'Logout' 
-                          ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100' 
-                          : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
-                        }
-                        ${isActive ? 'border-2' : 'border'}
+                      className={`group flex items-center w-full px-4 py-3 rounded-xl text-left transition-all border
+                        ${isActive
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow'
+                          : 'bg-white hover:bg-emerald-50 text-emerald-900 border-emerald-100'}
                       `}
                       onClick={() => handleNavigation(link.to, {
                         skipLoading: link.showLoading === false,
                         customAction: link.action
                       })}
                     >
-                      <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>
+                      <span className={`flex items-center justify-center w-9 h-9 rounded-lg mr-3 ${isActive ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'}`}>
                         {link.icon}
                       </span>
-                      <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
-                        {link.label}
-                      </span>
+                      <span className={`text-sm font-semibold flex-1 text-left ${isActive ? 'text-white' : 'text-emerald-900'}`}>{link.label}</span>
+                      <IoChevronForward className={`w-4 h-4 ${isActive ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-600'}`} />
                     </button>
                   );
                 })}
               </div>
             </nav>
+
+            {/* Logout */}
+            <div className="px-3 pb-4 pt-2 bg-white border-t border-emerald-100">
+              <button
+                className="flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors bg-red-50 hover:bg-red-100 text-red-700 border border-red-100"
+                onClick={() => handleNavigation(undefined, { customAction: () => setShowLogoutModal(true) })}
+              >
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg mr-3 bg-red-100 text-red-600">
+                  {navLinks.find(n => n.label === 'Logout')?.icon}
+                </span>
+                <span className="text-sm font-semibold">Logout</span>
+                <IoChevronForward className="w-4 h-4 ml-auto text-red-400" />
+              </button>
+            </div>
           </div>
         </div>
       )}

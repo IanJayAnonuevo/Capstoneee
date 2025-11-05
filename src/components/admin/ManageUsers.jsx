@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { buildApiUrl } from '../../config/api';
-import { FiSearch, FiPlus, FiUser, FiMoreVertical, FiCheckCircle, FiAlertCircle, FiX } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { FiSearch, FiPlus, FiUser, FiMoreVertical } from "react-icons/fi";
 
 // Environmental theme colors - Tree-inspired palette (same as ManageRoute)
 const ENV_COLORS = {
@@ -22,12 +21,12 @@ const ENV_COLORS = {
   soil: '#8b4513'          // Rich soil brown
 };
 
-const accountTypes = ["All", "Foreman", "Truck Driver", "Garbage Collector", "Barangay Head", "Resident"];
+const accountTypes = ["All", "Truck Driver", "Garbage Collector", "Barangay Head", "Resident"];
+const staffStatuses = ["All", "On Duty", "Off Duty"];
 
 // Color map for roles using tree palette
 const roleColors = {
   "Admin": "bg-purple-800 text-white",
-  "Foreman": "bg-lime-700 text-white",
   "Truck Driver": "bg-green-800 text-white",
   "Garbage Collector": "bg-green-600 text-white",
   "Barangay Head": "bg-amber-800 text-white",
@@ -36,7 +35,6 @@ const roleColors = {
 
 const roleDisplay = {
   admin: "Admin",
-  foreman: "Foreman",
   truck_driver: "Truck Driver",
   garbage_collector: "Garbage Collector",
   barangay_head: "Barangay Head",
@@ -47,12 +45,12 @@ const roleDisplay = {
 export default function ManageUsers() {
   const [search, setSearch] = useState("");
   const [accountType, setAccountType] = useState("All");
+  const [status, setStatus] = useState("All");
   const [cluster, setCluster] = useState("All");
   const [clusterOptions, setClusterOptions] = useState(["All"]);
-  const [barangayOptions, setBarangayOptions] = useState([]);
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const initialFormState = {
+  const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
@@ -61,57 +59,39 @@ export default function ManageUsers() {
     lastname: "",
     birthdate: "",
     gender: "",
-    contact_num: "",
-    address: "",
     status: "",
     barangay_id: ""
-  };
-  const [form, setForm] = useState(initialFormState);
+  });
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [viewModal, setViewModal] = useState({ open: false, loading: false, error: '', data: null });
-  const [editModal, setEditModal] = useState({ open: false, loading: false, submitting: false, error: '', form: null });
-  const [deactivateModal, setDeactivateModal] = useState({ open: false, submitting: false, error: '', user: null });
-  const [feedbackModal, setFeedbackModal] = useState({ open: false, type: 'success', title: '', message: '' });
-
-  const closeFeedbackModal = () => setFeedbackModal((prev) => ({ ...prev, open: false }));
-
-  const showFeedbackModal = (title, message, type = 'success') => {
-    setFeedbackModal({
-      open: true,
-      type,
-      title,
-      message
-    });
-  };
-
-  const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    try {
-      const res = await fetch(buildApiUrl('get_all_users.php'));
-      const data = await res.json();
-      if (data.success) {
-        const nonAdmins = Array.isArray(data.users) ? data.users.filter(u => u.user_type !== 'admin') : [];
-        setUsers(nonAdmins);
-      } else {
-        alert(data.message || "Failed to fetch users.");
-      }
-    } catch (err) {
-      alert("Error fetching users.");
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, []);
 
   useEffect(() => {
+    async function fetchUsers() {
+      setLoadingUsers(true);
+      try {
+        const res = await fetch("https://koletrash.systemproj.com/backend/api/get_all_users.php");
+        const data = await res.json();
+        if (data.success) {
+          // Exclude admin accounts from listing
+          const nonAdmins = Array.isArray(data.users) ? data.users.filter(u => u.user_type !== 'admin') : [];
+          setUsers(nonAdmins);
+        } else {
+          alert(data.message || "Failed to fetch users.");
+        }
+      } catch (err) {
+        alert("Error fetching users.");
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
 
   // Fetch clusters for barangay head and resident filtering
   useEffect(() => {
     async function fetchClusters() {
       try {
-        const res = await fetch(buildApiUrl('get_clusters.php'));
+        const res = await fetch('https://koletrash.systemproj.com/backend/api/get_clusters.php');
         const data = await res.json();
         let options = [];
         if (Array.isArray(data?.clusters)) {
@@ -127,193 +107,54 @@ export default function ManageUsers() {
     fetchClusters();
   }, []);
 
-  // Fetch barangays for create account modal selection
-  useEffect(() => {
-    async function fetchBarangays() {
-      try {
-        const res = await fetch(buildApiUrl('get_barangays.php'));
-        const data = await res.json();
-        if (data.success && Array.isArray(data.barangays)) {
-          setBarangayOptions(data.barangays);
-        } else {
-          console.warn('Failed to load barangays', data.message);
-        }
-      } catch (err) {
-        console.warn('Error fetching barangays', err);
-      }
-    }
-    fetchBarangays();
-  }, []);
-
-  const fetchUserDetails = useCallback(async (userId) => {
-    const url = buildApiUrl(`get_user.php?id=${encodeURIComponent(userId)}`);
-    const response = await fetch(url);
-    const data = await response.json();
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to load user details.');
-    }
-    return data.data;
-  }, []);
-
-  const handleViewUser = async (userId) => {
-    setOpenMenuUserId(null);
-    setViewModal({ open: true, loading: true, error: '', data: null });
-    try {
-      const detail = await fetchUserDetails(userId);
-      setViewModal({ open: true, loading: false, error: '', data: detail });
-    } catch (error) {
-      setViewModal({ open: true, loading: false, error: error.message || 'Failed to load user details.', data: null });
-    }
-  };
-
-  const closeViewModal = () => {
-    setViewModal({ open: false, loading: false, error: '', data: null });
-  };
-
-  const handleEditUser = async (userId) => {
-    setOpenMenuUserId(null);
-    setEditModal({ open: true, loading: true, submitting: false, error: '', form: null });
-    try {
-      const detail = await fetchUserDetails(userId);
-      setEditModal({
-        open: true,
-        loading: false,
-        submitting: false,
-        error: '',
-        form: {
-          id: detail.id,
-          firstname: detail.firstname || '',
-          lastname: detail.lastname || '',
-          email: detail.email || '',
-          phone: detail.phone || '',
-          role: detail.role,
-          barangay: detail.barangay,
-          barangay_id: detail.barangay_id,
-          status: detail.status
-        }
-      });
-    } catch (error) {
-      setEditModal({ open: true, loading: false, submitting: false, error: error.message || 'Failed to load user details.', form: null });
-    }
-  };
-
-  const handleEditFormChange = (field, value) => {
-    setEditModal((prev) => ({
-      ...prev,
-      form: prev.form ? { ...prev.form, [field]: value } : prev.form
-    }));
-  };
-
-  const closeEditModal = () => {
-    setEditModal({ open: false, loading: false, submitting: false, error: '', form: null });
-  };
-
-  const handleSubmitEdit = async (event) => {
-    event.preventDefault();
-    if (!editModal.form) return;
-    setEditModal((prev) => ({ ...prev, submitting: true, error: '' }));
-    try {
-      const payload = {
-        id: editModal.form.id,
-        firstname: (editModal.form.firstname || '').trim(),
-        lastname: (editModal.form.lastname || '').trim(),
-        phone: editModal.form.phone || '',
-        email: (editModal.form.email || '').trim()
-      };
-      const response = await fetch(buildApiUrl('update_profile.php'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        setEditModal({ open: false, loading: false, submitting: false, error: '', form: null });
-        await fetchUsers();
-        alert('User details updated successfully.');
-      } else {
-        throw new Error(data.message || 'Failed to update user.');
-      }
-    } catch (error) {
-      setEditModal((prev) => ({ ...prev, submitting: false, error: error.message || 'Failed to update user.' }));
-    }
-  };
-
-  const handleDeactivatePrompt = (user) => {
-    setOpenMenuUserId(null);
-    setDeactivateModal({ open: true, submitting: false, error: '', user });
-  };
-
-  const closeDeactivateModal = () => {
-    setDeactivateModal({ open: false, submitting: false, error: '', user: null });
-  };
-
-  const confirmDeactivate = async () => {
-    if (!deactivateModal.user) return;
-    setDeactivateModal((prev) => ({ ...prev, submitting: true, error: '' }));
-    try {
-      const response = await fetch(buildApiUrl('delete_account.php'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: deactivateModal.user.id })
-      });
-      const data = await response.json();
-      if (data.status === 'success') {
-        setDeactivateModal({ open: false, submitting: false, error: '', user: null });
-        await fetchUsers();
-        alert('User account deactivated.');
-      } else {
-        throw new Error(data.message || 'Failed to deactivate user.');
-      }
-    } catch (error) {
-      setDeactivateModal((prev) => ({ ...prev, submitting: false, error: error.message || 'Failed to deactivate user.' }));
-    }
-  };
-
   // Filter users
   const filteredUsers = users.filter((u) => {
-    const normalizedRole = (u.user_type || '').toLowerCase();
-    const displayRole = roleDisplay[normalizedRole] || (u.user_type ? u.user_type.replace(/_/g, ' ') : 'Unknown');
     const matchesSearch =
       (u.username && u.username.toLowerCase().includes(search.toLowerCase())) ||
       (u.email && u.email.toLowerCase().includes(search.toLowerCase())) ||
       (u.full_name && u.full_name.toLowerCase().includes(search.toLowerCase()));
-    const matchesType = accountType === "All" || displayRole === accountType;
-
-    const isResidentOrBgyHead = ['resident', 'barangay_head'].includes(normalizedRole);
+    const matchesType = accountType === "All" || (u.user_type && roleDisplay[u.user_type] === accountType);
+    
+    // Status filtering only applies to staff (drivers and collectors)
+    const isStaff = u.user_type === 'truck_driver' || u.user_type === 'garbage_collector';
+    const matchesStatus = status === "All" || !isStaff || (u.status && u.status === status);
+    
+    // Cluster filtering only applies to residents and barangay heads (not staff)
+    const isResidentOrBgyHead = u.user_type === 'resident' || u.user_type === 'barangay_head';
     const matchesCluster = cluster === "All" || !isResidentOrBgyHead || (u.cluster_id === cluster || u.barangay === cluster);
-
-    return matchesSearch && matchesType && matchesCluster;
+    
+    return matchesSearch && matchesType && matchesStatus && matchesCluster;
   });
 
-  const formatRoleLabel = (role) => roleDisplay[(role || '').toLowerCase()] || role || '—';
+  // Get staff count for status filtering
+  const staffUsers = users.filter(u => u.user_type === 'truck_driver' || u.user_type === 'garbage_collector');
 
-  const formatFullName = (user) => {
-    if (!user) return '—';
-    if (user.full_name && user.full_name.trim()) return user.full_name.trim();
-    const composed = `${user.firstname || ''} ${user.lastname || ''}`.trim();
-    return composed || '—';
+  // Function to get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "On Duty":
+        return { bg: ENV_COLORS.light, color: ENV_COLORS.success };
+      case "Completed Route":
+        return { bg: ENV_COLORS.light, color: ENV_COLORS.primary };
+      case "On Leave":
+        return { bg: '#fff3cd', color: ENV_COLORS.warning };
+      case "Off Duty":
+        return { bg: '#f8d7da', color: ENV_COLORS.error };
+      default:
+        return { bg: ENV_COLORS.light, color: ENV_COLORS.textLight };
+    }
   };
 
+
   return (
-    <>
-      <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl text-green-800 mb-2 font-normal tracking-tight">
-          User Management
-        </h1>
-        <p className="text-sm md:text-base lg:text-lg text-gray-600 m-0 font-normal">
-          Manage all system users and their information
-        </p>
-      </div>
+    <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
+      {/* Header removed - using global admin header */}
 
       {/* Action Buttons - Minimal Design */}
-      <div className="flex gap-3 my-6 flex-wrap justify-start">
+      <div className="flex gap-3 my-3 flex-wrap justify-start">
         <button
-          className="px-5 py-2.5 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 flex items-center gap-2 hover:bg-green-600"
-          onClick={() => {
-            setShowModal(true);
-          }}
+          className="px-4 py-2 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 flex items-center gap-2 hover:bg-green-600"
+          onClick={() => setShowModal(true)}
         >
           <FiPlus className="text-base" />
           Create Account
@@ -342,6 +183,19 @@ export default function ManageUsers() {
           ))}
         </select>
         {(
+          accountType === 'Truck Driver' || accountType === 'Garbage Collector'
+        ) && (
+          <select 
+            value={status} 
+            onChange={(e) => setStatus(e.target.value)} 
+            className="px-3 py-2 rounded-md border border-gray-200 text-sm min-w-fit bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
+          >
+            {staffStatuses.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        )}
+        {(
           accountType === 'Barangay Head' || accountType === 'Resident'
         ) && (
           <select 
@@ -364,6 +218,24 @@ export default function ManageUsers() {
             {loadingUsers ? "Loading..." : filteredUsers.length}
           </div>
         </div>
+        <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
+          <div className="text-sm text-gray-600 mb-2">Staff On Duty</div>
+          <div className="text-2xl font-normal text-green-600">
+            {staffUsers.filter(u => u.status === "On Duty").length}
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
+          <div className="text-sm text-gray-600 mb-2">Staff On Leave</div>
+          <div className="text-2xl font-normal text-orange-500">
+            {staffUsers.filter(u => u.status === "On Leave").length}
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
+          <div className="text-sm text-gray-600 mb-2">Staff Off Duty</div>
+          <div className="text-2xl font-normal text-red-500">
+            {staffUsers.filter(u => u.status === "Off Duty").length}
+          </div>
+        </div>
       </div>
 
       {/* Main Content: User Cards */}
@@ -375,11 +247,7 @@ export default function ManageUsers() {
               Users
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredUsers.map((user) => {
-                const normalizedRole = (user.user_type || '').toLowerCase();
-                const displayRole = roleDisplay[normalizedRole] || (user.user_type ? user.user_type.replace(/_/g, ' ') : 'Unknown');
-                const roleBadgeClass = roleColors[displayRole] || 'bg-gray-400 text-white';
-                return (
+              {filteredUsers.map((user) => (
                 <div
                   key={user.id}
                   className="bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 text-center hover:bg-green-50 relative"
@@ -394,27 +262,14 @@ export default function ManageUsers() {
                   </button>
                   {openMenuUserId === user.id && (
                     <div className="absolute right-2 top-8 bg-white border border-gray-200 rounded shadow z-10 text-left w-36">
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
-                        onClick={() => handleViewUser(user.id)}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
-                        onClick={() => handleEditUser(user.id)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
-                        onClick={() => handleDeactivatePrompt(user)}
-                      >
-                        Deactivate
-                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer">View</button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer">Edit</button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer">Deactivate</button>
                     </div>
                   )}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${roleBadgeClass}`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${
+                    roleColors[roleDisplay[user.user_type]] || 'bg-gray-400 text-white'
+                  }`}>
                     <FiUser />
                   </div>
                   <div className="font-medium text-sm text-gray-800 mb-1">
@@ -424,11 +279,26 @@ export default function ManageUsers() {
                     {user.email}
                   </div>
                   <div className="text-sm text-gray-800 mb-2">
-                    {displayRole}
+                    {roleDisplay[user.user_type] || user.user_type}
                   </div>
                   <div className="text-xs text-gray-500 mb-2">
                     {user.barangay}
                   </div>
+                  
+                  {/* Status for staff members - Read Only */}
+                  {(user.user_type === 'truck_driver' || user.user_type === 'garbage_collector') && (
+                    <div className="mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        user.status === "On Duty" 
+                          ? "bg-green-100 text-green-700"
+                          : user.status === "On Leave"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {user.status || 'Off Duty'}
+                      </span>
+                    </div>
+                  )}
                   
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     user.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
@@ -436,8 +306,7 @@ export default function ManageUsers() {
                     {user.is_active ? "Active" : "Inactive"}
                   </span>
                 </div>
-              );
-              })}
+              ))}
             </div>
           </div>
         </div>
@@ -452,24 +321,21 @@ export default function ManageUsers() {
                 e.preventDefault();
                 // Send POST request to your backend API
                 try {
-                  const res = await fetch(buildApiUrl('register_personnel.php'), {
+                  const res = await fetch("https://koletrash.systemproj.com/backend/api/register_personnel.php", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(form),
                   });
                   const data = await res.json();
                   if (data.success) {
-                    showFeedbackModal('Account Created', data.message || 'User account created successfully.', 'success');
+                    alert("Account created!");
                     setShowModal(false);
-                    setForm(initialFormState);
-                    fetchUsers();
+                    // Optionally refresh user list here
                   } else {
-                    showFeedbackModal('Unable to Create Account', data.message || 'Failed to create account.', 'error');
+                    alert(data.message || "Failed to create account.");
                   }
                 } catch (err) {
-                  console.error('Error creating account:', err);
-                  const message = err instanceof Error ? err.message : 'An unexpected error occurred while creating the account.';
-                  showFeedbackModal('Request Failed', message, 'error');
+                  alert("Error creating account.");
                 }
               }}
             >
@@ -560,21 +426,15 @@ export default function ManageUsers() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Barangay</label>
-                    <select
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Barangay ID</label>
+                    <input
                       className="w-full p-2 border rounded"
                       name="barangay_id"
+                      placeholder="Barangay ID"
                       value={form.barangay_id}
                       onChange={e => setForm({ ...form, barangay_id: e.target.value })}
                       required
-                    >
-                      <option value="">Select Barangay</option>
-                      {barangayOptions.map((b) => (
-                        <option key={b.barangay_id} value={b.barangay_id}>
-                          {b.barangay_name || `Barangay ${b.barangay_id}`}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
               </div>
@@ -627,7 +487,6 @@ export default function ManageUsers() {
                       required
                     >
                       <option value="admin">Admin</option>
-                      <option value="foreman">Foreman</option>
                       <option value="truck_driver">Truck Driver</option>
                       <option value="garbage_collector">Garbage Collector</option>
                       <option value="barangay_head">Barangay Head</option>
@@ -656,256 +515,5 @@ export default function ManageUsers() {
         </div>
       )}
     </div>
-
-      {viewModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-2xl">
-            <div className="px-6 py-5">
-              <h3 className="text-lg font-semibold text-green-800 mb-4">User Details</h3>
-              {viewModal.loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
-                </div>
-              ) : viewModal.error ? (
-                <p className="text-sm text-red-600">{viewModal.error}</p>
-              ) : viewModal.data ? (
-                <div className="space-y-3 text-sm text-gray-700">
-                  <div>
-                    <span className="font-semibold text-gray-800">Full name:</span> {formatFullName(viewModal.data)}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">Email:</span> {viewModal.data.email || '—'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">Username:</span> {viewModal.data.username || '—'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">Role:</span> {formatRoleLabel(viewModal.data.role)}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">Contact:</span> {viewModal.data.phone || '—'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">Barangay:</span> {viewModal.data.barangay || viewModal.data.barangay_id || '—'}
-                  </div>
-                  {viewModal.data.status && (
-                    <div>
-                      <span className="font-semibold text-gray-800">Status:</span> {viewModal.data.status}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600">No user details available.</p>
-              )}
-            </div>
-            <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-right">
-              <button
-                type="button"
-                onClick={closeViewModal}
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-2xl">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-green-800">Edit User</h3>
-            </div>
-            {editModal.loading && !editModal.form ? (
-              <div className="p-6 flex items-center justify-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
-              </div>
-            ) : editModal.error && !editModal.form ? (
-              <div className="p-6">
-                <p className="text-sm text-red-600 mb-4">{editModal.error}</p>
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={closeEditModal}
-                    className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form className="p-6 space-y-4" onSubmit={handleSubmitEdit}>
-                {editModal.error && editModal.form && (
-                  <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                    {editModal.error}
-                  </div>
-                )}
-                {editModal.form && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
-                        <input
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-green-600 focus:outline-none"
-                          value={editModal.form.firstname || ''}
-                          onChange={(e) => handleEditFormChange('firstname', e.target.value)}
-                          disabled={editModal.submitting}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
-                        <input
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-green-600 focus:outline-none"
-                          value={editModal.form.lastname || ''}
-                          onChange={(e) => handleEditFormChange('lastname', e.target.value)}
-                          disabled={editModal.submitting}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input
-                          type="email"
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-green-600 focus:outline-none"
-                          value={editModal.form.email || ''}
-                          onChange={(e) => handleEditFormChange('email', e.target.value)}
-                          disabled={editModal.submitting}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact number</label>
-                        <input
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-green-600 focus:outline-none"
-                          value={editModal.form.phone || ''}
-                          onChange={(e) => handleEditFormChange('phone', e.target.value)}
-                          disabled={editModal.submitting}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                        <input
-                          className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600"
-                          value={formatRoleLabel(editModal.form.role)}
-                          disabled
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Barangay</label>
-                        <input
-                          className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600"
-                          value={editModal.form.barangay || editModal.form.barangay_id || ''}
-                          disabled
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={closeEditModal}
-                        disabled={editModal.submitting}
-                        className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={editModal.submitting}
-                        className="inline-flex items-center justify-center rounded-md bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {editModal.submitting ? 'Saving…' : 'Save changes'}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-  {deactivateModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white shadow-2xl">
-            <div className="px-6 py-5">
-              <h3 className="text-lg font-semibold text-red-600">Deactivate account</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                This will remove access for <span className="font-semibold text-gray-800">{formatFullName(deactivateModal.user)}</span>.
-                This action permanently deletes the account.
-              </p>
-              {deactivateModal.user?.email && (
-                <p className="mt-2 text-xs text-gray-500">Email: {deactivateModal.user.email}</p>
-              )}
-              {deactivateModal.error && (
-                <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-                  {deactivateModal.error}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-3">
-              <button
-                type="button"
-                onClick={closeDeactivateModal}
-                disabled={deactivateModal.submitting}
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeactivate}
-                disabled={deactivateModal.submitting}
-                className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {deactivateModal.submitting ? 'Deactivating…' : 'Deactivate'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {feedbackModal.open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/20 backdrop-blur-sm px-4">
-          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <button
-              type="button"
-              onClick={closeFeedbackModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-              aria-label="Close notification dialog"
-            >
-              <FiX className="h-5 w-5" />
-            </button>
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${feedbackModal.type === 'success' ? 'bg-green-100' : 'bg-red-100'}`}>
-                {feedbackModal.type === 'success' ? (
-                  <FiCheckCircle className="h-8 w-8 text-green-600" />
-                ) : (
-                  <FiAlertCircle className="h-8 w-8 text-red-600" />
-                )}
-              </div>
-              <div>
-                <h3 className={`text-xl font-bold ${feedbackModal.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-                  {feedbackModal.title || (feedbackModal.type === 'success' ? 'Success' : 'Something went wrong')}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600">
-                  {feedbackModal.message || (feedbackModal.type === 'success' ? 'Action completed successfully.' : 'Please try again.')}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeFeedbackModal}
-                className={`w-full rounded-lg px-4 py-3 font-semibold text-white transition ${feedbackModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }

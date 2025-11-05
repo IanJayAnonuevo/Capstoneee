@@ -5,8 +5,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useStatus } from '../../contexts/StatusContext';
-
-const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
+import { buildApiUrl } from '../../config/api';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -101,6 +100,10 @@ export default function TruckDriverRoutes() {
     return 2 * R * Math.asin(Math.sqrt(s));
   }
 
+  const authHeaders = () => {
+    try { const t = localStorage.getItem('access_token'); return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
+  };
+
   async function postLocation(coords){
     // Try to resolve driver id from storage as a fallback when session is not available
     const getDriverId = () => {
@@ -116,7 +119,7 @@ export default function TruckDriverRoutes() {
       return null;
     };
     const driverId = getDriverId();
-    const url = driverId ? `${API_BASE_URL}/post_gps.php?driver_id=${driverId}` : `${API_BASE_URL}/post_gps.php`;
+    const url = driverId ? buildApiUrl(`post_gps.php?driver_id=${driverId}`) : buildApiUrl('post_gps.php');
     const payload = {
       lat: coords.latitude,
       lng: coords.longitude,
@@ -127,7 +130,7 @@ export default function TruckDriverRoutes() {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         credentials: 'include',
         body: JSON.stringify(payload)
       });
@@ -189,13 +192,13 @@ export default function TruckDriverRoutes() {
 
   const fetchRoutesForDate = useCallback(async (dateKey) => {
     const userId = getCurrentUserId();
-    const url = new URL(`${API_BASE_URL}/get_routes.php`);
+    const url = new URL(buildApiUrl('get_routes.php'));
     url.searchParams.set('date', dateKey);
     if (userId) {
       url.searchParams.set('role', 'driver');
       url.searchParams.set('user_id', String(userId));
     }
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), { headers: { ...authHeaders() } });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.message || 'Failed to load routes');
@@ -258,7 +261,7 @@ export default function TruckDriverRoutes() {
 
   const loadStops = useCallback(async (routeId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/get_route_details.php?id=${routeId}`);
+      const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Failed to load details');
       const sorted = (data.route.stops || []).sort((a,b) => (a.seq||0)-(b.seq||0));

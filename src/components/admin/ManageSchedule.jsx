@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { buildApiUrl } from '../../config/api';
 
 const trucks = ['Truck 1', 'Truck 2'];
 
@@ -110,8 +109,8 @@ export default function ManageSchedule() {
       }
       // Limit to visible weekdays
       params.set('days', ['Monday','Tuesday','Wednesday','Thursday','Friday'].join(','));
-  const url = buildApiUrl(`get_predefined_schedules.php?${params.toString()}`);
-    const res = await fetch(url);
+      const url = `https://koletrash.systemproj.com/backend/api/get_predefined_schedules.php?${params.toString()}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setPredefinedSchedules(Array.isArray(data.schedules) ? data.schedules : []);
@@ -135,7 +134,7 @@ export default function ManageSchedule() {
 
   // Fetch barangays for mapping
   useEffect(() => {
-  fetch(buildApiUrl('get_barangays.php'))
+    fetch('https://koletrash.systemproj.com/backend/api/get_barangays.php')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -149,7 +148,7 @@ export default function ManageSchedule() {
 
   // Fetch clusters
   useEffect(() => {
-  fetch(buildApiUrl('get_clusters.php'))
+    fetch('https://koletrash.systemproj.com/backend/api/get_clusters.php')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -253,15 +252,9 @@ export default function ManageSchedule() {
 
 
   return (
-    <div className="w-full h-full p-8 bg-emerald-50" style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl text-green-800 mb-2 font-normal tracking-tight">
-          Schedule Management
-        </h1>
-        <p className="text-sm md:text-base lg:text-lg text-gray-600 m-0 font-normal">
-          Manage predefined collection schedules and generate tasks for personnel.
-        </p>
+    <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
+      {/* Header removed - using global admin header */}
+      <div className="mb-4">
         {/* Legend */}
         <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -548,7 +541,7 @@ export default function ManageSchedule() {
                   let res;
                   if (!idVal) {
                     console.warn('No schedule id found; updating by fields', editingSchedule);
-                    res = await fetch('https://kolektrash.systemproj.com/backend/api/update_predefined_schedule_by_fields.php', {
+                    res = await fetch('https://koletrash.systemproj.com/backend/api/update_predefined_schedule_by_fields.php', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -567,7 +560,7 @@ export default function ManageSchedule() {
                     });
                   } else {
                     console.log('Updating predefined schedule id:', idVal, editingSchedule);
-                    res = await fetch('https://kolektrash.systemproj.com/backend/api/update_predefined_schedule.php', {
+                    res = await fetch('https://koletrash.systemproj.com/backend/api/update_predefined_schedule.php', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -707,7 +700,7 @@ export default function ManageSchedule() {
                             week_of_month: nextWeek,
                             is_active: 1
                           };
-                          const res = await fetch('https://kolektrash.systemproj.com/backend/api/create_predefined_schedule.php', {
+                          const res = await fetch('https://koletrash.systemproj.com/backend/api/create_predefined_schedule.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -716,7 +709,7 @@ export default function ManageSchedule() {
                           if (!data.success) throw new Error(data.message || 'Failed to copy schedule');
                           // Refresh list
                           setSchedulesLoading(true);
-                          const ref = await fetch('https://kolektrash.systemproj.com/backend/api/get_predefined_schedules.php');
+                          const ref = await fetch('https://koletrash.systemproj.com/backend/api/get_predefined_schedules.php');
                           const refData = await ref.json();
                           if (refData.success) {
                             setPredefinedSchedules(Array.isArray(refData.schedules) ? refData.schedules : []);
@@ -798,7 +791,7 @@ export default function ManageSchedule() {
                     week_of_month: schedule_type === 'weekly_cluster' ? wom : undefined,
                     is_active: 1
                   };
-                  const res = await fetch('https://kolektrash.systemproj.com/backend/api/create_predefined_schedule.php', {
+                  const res = await fetch('https://koletrash.systemproj.com/backend/api/create_predefined_schedule.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

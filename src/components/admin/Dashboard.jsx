@@ -25,8 +25,6 @@ const ENV_COLORS = {
   soil: '#8b4513'
 }
 
-// chart code removed per layout request
-
 // Fix Leaflet default icon paths
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -42,7 +40,8 @@ const SIPOCOT_BOUNDS = [
   [13.9000, 123.2000], // Northeast
 ]
 
-import { buildApiUrl } from '../../config/api';
+// Backend API base
+const API_BASE_URL = 'http://localhost/koletrash/backend/api' // Local development configuration
 
 const truckMarkerIcon = (scale = 1) => {
   const size = 36 * scale
@@ -93,7 +92,7 @@ export default function Dashboard() {
       try {
         setIsLiveLoading(true)
         setLiveError(null)
-  const res = await fetch(buildApiUrl('live_trucks.php?since=300&limit=2'))
+        const res = await fetch(`${API_BASE_URL}/live_trucks.php?since=300&limit=2`)
         const data = await res.json()
         if (data?.success) {
           setLiveTrucks(Array.isArray(data.trucks) ? data.trucks : [])
@@ -115,8 +114,8 @@ export default function Dashboard() {
   React.useEffect(() => {
     const fetchDestinations = async () => {
       try {
-  const today = new Date().toISOString().slice(0,10)
-  const res = await fetch(buildApiUrl(`get_scheduled_routes.php?date=${today}`))
+        const today = new Date().toISOString().slice(0,10)
+        const res = await fetch(`${API_BASE_URL}/get_scheduled_routes.php?date=${today}`)
         const data = await res.json()
         if (data?.success && Array.isArray(data.routes)) {
           const pins = data.routes
@@ -143,65 +142,73 @@ export default function Dashboard() {
     fetchDestinations()
   }, [])
   return (
-    <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
-      {/* Top bar - layout only, content unchanged */}
-      <div className="mb-6">
-        <h1 className="text-4xl md:text-5xl text-green-800 mb-1 font-semibold tracking-tight">Task Dashboard</h1>
-        <p className="text-sm md:text-base text-gray-600 m-0">Track operations and monitor activities</p>
-      </div>
+    <div className="max-w-full overflow-x-auto bg-emerald-50/40 min-h-screen font-sans">
+      <div className="px-6 pb-6 mt-3">
+        {/* Top: KPI cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {[
+            { label: 'Total Collections', value: 100, hint: 'this month', icon: (
+              <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v4H3z"/><path d="M5 7v14h14V7"/></svg>
+            ) },
+            { label: 'Completed Today', value: 20, hint: 'marked completed', icon: (
+              <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>
+            ) },
+            { label: 'Total Requests', value: 45, hint: 'this month', icon: (
+              <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            ) },
+            { label: 'Recently Uploaded', value: 45, hint: 'this month', icon: (
+              <svg className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V6"/><path d="M5 12l7-7 7 7"/></svg>
+            ) },
+          ].map((k, i) => (
+            <div key={i} className="bg-white rounded-xl border border-emerald-100 shadow-soft p-4">
+              <div className="flex items-start justify-between">
+                <div className="text-sm text-emerald-900 font-semibold">{k.label}</div>
+                {k.icon}
+              </div>
+              <div className="mt-1 text-4xl font-extrabold tracking-tight text-emerald-900">{k.value}</div>
+              <div className="mt-1 text-[11px] text-emerald-700/70">{k.hint}</div>
+            </div>
+          ))}
+        </div>
 
-      {/* Layout: main content + right KPI panel */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-8 items-start">
-        {/* Main content: top 3 boxes + sections */}
-            <div>
-          {/* Live Map replaces the top three boxes */}
-        <div className="bg-white rounded-md border border-gray-200 p-4">
-          <h2 className="text-lg mb-3 text-green-900 font-medium">Live Map</h2>
-          {liveError && (
-            <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{liveError}</div>
-          )}
-          <div className="h-96 rounded-sm overflow-hidden border border-gray-200">
-            <MapContainer
-              center={SIPOCOT_CENTER}
-              zoom={13}
-              className="h-full w-full"
-              maxBounds={SIPOCOT_BOUNDS}
-              minZoom={10}
-              maxZoom={18}
-            >
-              <TileLayer
-                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-                attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://srtm.csi.cgiar.org/">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
-              />
-              <Marker position={SIPOCOT_CENTER} icon={truckMarkerIcon(0.9)}>
-                <Popup>
-                  <div className="p-2.5 text-center">
-                    <h3 className="m-0 mb-1 text-green-800">Sipocot</h3>
-                    <p className="m-0 text-gray-800">Camarines Sur</p>
-                  </div>
-                </Popup>
-              </Marker>
-
-              {/* Live trucks (up to two) with stale dimming */}
-                {liveTrucks.map((t, idx) => {
-                const stale = isStale(t.ts)
+        {/* Middle: Full-width Live Map */}
+        <div className="grid grid-cols-12 gap-4 xl:gap-6 items-start mb-4">
+          <div className="col-span-12 bg-white rounded-lg border border-emerald-100 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm text-emerald-900 font-medium">Live Map</h2>
+              <button onClick={() => window.location.reload()} className="text-xs px-2 py-1 rounded-md border border-emerald-100 text-emerald-700 hover:bg-emerald-50" title="Refresh">Refresh</button>
+            </div>
+            {liveError && (
+              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">{liveError}</div>
+            )}
+            <div className="h-96 rounded-md overflow-hidden border border-emerald-100">
+              <MapContainer center={SIPOCOT_CENTER} zoom={13} className="h-full w-full" maxBounds={SIPOCOT_BOUNDS} minZoom={10} maxZoom={18}>
+                <TileLayer url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png" attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://srtm.csi.cgiar.org/">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)' />
+                <Marker position={SIPOCOT_CENTER} icon={truckMarkerIcon(0.9)}>
+                  <Popup>
+                    <div className="p-2.5 text-center">
+                      <h3 className="m-0 mb-1 text-green-800">Sipocot</h3>
+                      <p className="m-0 text-gray-800">Camarines Sur</p>
+                    </div>
+                  </Popup>
+                </Marker>
+                {liveTrucks.map((t) => {
+                  const stale = isStale(t.ts)
                   const opacity = stale ? 0.6 : 1
-                return (
+                  return (
                     <Marker key={`truck-${t.truck_id}`} position={[parseFloat(t.lat), parseFloat(t.lng)]} icon={truckMarkerIcon(1.05)} opacity={opacity}>
-                    <Popup>
-                      <div className="text-sm">
-                        <div><strong>{t.plate || `Truck ${t.truck_id}`}</strong> {stale && <span className="text-xs text-gray-500">(Stale)</span>}</div>
-                        <div>Driver: {t.driver || 'N/A'}</div>
-                        <div>Speed: {t.speed ?? 0} km/h</div>
-                        <div>Accuracy: {t.accuracy ?? '—'} m</div>
-                        <div>Updated: {new Date(t.ts).toLocaleTimeString()}</div>
-                      </div>
-                    </Popup>
-                  </Marker>
-                )
-              })}
-
-                {/* Destination pins (today) */}
+                      <Popup>
+                        <div className="text-sm">
+                          <div><strong>{t.plate || `Truck ${t.truck_id}`}</strong> {stale && <span className="text-xs text-gray-500">(Stale)</span>}</div>
+                          <div>Driver: {t.driver || 'N/A'}</div>
+                          <div>Speed: {t.speed ?? 0} km/h</div>
+                          <div>Accuracy: {t.accuracy ?? '—'} m</div>
+                          <div>Updated: {new Date(t.ts).toLocaleTimeString()}</div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )
+                })}
                 {destinations.map((d, i) => (
                   <Marker key={`dest-${i}`} position={[d.lat, d.lng]} icon={truckMarkerIcon(0.75)}>
                     <Popup>
@@ -213,61 +220,20 @@ export default function Dashboard() {
                     </Popup>
                   </Marker>
                 ))}
-
-              {/* Auto-fit to include available trucks */}
-              <MapAutoFit trucks={liveTrucks} />
-            </MapContainer>
-          </div>
-          {isLiveLoading && (
-            <div className="mt-2 text-xs text-gray-600">Loading live trucks…</div>
-          )}
-          </div>
-
-          {/* Task Summary (left column) */}
-          <div className="mt-6">
-            {/* Task Summary */}
-            <div>
-              <h2 className="text-base font-medium text-green-900 mb-3">Task Summary</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {Array.from({length:6}).map((_,i)=> (
-                  <div key={i} className="bg-white rounded-md border border-emerald-200 p-4">
-                    <div className="text-2xl font-semibold text-green-900">0</div>
-                    <div className="text-xs text-gray-500 mt-1">Placeholder</div>
-                  </div>
-                ))}
-              </div>
+                <MapAutoFit trucks={liveTrucks} />
+              </MapContainer>
             </div>
+            {isLiveLoading && (<div className="mt-2 text-xs text-emerald-700/70">Loading live trucks…</div>)}
           </div>
         </div>
-        
-        {/* Right column: KPI cards stacked */}
-        <aside>
-          <div className="space-y-3">
-            <div className="bg-white rounded-md p-4 border border-emerald-200">
-              <div className="text-sm text-emerald-900 font-semibold">Total Collections</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-900">100</div>
-              <div className="text-xs text-emerald-600 mt-1">≈ daily pickups</div>
-            </div>
-            <div className="bg-white rounded-md p-4 border border-emerald-200">
-              <div className="text-sm text-emerald-900 font-semibold">Completed Today</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-900">20</div>
-              <div className="text-xs text-emerald-600 mt-1">Marked completed</div>
-            </div>
-            <div className="bg-white rounded-md p-4 border border-emerald-200">
-              <div className="text-sm text-emerald-900 font-semibold">Delayed</div>
-              <div className="mt-2 text-3xl font-semibold text-red-600">12</div>
-              <div className="text-xs text-emerald-600 mt-1">Follow-up required</div>
-            </div>
-            <div className="bg-white rounded-md p-4 border border-emerald-200">
-              <div className="text-sm text-emerald-900 font-semibold">Active Trucks</div>
-              <div className="mt-2 text-3xl font-semibold text-emerald-900">2</div>
-              <div className="text-xs text-emerald-600 mt-1">Currently online</div>
-            </div>
-          </div>
-        </aside>
-      </div>
 
-      {/* charts removed per request */}
+        {/* Bottom: Three blank containers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {Array.from({length:3}).map((_,i)=> (
+            <div key={i} className="bg-white rounded-lg p-4 border border-emerald-100 shadow-sm h-56 flex items-center justify-center text-emerald-700/60 text-sm">Blank</div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

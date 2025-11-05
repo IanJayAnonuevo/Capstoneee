@@ -177,7 +177,8 @@ export default function ResidentReport() {
   const fetchBarangayName = async (barangayId) => {
     if (!barangayId) return null;
     try {
-      const response = await axios.get(buildApiUrl(`get_barangay_details.php?barangay_id=${encodeURIComponent(barangayId)}`));
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+      const response = await axios.get(buildApiUrl(`get_barangay_details.php?barangay_id=${encodeURIComponent(barangayId)}`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       if (response.data.status === 'success' && response.data.data?.barangay_name) {
         return response.data.data.barangay_name;
       }
@@ -189,7 +190,8 @@ export default function ResidentReport() {
 
   const fetchProfileFromFallback = async (userId, fallbackLocal = {}) => {
     try {
-      const response = await axios.get(buildApiUrl(`get_user_details.php?user_id=${encodeURIComponent(userId)}`));
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+      const response = await axios.get(buildApiUrl(`get_user_details.php?user_id=${encodeURIComponent(userId)}`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       if (response.data.status === 'success' && response.data.data) {
         const data = response.data.data;
         let barangayName = data.barangay || data.barangay_name || null;
@@ -210,7 +212,8 @@ export default function ResidentReport() {
 
   const fetchResolvedProfile = async (userId, fallbackLocal = {}) => {
     try {
-      const response = await axios.get(buildApiUrl(`get_resident_profile.php?user_id=${encodeURIComponent(userId)}`));
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+      const response = await axios.get(buildApiUrl(`get_resident_profile.php?user_id=${encodeURIComponent(userId)}`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       if (response.data.status === 'success' && response.data.data) {
         const normalized = normalizeProfileData(response.data.data, fallbackLocal);
         return { profile: normalized, warning: null };

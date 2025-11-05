@@ -14,7 +14,12 @@ import {
 } from 'react-icons/fi';
 import { feedbackService } from '../../services/feedbackService';
 
-
+const isDev = import.meta.env.DEV;
+const debugLog = (...args) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
 
 const ratingLabels = {
   5: 'Excellent',
@@ -93,11 +98,11 @@ const Feedback = () => {
     setError('');
 
     try {
-  // Removed debugLog
+      debugLog('Fetching feedback...');
       const result = await feedbackService.getAllFeedback();
-  // Removed debugLog
+      debugLog('Feedback result:', result);
       if (result.success) {
-  // Removed debugLog
+        debugLog('Feedback data:', result.data);
         const normalized = (result.data || []).map((item, index) => {
           const parsedRating = Number(item.rating);
           const rating = Number.isFinite(parsedRating) ? parsedRating : null;
@@ -226,12 +231,7 @@ const Feedback = () => {
 
   return (
     <div className="w-full h-full p-8 space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold text-green-700 mb-2">User Feedbacks</h1>
-        <p className="text-gray-600 max-w-3xl">
-          Monitor community sentiment, review detailed comments, and track satisfaction trends from residents across barangays.
-        </p>
-      </header>
+      {/* Header removed - using global admin header */}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3">

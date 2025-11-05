@@ -247,7 +247,8 @@ const ResidentDashboard = () => {
     let isActive = true;
     const loadUnread = async () => {
       try {
-        const res = await fetch(buildApiUrl(`get_notifications.php?recipient_id=${uid}`));
+        const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+        const res = await fetch(buildApiUrl(`get_notifications.php?recipient_id=${uid}`), { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
         const data = await res.json();
         if (isActive && data?.success) {
           const count = calculateUnreadCount(data.notifications || []);

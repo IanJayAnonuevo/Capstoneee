@@ -73,13 +73,15 @@ export default function BarangayHeadNotifications() {
     dispatchNotificationCount(uid, updatedNotifications);
   }, [resolveUserId, userId]);
 
+  const authHeaders = () => { try { const t = localStorage.getItem('access_token'); return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; } };
+
   // Fetch from backend
   useEffect(() => {
     const uid = resolveUserId();
     if (!uid) { setLoading(false); syncCount([]); return; }
     setUserId(uid);
     setLoading(true);
-    fetch(`${API_BASE_URL}/get_notifications.php?recipient_id=${uid}`)
+    fetch(buildApiUrl(`get_notifications.php?recipient_id=${uid}`), { headers: { ...authHeaders() } })
       .then(res => res.json())
       .then(data => {
         if (data?.success) {
@@ -130,7 +132,7 @@ export default function BarangayHeadNotifications() {
     });
     for (const n of unread) {
       try {
-        await fetch(`${API_BASE_URL}/mark_notification_read.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: n.notification_id }) });
+        await fetch(buildApiUrl('mark_notification_read.php'), { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({ notification_id: n.notification_id }) });
       } catch {}
     }
   };
@@ -142,7 +144,7 @@ export default function BarangayHeadNotifications() {
       return updated;
     });
     try {
-      await fetch(`${API_BASE_URL}/delete_notification.php`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ notification_id: id }) });
+      await fetch(buildApiUrl('delete_notification.php'), { method:'POST', headers:{'Content-Type':'application/json', ...authHeaders()}, body: JSON.stringify({ notification_id: id }) });
     } catch {}
   };
 

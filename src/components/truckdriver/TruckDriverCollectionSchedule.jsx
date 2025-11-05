@@ -30,7 +30,8 @@ export default function TruckDriverCollectionSchedule() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-  const response = await axios.get(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`));
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+  const response = await axios.get(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       
       if (response.data.success) {
         setSchedules(response.data.schedules);

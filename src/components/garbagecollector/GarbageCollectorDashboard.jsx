@@ -12,6 +12,7 @@ import {
 import { authService } from '../../services/authService';
 import { StatusProvider } from '../../contexts/StatusContext';
 import { calculateUnreadCount, dispatchNotificationCount } from '../../utils/notificationUtils';
+import { buildApiUrl } from '../../config/api';
 import BrandedLoader from '../shared/BrandedLoader';
 import { useLoader } from '../../contexts/LoaderContext';
 
@@ -322,7 +323,8 @@ export default function GarbageCollectorDashboard() {
 
     const loadUnread = async () => {
       try {
-  const res = await fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${uid}`);
+        const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+        const res = await fetch(buildApiUrl(`get_notifications.php?recipient_id=${uid}`), { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
         const data = await res.json();
         if (isActive && data?.success) {
           const notifications = data.notifications || [];

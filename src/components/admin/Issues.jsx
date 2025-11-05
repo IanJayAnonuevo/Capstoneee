@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FiEye, FiClock, FiCheckCircle, FiXCircle, FiAlertCircle, FiFilter, FiRefreshCw, FiImage, FiCalendar, FiUser, FiMapPin, FiTag, FiSearch, FiPrinter, FiX, FiExternalLink } from 'react-icons/fi';
 import axios from 'axios';
 
-import { API_BASE_URL, buildApiUrl } from '../../config/api';
+const API_BASE_URL = 'http://localhost/koletrash/backend/api';
 
 export default function Issues() {
   const [reports, setReports] = useState([]);
@@ -36,7 +36,7 @@ export default function Issues() {
       const parsed = new URL(trimmed);
 
       if (['localhost', '127.0.0.1'].includes(parsed.hostname)) {
-  const sanitizedPath = parsed.pathname.replace(/^\/+/, '').replace(/^kolektrash\//i, '');
+        const sanitizedPath = parsed.pathname.replace(/^\/+/, '').replace(/^koletrash\//i, '');
         const originCandidates = Array.from(new Set([
           currentOrigin,
           backendBaseUrl,
@@ -117,7 +117,7 @@ export default function Issues() {
         params.append('status', filterStatus);
       }
 
-  const response = await axios.get(buildApiUrl(`get_issues.php?${params}`));
+      const response = await axios.get(`${API_BASE_URL}/get_issues.php?${params}`);
       
       if (response.data.status === 'success') {
         const normalizedReports = (response.data.data || []).map((report) => {

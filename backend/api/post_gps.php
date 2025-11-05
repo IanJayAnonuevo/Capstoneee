@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // CORS for frontend at Vite dev server (allow credentials)
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 $allowedOrigin = 'http://localhost:5173';

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Typography, Button, Stack, Box, Snackbar, Alert, Dialog, DialogActions } from '@mui/material';
 import { NotificationsNone as NotificationsNoneIcon, MarkEmailRead as MarkEmailReadIcon, DirectionsCar as DirectionsCarIcon, Schedule as ScheduleIcon, Build as BuildIcon, Security as SecurityIcon, Assessment as AssessmentIcon, School as SchoolIcon } from '@mui/icons-material';
 import NotificationItem from '../shared/NotificationItem';
+import { buildApiUrl } from '../../config/api';
 import { dispatchNotificationCount } from '../../utils/notificationUtils';
 // Standardized modal replaces custom per-role modals
 
@@ -39,6 +40,15 @@ export default function GarbageCollectorNotifications({ userId }) {
 
   const effectiveUserId = userId || localStorage.getItem('user_id');
 
+  const authHeaders = () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  };
+
   // Resolve user id robustly when localStorage.user_id is missing
   const resolveUserId = () => {
     const uid = localStorage.getItem('user_id');
@@ -54,7 +64,7 @@ export default function GarbageCollectorNotifications({ userId }) {
   useEffect(() => {
     if (!effectiveUserId) return;
     setLoading(true);
-  fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+  fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), { headers: { ...authHeaders() } })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -85,9 +95,9 @@ export default function GarbageCollectorNotifications({ userId }) {
     try {
       for (const n of prev) {
         if (n.response_status !== 'read') {
-          await fetch('https://kolektrash.systemproj.com/backend/api/mark_notification_read.php', {
+          await fetch(buildApiUrl('mark_notification_read.php'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({ notification_id: n.notification_id })
           });
         }
@@ -102,9 +112,9 @@ export default function GarbageCollectorNotifications({ userId }) {
       return updated;
     });
     try {
-  await fetch('https://kolektrash.systemproj.com/backend/api/delete_notification.php', {
+  await fetch(buildApiUrl('delete_notification.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ notification_id: id })
       });
     } catch {}
@@ -114,9 +124,9 @@ export default function GarbageCollectorNotifications({ userId }) {
   const respondAssignment = async (assignment_id, response_status, role, notification_id) => {
     const uid = resolveUserId();
     try {
-  const res = await fetch('https://kolektrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id, user_id: uid, response_status, role })
       });
       const data = await res.json();
@@ -132,7 +142,7 @@ export default function GarbageCollectorNotifications({ userId }) {
         setOpenModal(false);
 
         setTimeout(() => {
-          fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), { headers: { ...authHeaders() } })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
@@ -154,9 +164,9 @@ export default function GarbageCollectorNotifications({ userId }) {
   // Bulk respond for daily assignments (accept/decline all for the date)
   const bulkRespond = async (date, response_status, role, notification_id) => {
     try {
-  const res = await fetch('https://kolektrash.systemproj.com/backend/api/respond_assignment.php', {
+  const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ date, user_id: resolveUserId(), response_status, role })
       });
       const data = await res.json();
@@ -172,7 +182,7 @@ export default function GarbageCollectorNotifications({ userId }) {
         
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(`https://kolektrash.systemproj.com/backend/api/get_notifications.php?recipient_id=${effectiveUserId}`)
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), { headers: { ...authHeaders() } })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
@@ -202,9 +212,9 @@ export default function GarbageCollectorNotifications({ userId }) {
 
   const markNotificationAsRead = async (notificationId) => {
     try {
-  const res = await fetch('https://kolektrash.systemproj.com/backend/api/mark_notification_read.php', {
+  const res = await fetch(buildApiUrl('mark_notification_read.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ notification_id: notificationId })
       });
       const data = await res.json();

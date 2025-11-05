@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { FiCheckCircle, FiMapPin, FiTruck, FiCalendar, FiChevronRight } from 'react-icons/fi';
+import React from 'react';
+import { FiCheckCircle, FiMapPin, FiTruck, FiCalendar, FiChevronRight, FiPlay, FiStopCircle, FiXCircle, FiFileText } from 'react-icons/fi';
 import { MdEvent } from 'react-icons/md';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -11,6 +12,45 @@ import eventAn from '../../assets/images/users/an.jpg';
 
 export default function TruckDriverHome() {
   const navigate = useNavigate();
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // Attendance time window logic (5:00 AM – 6:00 AM)
+  const [now, setNow] = React.useState(new Date());
+  const WINDOW_START_HOUR = 5;   // 5:00 AM
+  const WINDOW_END_HOUR = 6;     // 6:00 AM
+  const NEAR_END_MINUTES = 5;    // 5:55–6:00 warning window
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isBetween = (date, startHour, endHour) => {
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    const d = date.getDate();
+    const start = new Date(y, m, d, startHour, 0, 0, 0);
+    const end = new Date(y, m, d, endHour, 0, 0, 0);
+    return date >= start && date < end;
+  };
+
+  const computeState = (date) => {
+    const minute = date.getMinutes();
+    const hour = date.getHours();
+    const nearWindow = hour === WINDOW_END_HOUR - 0 && minute >= (60 - NEAR_END_MINUTES) && minute < 60;
+    if (isBetween(date, WINDOW_START_HOUR, WINDOW_END_HOUR)) {
+      return nearWindow ? 'near_end' : 'open';
+    }
+    if (hour >= WINDOW_END_HOUR) return 'closed';
+    return 'pre';
+  };
+
+  const attendanceState = computeState(now);
+  const timeInEnabled = attendanceState === 'open' || attendanceState === 'near_end';
+  const timeOutEnabled = false; // disabled until user has timed in (out of scope here)
+  const otherButtonsEnabled = timeInEnabled || attendanceState === 'closed' || attendanceState === 'pre';
 
   // MENRO events carousel images
   const eventImages = [
@@ -114,6 +154,82 @@ export default function TruckDriverHome() {
             </div>
           ))}
         </Slider>
+      </div>
+
+      {/* Time-based notifications */}
+      <div className="mb-3">
+        {attendanceState === 'open' && (
+          <div className="border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">📢</span><strong>System Notice:</strong> Time-in window is open from 5:00 AM to 6:00 AM. Please complete your attendance.</div>
+          </div>
+        )}
+        {attendanceState === 'near_end' && (
+          <div className="border-l-4 border-amber-500 bg-amber-50 text-amber-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">⏰</span><strong>You haven’t timed in yet!</strong> Please log in immediately to avoid being marked <strong>absent</strong>.</div>
+          </div>
+        )}
+        {attendanceState === 'closed' && (
+          <div className="border-l-4 border-red-500 bg-red-50 text-red-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">⛔</span><strong>Time-In Closed:</strong> The time-in period is now over. You can no longer record attendance for today.</div>
+          </div>
+        )}
+      </div>
+
+      {/* Attendance section styled like favorite cards (placed before Quick Actions) */}
+      <div className="mb-6">
+        <div className="mb-3 text-sm font-medium text-slate-600">
+          <span className="text-emerald-700">Today:</span> {today}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" disabled={!timeInEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                <FiPlay className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-semibold">Time In</div>
+                <div className="text-xs text-emerald-100/80">Tap to record</div>
+              </div>
+            </div>
+            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+          </button>
+          <button type="button" disabled={!timeOutEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeOutEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                <FiStopCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-semibold">Time Out</div>
+                <div className="text-xs text-emerald-100/80">Tap to record</div>
+              </div>
+            </div>
+            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+          </button>
+          <button type="button" disabled={!otherButtonsEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                <FiXCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-semibold">Absent</div>
+                <div className="text-xs text-emerald-100/80">Mark for today</div>
+              </div>
+            </div>
+            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+          </button>
+          <button type="button" disabled={!otherButtonsEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                <FiFileText className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-semibold">File Leave</div>
+                <div className="text-xs text-emerald-100/80">Submit request</div>
+              </div>
+            </div>
+            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}

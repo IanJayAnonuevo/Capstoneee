@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // Layunin: Script na awtomatikong lumilikha ng tasks (schedules at teams)
 //          base sa saklaw ng petsa at cluster (priority vs clustered).
 header('Access-Control-Allow-Origin: *');

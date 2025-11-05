@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { buildApiUrl } from '../../config/api';
 
 const weekdays = [
   { label: 'M', value: 'Monday' },
@@ -29,7 +30,8 @@ export default function GarbageCollectorSchedule() {
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-  const response = await axios.get(`https://kolektrash.systemproj.com/backend/api/get_personnel_schedule.php?user_id=${userId}&role=collector`);
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+  const response = await axios.get(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=collector`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       
       if (response.data.success) {
         setSchedules(response.data.schedules);

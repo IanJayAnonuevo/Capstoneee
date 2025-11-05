@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // Set timezone to Philippines
 if (!ini_get('date.timezone')) {
     date_default_timezone_set('Asia/Manila');

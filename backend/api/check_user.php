@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 header('Access-Control-Allow-Origin: http://localhost:5173');
 header('Access-Control-Allow-Credentials: true');
 header('Content-Type: application/json');

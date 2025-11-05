@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // Prevent any output buffering issues
 ob_start();
 

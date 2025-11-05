@@ -39,10 +39,24 @@ export default function TruckDriverNotifications({ userId }) {
 
   const effectiveUserId = userId || localStorage.getItem('user_id');
 
+  // Build Authorization header from stored access token
+  const authHeaders = () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  };
+
   useEffect(() => {
     if (!effectiveUserId) return;
     setLoading(true);
-  fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
+  fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), {
+      headers: {
+        ...authHeaders(),
+      },
+    })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -73,7 +87,7 @@ export default function TruckDriverNotifications({ userId }) {
         if (n.response_status !== 'read') {
           await fetch(buildApiUrl('mark_notification_read.php'), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
             body: JSON.stringify({ notification_id: n.notification_id })
           });
         }
@@ -90,7 +104,7 @@ export default function TruckDriverNotifications({ userId }) {
     try {
   await fetch(buildApiUrl('delete_notification.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ notification_id: id })
       });
     } catch {}
@@ -118,7 +132,7 @@ export default function TruckDriverNotifications({ userId }) {
     try {
   const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id, user_id: userId, response_status, role }),
       });
       
@@ -145,7 +159,9 @@ export default function TruckDriverNotifications({ userId }) {
         
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), {
+              headers: { ...authHeaders() },
+            })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
@@ -178,7 +194,7 @@ export default function TruckDriverNotifications({ userId }) {
     try {
   const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ date, user_id: userId, response_status, role })
       });
       const data = await res.json();
@@ -195,7 +211,9 @@ export default function TruckDriverNotifications({ userId }) {
 
         // Refresh notifications to get updated data
         setTimeout(() => {
-          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`))
+          fetch(buildApiUrl(`get_notifications.php?recipient_id=${effectiveUserId}`), {
+              headers: { ...authHeaders() },
+            })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
@@ -231,7 +249,7 @@ export default function TruckDriverNotifications({ userId }) {
     try {
   const res = await fetch(buildApiUrl('mark_notification_read.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ notification_id: notificationId }),
       });
       const data = await res.json();

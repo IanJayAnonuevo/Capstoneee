@@ -36,6 +36,13 @@ export default function TruckDriverTask() {
     } catch (_) { return ''; }
   }, []);
 
+  const authHeaders = () => {
+    try {
+      const t = localStorage.getItem('access_token');
+      return t ? { Authorization: `Bearer ${t}` } : {};
+    } catch { return {}; }
+  };
+
   const fallbackDriverName = useMemo(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
@@ -64,7 +71,7 @@ export default function TruckDriverTask() {
       setLoading(true);
       setError(null);
       try {
-  const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`));
+  const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`), { headers: { ...authHeaders() } });
         const data = await res.json();
         if (data.success) {
           const mapped = (data.schedules || []).map((s, idx) => {
@@ -166,7 +173,7 @@ export default function TruckDriverTask() {
     try {
   const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id: teamId, user_id: userId, response_status: response, role: 'driver' })
       });
       const data = await res.json();
@@ -273,7 +280,7 @@ export default function TruckDriverTask() {
         try {
           // Prefer daily_route with true route IDs
           const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || '';
-          const res = await fetch(buildApiUrl(`get_routes.php?date=${dateKey}&role=driver&user_id=${encodeURIComponent(user_id)}`));
+          const res = await fetch(buildApiUrl(`get_routes.php?date=${dateKey}&role=driver&user_id=${encodeURIComponent(user_id)}`), { headers: { ...authHeaders() } });
           const data = await res.json();
           if (!data?.success) return [dateKey, null];
           const barangayList = (data.routes || []).map((r, idx) => ({
@@ -410,14 +417,14 @@ export default function TruckDriverTask() {
                                   const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null;
                                   await fetch(buildApiUrl('update_route_status.php'), {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: { 'Content-Type': 'application/json', ...authHeaders() },
                                     body: JSON.stringify({ route_id: Number(routeId), status: 'in_progress', user_id })
                                   });
                                   // Set active route for collectors to auto-redirect
                                   try {
                                     await fetch(buildApiUrl('set_route_active.php'), {
                                       method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
+                                      headers: { 'Content-Type': 'application/json', ...authHeaders() },
                                       body: JSON.stringify({ route_id: Number(routeId), barangay: b.barangay_name || b.name || '', team_id: b.team_id || task.team_id || null })
                                     });
                                   } catch(_) {}
@@ -431,7 +438,7 @@ export default function TruckDriverTask() {
                                 try {
                                   // Optional: user feedback
                                   // alert(`✅ Route started for ${b.barangay_name || b.name || 'Route'}!`);
-                                  const res = await fetch(buildApiUrl(`get_route_details.php?id=${Number(routeId)}`));
+                                  const res = await fetch(buildApiUrl(`get_route_details.php?id=${Number(routeId)}`), { headers: { ...authHeaders() } });
                                   const data = await res.json();
                                   if (data?.success && data.route?.stops) {
                                     navigate(`/truckdriver/route/${routeId}`, {

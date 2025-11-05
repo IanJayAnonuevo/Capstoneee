@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiUser, FiMapPin, FiAlertCircle, FiCamera, FiCheckCircle, FiChevronDown, FiChevronUp, FiTag, FiX } from 'react-icons/fi';
 import axios from 'axios';
-
-const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
+import { buildApiUrl } from '../../config/api';
 
 const issueTypes = [
   'Missed or delayed pickups',
@@ -156,8 +155,10 @@ export default function ReportIssue() {
           
           // We'll verify the role after getting fresh data from the database
           // Fetch user details from database using the get_user endpoint
-          const response = await axios.get(`${API_BASE_URL}/get_user.php`, {
-            params: { id: userId }
+          const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+          const response = await axios.get(buildApiUrl('get_user.php'), {
+            params: { id: userId },
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           });
           
           if (response.data.status === 'success') {
@@ -295,9 +296,11 @@ export default function ReportIssue() {
         formData.append('photo', pendingSubmission.photo);
       }
 
-      const response = await axios.post(`${API_BASE_URL}/submit_issue_report.php`, formData, {
+      const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
+      const response = await axios.post(buildApiUrl('submit_issue_report.php'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         }
       });
 

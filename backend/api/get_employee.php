@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 require_once '../includes/cors.php';
 require_once '../config/database.php';
 

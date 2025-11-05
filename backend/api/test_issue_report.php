@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // Test script for issue report functionality
 header('Content-Type: application/json');
 

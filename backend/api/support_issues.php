@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/_bootstrap.php';
 // Support Staff API - Handle issues submitted by residents and barangay heads
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');

@@ -1,40 +1,42 @@
-import { Fragment } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useLoader } from '../../contexts/LoaderContext'
 import {
-  FaTachometerAlt,
-  FaUsers,
-  FaCalendarAlt,
-  FaMapMarkedAlt,
-  FaTasks,
-  FaTruckMoving,
-  FaBuilding,
-  FaComments,
-  FaExclamationCircle,
-  FaSignOutAlt
-} from 'react-icons/fa'
+  FiHome,
+  FiUser,
+  FiMap,
+  FiCalendar,
+  FiTruck,
+  FiActivity,
+  FiMessageSquare,
+  FiAlertCircle,
+  FiLogOut
+} from 'react-icons/fi'
+import { FaUsers, FaMapMarkedAlt, FaCalendarAlt, FaTasks, FaTruckMoving, FaBuilding, FaComments, FaExclamationCircle, FaSignOutAlt, FaTachometerAlt } from 'react-icons/fa'
 
-const navSections = [
-  [
-    { to: '/admin/dashboard', label: 'Dashboard', icon: FaTachometerAlt, exact: true }
-  ],
-  [
-    { to: '/admin/users', label: 'Manage Users', icon: FaUsers },
-    { to: '/admin/schedule', label: 'Manage Schedule', icon: FaCalendarAlt },
-    { to: '/admin/routes', label: 'Manage Routes', icon: FaMapMarkedAlt },
-    { to: '/admin/task-management', label: 'Task Management', icon: FaTasks },
-    { to: '/admin/pickup', label: 'Special Pickup', icon: FaTruckMoving },
-    { to: '/admin/barangay', label: 'Barangay Activity', icon: FaBuilding }
-  ],
-  [
-    { to: '/admin/feedback', label: 'Feedback', icon: FaComments },
-    { to: '/admin/issues', label: 'Issues', icon: FaExclamationCircle }
-  ]
+// Keep structure simple but allow dynamic icon coloring
+const navItems = [
+  { to: '/admin/dashboard', label: 'Dashboard', Icon: FaTachometerAlt },
+  { divider: true },
+  { to: '/admin/users', label: 'Manage Users', Icon: FaUsers },
+  { to: '/admin/schedule', label: 'Manage Schedule', Icon: FaCalendarAlt },
+  { to: '/admin/routes', label: 'Manage Routes', Icon: FaMapMarkedAlt },
+  { to: '/admin/task-management', label: 'Task Management', Icon: FaTasks },
+  { to: '/admin/pickup', label: 'Special Pickup', Icon: FaTruckMoving },
+  { to: '/admin/barangay', label: 'Barangay Activity', Icon: FaBuilding },
+  { divider: true },
+  { to: '/admin/feedback', label: 'Feedback', Icon: FaComments },
+  { to: '/admin/issues', label: 'Issues', Icon: FaExclamationCircle },
+  // Logout moved to avatar menu in header
 ]
 
-const DARK_GREEN = '#052e1b'
-const DARK_GREEN_LIGHT = '#0a3f25'
-const ACCENT_GREEN = '#3dd68c'
+function getSectionLabel(index) {
+  // Sections based on divider positions in navItems
+  if (index === 0) return 'Overview'
+  if (index === 2) return 'Operations'
+  if (index === 9) return 'Engagement'
+  if (index === 12) return 'Account'
+  return null
+}
 
 export default function Sidebar({ handleLogout }) {
   const location = useLocation()
@@ -53,71 +55,69 @@ export default function Sidebar({ handleLogout }) {
   }
 
   return (
-  <aside className="sticky top-4 mx-4 flex h-[calc(100vh-2rem)] w-60 flex-col rounded-3xl border border-white/10 bg-[color:var(--sidebar-bg)] text-white shadow-[0_24px_60px_rgba(5,45,25,0.45)]"
-      style={{ '--sidebar-bg': DARK_GREEN, '--sidebar-bg-light': DARK_GREEN_LIGHT }}>
-      <div className="flex items-center gap-3 px-6 pt-6 pb-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[color:var(--accent-green)] font-semibold"
-          style={{ '--accent-green': ACCENT_GREEN }}>
-          KT
-        </div>
-        <div className="leading-tight">
-          <p className="text-[11px] uppercase tracking-[0.4em] text-white/70">Admin</p>
-          <p className="text-lg font-semibold text-white">KolekTrash</p>
-        </div>
+    <aside className="w-64 h-screen sticky top-0 bg-gradient-to-b from-emerald-950 to-emerald-800 text-emerald-50 flex flex-col shadow-2xl">
+      <div className="px-6 py-6 text-xl font-extrabold tracking-wide border-b border-emerald-900/60 flex items-center">
+        <svg className="w-8 h-8 mr-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2c-.28 0-.56.06-.81.18l-7 3.11A2 2 0 003 7.06V12c0 5.25 3.92 9.74 8.47 10.93.36.09.74.09 1.1 0C17.08 21.74 21 17.25 21 12V7.06a2 2 0 00-1.19-1.77l-7-3.11A1.98 1.98 0 0012 2zm0 2.18l7 3.11V12c0 4.41-3.29 8.19-7 9.32C8.29 20.19 5 16.41 5 12V7.29l7-3.11z" />
+        </svg>
+        KolekTrash Admin
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 pb-4 pt-2 space-y-5">
-        {navSections.map((section, sectionIndex) => (
-          <Fragment key={`section-${sectionIndex}`}>
-            <div className="space-y-1.5">
-              {section.map((item) => {
-                const Icon = item.icon
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.exact}
-                    onClick={(event) => handleNavClick(event, item.to)}
-                    className={({ isActive }) =>
-                      `group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'bg-white/15 text-white shadow-[0_12px_30px_rgba(5,60,30,0.35)]'
-                          : 'text-white/70 hover:bg-[color:var(--sidebar-bg-light)] hover:text-white'
-                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
-                            isActive
-                              ? 'bg-[color:var(--accent-green)]/25 text-[color:var(--accent-green)] shadow-inner shadow-emerald-900/25'
-                              : 'bg-white/5 text-white/80 group-hover:bg-[color:var(--accent-green)]/20 group-hover:text-[color:var(--accent-green)]'
-                          }`}
-                        >
-                          <Icon size={18} />
-                        </div>
-                        <span className="tracking-wide">{item.label}</span>
-                      </>
-                    )}
-                  </NavLink>
-                )
-              })}
+      <nav className="flex-1 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-700/50 scrollbar-track-transparent">
+        {navItems.map((item, idx) => {
+          if (item.divider) {
+            return <hr key={`div-${idx}`} className="my-4 border-emerald-900/40" />
+          }
+
+          const section = getSectionLabel(idx)
+          const isLogout = !!item.isLogout
+          const isActive = location.pathname === item.to
+          const Icon = item.Icon
+
+          if (isLogout) {
+            return (
+              <div key={`logout-wrap-${idx}`} className="mt-auto px-3 pt-2">
+                <button
+                  onClick={handleLogout}
+                  className="group flex items-center w-full px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-150 text-emerald-100/90 hover:text-white hover:bg-emerald-700/40"
+                >
+                  <Icon className="w-5 h-5 mr-3 text-emerald-300 group-hover:text-emerald-200" />
+                  {item.label}
+                </button>
+              </div>
+            )
+          }
+
+          return (
+            <div key={item.to} className="px-3">
+              {section && (
+                <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300/70">
+                  {section}
+                </div>
+              )}
+              <NavLink
+                to={item.to}
+                onClick={(event) => handleNavClick(event, item.to)}
+                end={item.to === '/admin/dashboard'}
+                className={({ isActive: linkActive }) => {
+                  const active = linkActive || isActive
+                  return [
+                    'relative flex items-center mt-2 px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-150',
+                    active ? 'bg-emerald-700/60 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]' : 'text-emerald-100/90 hover:bg-emerald-700/40 hover:text-white'
+                  ].join(' ')
+                }}
+              >
+                <span className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg bg-emerald-400/0 group-hover:bg-emerald-400/30" />
+                <Icon className="w-5 h-5 mr-3 text-emerald-300" />
+                <span className="truncate">{item.label}</span>
+              </NavLink>
             </div>
-            {sectionIndex < navSections.length - 1 && <div className="mx-3 my-3 h-px bg-white/15" />}
-          </Fragment>
-        ))}
+          )
+        })}
       </nav>
 
-      <div className="px-5 pb-6 pt-2 space-y-3">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full rounded-2xl bg-emerald-500/90 px-4 py-3 text-sm font-semibold tracking-wide text-white shadow-lg shadow-emerald-900/25 transition-all duration-200 hover:bg-emerald-500"
-        >
-          <FaSignOutAlt size={18} />
-          Logout
-        </button>
+      <div className="px-4 py-3 border-t border-emerald-900/60 text-[11px] text-emerald-300/70">
+        v1.0 • Stay green ♻️
       </div>
     </aside>
   )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Sidebar from './components/admin/Sidebar'
@@ -76,6 +76,8 @@ function Placeholder({ title }) {
 
 function App() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileBtnRef = useRef(null)
   const [notifications, setNotifications] = useState([
     { id: 1, message: 'New event added', read: false },
     { id: 2, message: 'Schedule updated', read: false },
@@ -92,8 +94,15 @@ function App() {
   const location = useLocation()
   const { showLoader } = useLoader()
 
+  // theme toggling removed per request
+
   const handleLogout = () => {
     setShowLogoutModal(true)
+  }
+
+  const goToSettings = () => {
+    setProfileOpen(false)
+    navigate('/admin/users')
   }
 
   const confirmLogout = async () => {
@@ -129,11 +138,59 @@ function App() {
   }
   // In the future, add custom sidebars for resident, barangayhead, truckdriver here
 
+  // Dynamic Admin Title
+  const isAdmin = location.pathname.startsWith('/admin')
+  const getAdminTitle = () => {
+    if (!isAdmin) return ''
+    if (location.pathname.startsWith('/admin/dashboard')) return 'Dashboard'
+    if (location.pathname.startsWith('/admin/users')) return 'User Management'
+    if (location.pathname.startsWith('/admin/schedule')) return 'Schedule Management'
+    if (location.pathname.startsWith('/admin/routes')) return 'Route Management'
+    if (location.pathname.startsWith('/admin/pickup')) return 'Special Pickup'
+    if (location.pathname.startsWith('/admin/barangay')) return 'Barangay Activity'
+    if (location.pathname.startsWith('/admin/feedback')) return 'Feedback'
+    if (location.pathname.startsWith('/admin/issues')) return 'Issues'
+    if (location.pathname.startsWith('/admin/task-management')) return 'Task Management'
+    return 'Admin'
+  }
+
   return (
-    <div className="min-h-screen flex bg-emerald-50">
+    <div className="h-screen flex bg-emerald-50 overflow-hidden">
       {!isLandingPage && !isAuthPage && sidebar}
-      <main className="flex-1 min-h-screen w-full h-full overflow-y-auto">
-        <Routes>
+      <main className="flex-1 min-h-screen w-full h-full flex flex-col overflow-hidden">
+        {isAdmin && (
+          <div className="flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white/90 backdrop-blur-sm border-b border-emerald-100/60 shadow-sm px-5 py-3">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-emerald-900">{getAdminTitle()}</h1>
+                <p className="text-[11px] text-emerald-700/70">Track operations and monitor activities</p>
+              </div>
+            </div>
+            <div className="relative flex items-center gap-2">
+              <button
+                ref={profileBtnRef}
+                onClick={() => setProfileOpen((v) => !v)}
+                onBlur={() => {
+                  setTimeout(() => setProfileOpen(false), 120)
+                }}
+                className="ml-1 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white text-xs font-semibold inline-flex items-center justify-center"
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+              >
+                AD
+              </button>
+
+              {profileOpen && (
+                <div role="menu" className="absolute right-0 top-11 z-50 w-44 rounded-md border border-emerald-100 bg-white shadow-soft py-1">
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={goToSettings} className="w-full text-left px-3 py-2 text-sm text-emerald-900 hover:bg-emerald-50">Settings</button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50/60">Logout</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto">
+          <Routes>
           {/* Landing page - default route */}
           <Route path="/" element={<LandingPage />} />
           {/* Auth routes (guest only) */}
@@ -219,7 +276,8 @@ function App() {
           />
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </div>
       </main>
       <ToastContainer position="top-right" autoClose={3000} />
       {/* Logout Confirmation Modal */}

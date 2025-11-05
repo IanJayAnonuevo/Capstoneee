@@ -3,8 +3,7 @@ import { FiX, FiMap } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api';
+import { buildApiUrl } from '../../config/api';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -73,15 +72,17 @@ export default function GarbageCollectorRoutes() {
     }
   }, []);
 
+  const authHeaders = () => { try { const t = localStorage.getItem('access_token'); return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; } };
+
   const fetchRoutesForDate = useCallback(async (dateKey) => {
     const userId = getCurrentUserId();
-    const url = new URL(`${API_BASE_URL}/get_routes.php`);
+    const url = new URL(buildApiUrl('get_routes.php'));
     url.searchParams.set('date', dateKey);
     if (userId) {
       url.searchParams.set('role', 'collector');
       url.searchParams.set('user_id', String(userId));
     }
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), { headers: { ...authHeaders() } });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.message || 'Failed to load routes');
@@ -138,7 +139,7 @@ export default function GarbageCollectorRoutes() {
 
   const loadStops = async (routeId) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/get_route_details.php?id=${routeId}`);
+      const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Failed to load details');
       const sorted = (data.route.stops || []).sort((a,b) => (a.seq||0)-(b.seq||0));
