@@ -10,31 +10,60 @@ import {
 } from 'react-icons/fa';
 
 const Section4 = () => {
+  const handleEmailClick = (e) => {
+    e.preventDefault();
+    const email = 'menro.sipocot@gmail.com';
+    
+    // Try to open default email client
+    const mailtoLink = `mailto:${email}`;
+    const mailtoWindow = window.open(mailtoLink, '_self');
+    
+    // If it fails, copy to clipboard as fallback
+    setTimeout(() => {
+      if (!mailtoWindow || mailtoWindow.closed) {
+        navigator.clipboard.writeText(email).then(() => {
+          alert(`Email address copied to clipboard: ${email}`);
+        }).catch(() => {
+          alert(`Email: ${email}\n\nPlease copy this email address manually.`);
+        });
+      }
+    }, 500);
+  };
+
   const contactDetails = [
     {
       Icon: FaPhoneAlt,
       title: 'Call Us',
-      value: '+639764567823',
-      description: 'Monday to Friday · 8:00 AM – 5:00 PM',
+      value: '+639457627784',
+      href: 'tel:+639457627784',
+      description: 'Monday-Friday | 8am-5pm',
     },
     {
       Icon: FaEnvelope,
-      title: 'Email',
+      title: 'Email Us',
       value: 'menro.sipocot@gmail.com',
-      href: 'mailto:menro.sipocot@gmail.com',
-      description: 'We aim to respond within one business day.',
+      onClick: handleEmailClick,
+      description: 'We responds within one business day.',
     },
     {
       Icon: FaMapMarkerAlt,
-      title: 'Visit the Office',
+      title: 'Visit Us',
       value: 'LGU Sipocot Compound',
-      description: 'South Centro, Sipocot, Camarines Sur',
+      href: 'https://maps.google.com/?q=LGU+Sipocot+Compound,South+Centro+Sipocot,Camarines+Sur',
+      description: 'South Centro Sipocot, Camarines Sur',
+    },
+    {
+      Icon: FaFacebook,
+      title: 'Follow Us',
+      value: 'Visit our official Facebook Page',
+      href: 'https://www.facebook.com/profile.php?id=100068581194697',
+      description: 'at facebook.com/MENROSipocot',
     },
     {
       Icon: FaClock,
       title: 'Service Hours',
       value: 'Field Operations',
-      description: 'Daily monitoring to keep Sipocot clean and resilient.',
+      description: 'Monday-Sunday 6AM-6PM',
     },
   ];
 
@@ -55,60 +84,42 @@ const Section4 = () => {
       </div>
 
       <div className="relative max-w-6xl mx-auto px-6 py-20 lg:px-8">
-        <div className="flex items-center gap-4 text-sm uppercase tracking-[0.4em] text-white/70">
-          <span className="h-px w-12 bg-white/40" aria-hidden="true" />
-          Municipal Environment and Natural Resources Office
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="h-px w-8 bg-white/40" aria-hidden="true" />
+            <h2 className="text-xl md:text-2xl font-bold tracking-wide text-white uppercase">
+              Municipal Environment and Natural Resources Office
+            </h2>
+          </div>
+          <p className="text-base md:text-lg text-white/85 leading-relaxed max-w-3xl pl-11">
+            MENRO is responsible for overseeing the municipality's waste management operations, ensuring efficient collection, proper disposal, and adherence to environmental standards and policies.
+          </p>
         </div>
 
-        <div className="mt-10 grid gap-14 lg:grid-cols-[1.15fr_1fr]">
-          <div className="space-y-8">
-            <div className="space-y-6">
-              <h3 className="text-4xl md:text-5xl font-semibold leading-tight text-white">
-                Let&apos;s build a cleaner, smarter Sipocot together.
-              </h3>
-              <p className="text-lg text-white/80 max-w-xl">
-                Our team supports barangays, collectors, and residents with data-driven planning and real-time coordination. Reach out and we&apos;ll partner with you on your next sustainability initiative.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-6">
-              <a
-                href="mailto:menro.sipocot@gmail.com"
-                className="inline-flex items-center justify-center gap-3 rounded-full bg-white text-green-900 px-7 py-3 font-medium shadow-lg shadow-green-900/30 transition hover:-translate-y-0.5 hover:bg-gray-100"
-              >
-                <FaEnvelope aria-hidden="true" />
-                Email Our Team
-              </a>
-              <div className="flex items-center gap-4 text-white/80">
-                {socialLinks.map(({ Icon, label, href, target, rel }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target={target}
-                    rel={rel}
-                    aria-label={label}
-                    className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors duration-200 hover:bg-white hover:text-green-900"
-                  >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
-
+        <div className="mt-12 max-w-5xl mx-auto">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md shadow-2xl shadow-green-900/20">
             <h4 className="text-sm font-semibold uppercase tracking-[0.4em] text-white/70">Sipocot Office</h4>
             <div className="mt-6 grid gap-6">
-              {contactDetails.map(({ Icon, title, value, description, href }) => (
+              {contactDetails.map(({ Icon, title, value, description, href, onClick }) => (
                 <div key={title} className="flex items-start gap-4">
                   <span className="mt-1 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
                     <Icon className="h-5 w-5 text-white" aria-hidden="true" />
                   </span>
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.25em] text-white/60">{title}</p>
-                    {href ? (
+                    {onClick ? (
+                      <button
+                        onClick={onClick}
+                        className="mt-1 block text-lg font-medium text-white hover:text-green-100 transition hover:underline cursor-pointer text-left"
+                      >
+                        {value}
+                      </button>
+                    ) : href ? (
                       <a
                         href={href}
-                        className="mt-1 block text-lg font-medium text-white hover:text-green-100 transition"
+                        target={href.startsWith('http') ? '_blank' : undefined}
+                        rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                        className="mt-1 block text-lg font-medium text-white hover:text-green-100 transition hover:underline cursor-pointer"
                       >
                         {value}
                       </a>

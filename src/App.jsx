@@ -59,6 +59,15 @@ import GarbageCollectorRoutes from './components/garbagecollector/GarbageCollect
 import CollectorRouteRun from './components/garbagecollector/CollectorRouteRun'
 import GarbageCollectorTasks from './components/garbagecollector/GarbageCollectorTasks'
 import GarbageCollectorSchedule from './components/garbagecollector/GarbageCollectorSchedule'
+import ForemanDashboard from './components/foreman/ForemanDashboard'
+import ForemanHome from './components/foreman/ForemanHome'
+import ForemanAttendance from './components/foreman/ForemanAttendance'
+import ForemanSchedule from './components/foreman/ForemanSchedule'
+import ForemanTasks from './components/foreman/ForemanTasks'
+import ForemanTrucks from './components/foreman/ForemanTrucks'
+import ForemanSpecialPickup from './components/foreman/ForemanSpecialPickup'
+import ForemanIssues from './components/foreman/ForemanIssues'
+import ForemanSettings from './components/foreman/ForemanSettings'
 import Issues from './components/admin/Issues'
 import AdminFeedback from './components/admin/Feedback'
 import { ToastContainer } from 'react-toastify';
@@ -280,8 +289,17 @@ function App() {
           {/* Foreman routes - protected */}
           <Route
             path="/foreman"
-            element={<RequireAuth allowedRoles={['foreman']}><Placeholder title="Foreman Portal" /></RequireAuth>}
-          />
+            element={<RequireAuth allowedRoles={['foreman']}><ForemanDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+          >
+            <Route index element={<ForemanHome />} />
+            <Route path="attendance" element={<ForemanAttendance />} />
+            <Route path="schedule" element={<ForemanSchedule />} />
+            <Route path="tasks" element={<ForemanTasks />} />
+            <Route path="trucks" element={<ForemanTrucks />} />
+            <Route path="special-pickup" element={<ForemanSpecialPickup />} />
+            <Route path="issues" element={<ForemanIssues />} />
+            <Route path="settings" element={<ForemanSettings />} />
+          </Route>
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

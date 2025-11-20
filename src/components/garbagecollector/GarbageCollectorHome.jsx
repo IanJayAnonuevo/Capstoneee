@@ -57,6 +57,16 @@ function GarbageCollectorHome() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
+  // Attendance state
+  const [attendanceStatus, setAttendanceStatus] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [message, setMessage] = React.useState({ type: '', text: '' });
+  const [showAbsentModal, setShowAbsentModal] = React.useState(false);
+  const [absentReason, setAbsentReason] = React.useState('');
+  const [absentRequirements, setAbsentRequirements] = React.useState('');
+  const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+  const [hasSubmittedAbsence, setHasSubmittedAbsence] = React.useState(false);
+
   // Attendance time window logic (5:00 AM – 6:00 AM)
   const [now, setNow] = React.useState(new Date());
   const WINDOW_START_HOUR = 5;   // 5:00 AM
@@ -90,8 +100,146 @@ function GarbageCollectorHome() {
 
   const attendanceState = computeState(now);
   const timeInEnabled = attendanceState === 'open' || attendanceState === 'near_end';
-  const timeOutEnabled = false; // disabled until user has timed in (out of scope here)
+  const timeOutEnabled = attendanceStatus === 'timed_in'; // enabled only after time in
   const otherButtonsEnabled = timeInEnabled || attendanceState === 'closed' || attendanceState === 'pre';
+
+  // Handle attendance action
+  const handleAttendance = async (action) => {
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData || !userData.user_id) {
+        setMessage({ type: 'error', text: 'User not found. Please log in again.' });
+        return;
+      }
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setMessage({ type: 'error', text: 'Authentication token missing. Please log in again.' });
+        return;
+      }
+
+      const currentDate = new Date();
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      const hour = currentDate.getHours();
+      const session = hour < 12 ? 'AM' : 'PM';
+
+      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_id: userData.user_id,
+          attendance_date: formattedDate,
+          session: session,
+          action: action
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage({ type: 'success', text: data.message });
+        setAttendanceStatus(action === 'time_in' ? 'timed_in' : 'timed_out');
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to record attendance.' });
+      }
+    } catch (error) {
+      console.error('Attendance error:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle absent marking - show modal
+  const handleAbsent = () => {
+    setShowAbsentModal(true);
+    setAbsentReason('');
+    setAbsentRequirements('');
+  };
+
+  // Submit absent with reason
+  const submitAbsent = async () => {
+    if (!absentReason.trim()) {
+      setMessage({ type: 'error', text: 'Please provide a reason for absence.' });
+      return;
+    }
+
+    if (!absentRequirements.trim()) {
+      setMessage({ type: 'error', text: 'Please list required documents/proof.' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData || !userData.user_id) {
+        setMessage({ type: 'error', text: 'User not found. Please log in again.' });
+        return;
+      }
+
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setMessage({ type: 'error', text: 'Authentication token missing. Please log in again.' });
+        return;
+      }
+
+      const currentDate = new Date();
+      const formattedDate = currentDate.toISOString().split('T')[0];
+      const hour = currentDate.getHours();
+      const session = hour < 12 ? 'AM' : 'PM';
+
+      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_id: userData.user_id,
+          attendance_date: formattedDate,
+          session: session,
+          action: 'absent',
+          reason: absentReason,
+          requirements: absentRequirements
+        })
+      });
+
+      const data = await response.json();
+      console.log('Absence API response:', data);
+
+      if (data.success) {
+        console.log('Setting showSuccessModal to true');
+        setShowAbsentModal(false);
+        setShowSuccessModal(true);
+        setHasSubmittedAbsence(true);
+        setAbsentReason('');
+        setAbsentRequirements('');
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to mark absent.' });
+      }
+    } catch (error) {
+      console.error('Absent marking error:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle leave filing
+  const handleFileLeave = () => {
+    // Navigate to leave filing page or open modal
+    setMessage({ type: 'info', text: 'Leave filing feature coming soon!' });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  };
 
   const quickActions = [
     {
@@ -159,6 +307,19 @@ function GarbageCollectorHome() {
         `}</style>
       </div>
 
+      {/* Success/Error Messages */}
+      {message.text && (
+        <div className={`mb-3 border-l-4 p-3 rounded ${
+          message.type === 'success' 
+            ? 'border-emerald-500 bg-emerald-50 text-emerald-800' 
+            : message.type === 'info'
+            ? 'border-blue-500 bg-blue-50 text-blue-800'
+            : 'border-red-500 bg-red-50 text-red-800'
+        }`}>
+          <div className="text-sm font-medium">{message.text}</div>
+        </div>
+      )}
+
       {/* Time-based notifications */}
       <div className="mb-3">
         {attendanceState === 'open' && (
@@ -184,7 +345,12 @@ function GarbageCollectorHome() {
           <span className="text-emerald-700">Today:</span> {today}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <button type="button" disabled={!timeInEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+          <button 
+            type="button" 
+            disabled={!timeInEnabled || loading} 
+            onClick={() => handleAttendance('time_in')}
+            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
                 <FiPlay className="h-5 w-5" />
@@ -196,7 +362,12 @@ function GarbageCollectorHome() {
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
           </button>
-          <button type="button" disabled={!timeOutEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeOutEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+          <button 
+            type="button" 
+            disabled={!timeOutEnabled || loading} 
+            onClick={() => handleAttendance('time_out')}
+            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeOutEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
                 <FiStopCircle className="h-5 w-5" />
@@ -208,21 +379,31 @@ function GarbageCollectorHome() {
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
           </button>
-          <button type="button" disabled={!otherButtonsEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+          <button 
+            type="button" 
+            disabled={!otherButtonsEnabled || loading || hasSubmittedAbsence} 
+            onClick={handleAbsent}
+            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading && !hasSubmittedAbsence ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
                 <FiXCircle className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-base font-semibold">Absent</div>
-                <div className="text-xs text-emerald-100/80">Mark for today</div>
+                <div className="text-base font-semibold">{hasSubmittedAbsence ? 'Submitted' : 'Absent'}</div>
+                <div className="text-xs text-emerald-100/80">{hasSubmittedAbsence ? 'Already marked' : 'Mark for today'}</div>
               </div>
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
           </button>
-          <button type="button" disabled={!otherButtonsEnabled} className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled ? 'bg-emerald-800' : 'bg-emerald-800/60 cursor-not-allowed'}`}>
+          <button 
+            type="button" 
+            disabled={!otherButtonsEnabled || loading} 
+            onClick={handleFileLeave}
+            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+          >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-2 00">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
                 <FiFileText className="h-5 w-5" />
               </div>
               <div>
@@ -271,6 +452,94 @@ function GarbageCollectorHome() {
           })}
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Absence Recorded!</h3>
+            <p className="text-gray-600 mb-6">
+              Your absence has been successfully recorded and is now pending foreman verification.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm text-blue-800">
+                <strong>📋 Next Steps:</strong><br/>
+                • Ensure you have all required documents ready<br/>
+                • Wait for foreman verification<br/>
+                • Check back for approval status
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
+            >
+              Got it, thanks!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Absent Modal */}
+      {showAbsentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Mark as Absent</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Absence <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={absentReason}
+                  onChange={(e) => setAbsentReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  rows="3"
+                  placeholder="e.g., Sick, Emergency, Personal matters"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Documents/Proof <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={absentRequirements}
+                  onChange={(e) => setAbsentRequirements(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  rows="3"
+                  placeholder="e.g., Medical certificate, Police report, etc."
+                />
+              </div>
+              <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                📌 Note: Your absence request will be submitted to the foreman for verification. Please ensure all required documents are ready.
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowAbsentModal(false)}
+                disabled={loading}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitAbsent}
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium disabled:opacity-50"
+              >
+                {loading ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

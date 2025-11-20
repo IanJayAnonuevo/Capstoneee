@@ -593,7 +593,7 @@ export default function TaskManagement() {
   }, []);
 
   return (
-    <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
+    <div className="p-2 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans text-xs">
       {/* Toast */}
       {toast && (
         <div
@@ -607,15 +607,15 @@ export default function TaskManagement() {
       {/* Header removed - using global admin header */}
 
       {/* Minimal Summary Bar - Tree Palette */}
-      <div className="w-full flex items-center justify-between bg-green-50 py-6 px-8 mb-8">
+      <div className="w-full flex items-center justify-between bg-green-50 py-2 px-3 mb-2">
         {/* Left: Info Columns */}
-        <div className="flex flex-1 items-start gap-20">
+        <div className="flex flex-1 items-start gap-4">
           {/* Column 1 */}
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center gap-3">
-              <FiUser className="w-6 h-6 text-green-800" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5">
+              <FiUser className="w-4 h-4 text-green-800" />
               <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
+                <div className="text-[10px] text-green-900 font-semibold leading-tight">
                   {selectedSchedule?.driver?.name ? (
                     <>
                       {selectedSchedule.driver.name}
@@ -1241,9 +1241,9 @@ export default function TaskManagement() {
       {/* History side panel */}
       {historyFor && (
         <div className="fixed inset-0 z-50 flex items-start justify-end bg-black bg-opacity-30">
-          <div className="bg-white w-full max-w-md h-full shadow-xl p-5 overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-green-800">History: {historyFor.barangay_name} — #{historyFor.assignment_id}</h3>
+          <div className="bg-white w-full max-w-md h-full shadow-xl p-3 overflow-y-auto">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-green-800">History: {historyFor.barangay_name} — #{historyFor.assignment_id}</h3>
               <button className="text-gray-500 hover:text-green-700" onClick={() => { setHistoryFor(null); setHistoryEvents([]); }}>✕</button>
             </div>
             {historyLoading ? (
@@ -1274,10 +1274,10 @@ export default function TaskManagement() {
       {/* Assignment Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-green-700" onClick={closeModal}><FaTimes size={20} /></button>
-            <h2 className="text-xl font-semibold text-green-800 mb-4">Assign Task</h2>
-            <form className="flex flex-col gap-4" onSubmit={handleConfirmAssignment}>
+          <div className="bg-white rounded-lg shadow-lg p-3 w-full max-w-sm relative">
+            <button className="absolute top-1 right-1 text-gray-500 hover:text-green-700" onClick={closeModal}><FaTimes size={16} /></button>
+            <h2 className="text-sm font-semibold text-green-800 mb-2">Assign Task</h2>
+            <form className="flex flex-col gap-2" onSubmit={handleConfirmAssignment}>
               <div>
                 <label className="block text-sm text-green-700 mb-1">Select Driver</label>
                 <select name="driver" className="w-full border border-green-200 rounded px-3 py-2" disabled={personnelLoading}>

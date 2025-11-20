@@ -421,15 +421,15 @@ export default function ManageSchedule() {
   }, [selectedTruck, selectedCluster, currentWeek]);
 
   return (
-    <div className="p-6 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans">
+    <div className="p-2 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans text-xs">
       {/* Bulk action bar (visible when there are selections) */}
       {selectedCount > 0 && (
-        <div className="mb-3 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
-          <div className="text-emerald-900 text-sm font-medium">{selectedCount} selected</div>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setBulkOpen(true)}>Edit Selected</button>
-            <button className="px-3 py-1.5 rounded border border-red-300 text-red-700 hover:bg-red-50" onClick={bulkDelete}>Delete Selected</button>
-            <button className="px-3 py-1.5 rounded border border-emerald-300 text-emerald-800 hover:bg-emerald-100" onClick={clearSelected}>Clear</button>
+        <div className="mb-2 flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-2 py-1">
+          <div className="text-emerald-900 text-[10px] font-medium">{selectedCount} selected</div>
+          <div className="flex items-center gap-1">
+            <button className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-[10px]" onClick={() => setBulkOpen(true)}>Edit</button>
+            <button className="px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 text-[10px]" onClick={bulkDelete}>Delete</button>
+            <button className="px-2 py-1 rounded border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-[10px]" onClick={clearSelected}>Clear</button>
           </div>
         </div>
       )}
@@ -437,22 +437,22 @@ export default function ManageSchedule() {
       {/* Header removed - using global admin header */}
       
       {/* Navigation Controls */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={goToPreviousWeek}
-            className="px-2.5 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
             aria-label="Previous week"
             title="Previous week"
           >
             ←
           </button>
-          <div className="px-3 py-1.5 rounded text-green-900 font-medium">
+          <div className="px-2 py-1 rounded text-green-900 font-medium text-[10px]">
             {formatMonthYear(currentWeek)}
           </div>
           <button
             onClick={goToNextWeek}
-            className="px-2.5 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
             aria-label="Next week"
             title="Next week"
           >
@@ -461,7 +461,7 @@ export default function ManageSchedule() {
         </div>
         <button
           onClick={goToToday}
-          className="px-3 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+          className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-[10px]"
           title="Go to today"
         >
           Today
@@ -473,7 +473,7 @@ export default function ManageSchedule() {
               <button
                 key={truck}
                 onClick={() => { setSelectedTruck(truck); clearSelected(); }}
-                className={`px-3 py-1 rounded mr-2 font-semibold text-sm transition ${
+                className={`px-2 py-0.5 rounded mr-1 font-semibold text-[10px] transition ${
                   selectedTruck === truck 
                     ? 'bg-green-600 text-white' 
                     : 'bg-transparent text-green-800 border border-green-300 hover:bg-green-50'
@@ -486,16 +486,16 @@ export default function ManageSchedule() {
           </div>
           
           {selectedTruck === 'Truck 1' ? (
-            <span className="font-semibold text-green-700 text-base px-3 py-1 bg-green-50 rounded-md">
+            <span className="font-semibold text-green-700 text-[10px] px-2 py-0.5 bg-green-50 rounded-md">
               Priority Barangays (1C-PB)
             </span>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-700 text-base">
+            <div className="flex items-center gap-1">
+              <span className="font-semibold text-green-700 text-[10px]">
                 Cluster:
               </span>
               <select
-                className="border border-gray-300 rounded-md px-3 py-1 text-sm font-medium focus:border-green-600 focus:outline-none"
+                className="border border-gray-300 rounded-md px-2 py-0.5 text-[10px] font-medium focus:border-green-600 focus:outline-none"
                 value={selectedCluster}
                 onChange={e => { setSelectedCluster(e.target.value); clearSelected(); }}
                 title="Select cluster for Truck 2"
@@ -509,7 +509,7 @@ export default function ManageSchedule() {
           )}
           <button
             onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '' }); setAddError(null); setAddOpen(true); }}
-            className="ml-2 px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700"
+            className="ml-1 px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700"
             title="Add schedule"
           >
             Add Schedule
@@ -519,16 +519,16 @@ export default function ManageSchedule() {
 
       {/* Loading and Error States */}
       {schedulesLoading && (
-        <div className="text-center py-8">
+        <div className="text-center py-2">
           <div className="text-gray-600 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mr-3"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600 mr-1.5"></div>
             Loading predefined schedules...
           </div>
         </div>
       )}
       
       {schedulesError && (
-        <div className="text-center py-8">
+        <div className="text-center py-2">
           <div className="text-red-600 flex items-center justify-center">
             Error: {schedulesError}
           </div>
@@ -560,11 +560,11 @@ export default function ManageSchedule() {
                 minWidth: '1150px', // 100px + (7 * 150px) = 1150px minimum
               }}
             >
-              <div className="bg-green-100 rounded-tl-lg py-3 font-semibold text-sm text-center">
+              <div className="bg-green-100 rounded-tl-lg py-1.5 font-semibold text-[10px] text-center">
                 Time
               </div>
               {days.map(col => (
-                <div key={col.day} className="bg-green-100 rounded-t-lg text-center text-gray-700 font-semibold text-sm py-3">
+                <div key={col.day} className="bg-green-100 rounded-t-lg text-center text-gray-700 font-semibold text-[10px] py-1.5">
                   {col.day} <span className="font-normal">{col.date}</span>
                 </div>
               ))}
@@ -693,37 +693,37 @@ export default function ManageSchedule() {
       {/* Bulk Edit Modal */}
       {selectedCount > 0 && bulkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl relative p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative p-3">
             <button className="absolute top-3 right-3 text-gray-500 hover:text-green-700" onClick={() => setBulkOpen(false)}>✕</button>
             <h2 className="text-lg font-semibold text-green-800 mb-4">Edit {selectedCount} Selected</h2>
             {bulkError && <div className="text-red-600 text-sm mb-3">{bulkError}</div>}
-            <form onSubmit={bulkEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={bulkEditSubmit} className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">Day of Week</label>
-                  <select className="w-full border border-green-200 rounded px-3 py-2" value={bulkForm.day_of_week} onChange={(e) => setBulkForm({ ...bulkForm, day_of_week: e.target.value })} required>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Day of Week</label>
+                  <select className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.day_of_week} onChange={(e) => setBulkForm({ ...bulkForm, day_of_week: e.target.value })} required>
                     <option value="">Select day</option>
                     {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => (<option key={d} value={d}>{d}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">Week of Month</label>
-                  <input type="number" min={1} max={4} className="w-full border border-green-200 rounded px-3 py-2" value={bulkForm.week_of_month || ''} onChange={(e) => setBulkForm({ ...bulkForm, week_of_month: e.target.value })} />
+                  <label className="block text-[10px] text-green-700 mb-0.5">Week of Month</label>
+                  <input type="number" min={1} max={4} className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.week_of_month || ''} onChange={(e) => setBulkForm({ ...bulkForm, week_of_month: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">Start Time</label>
-                  <input type="time" className="w-full border border-green-200 rounded px-3 py-2" value={bulkForm.start_time} onChange={(e) => setBulkForm({ ...bulkForm, start_time: e.target.value })} required />
+                  <label className="block text-[10px] text-green-700 mb-0.5">Start Time</label>
+                  <input type="time" className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.start_time} onChange={(e) => setBulkForm({ ...bulkForm, start_time: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">End Time</label>
-                  <input type="time" className="w-full border border-green-200 rounded px-3 py-2" value={bulkForm.end_time} onChange={(e) => setBulkForm({ ...bulkForm, end_time: e.target.value })} required />
+                  <label className="block text-[10px] text-green-700 mb-0.5">End Time</label>
+                  <input type="time" className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.end_time} onChange={(e) => setBulkForm({ ...bulkForm, end_time: e.target.value })} required />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setBulkOpen(false)}>Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={bulkSaving}>{bulkSaving ? 'Saving...' : 'Apply Changes'}</button>
+              <div className="flex items-center justify-end gap-1 pt-1">
+                <button type="button" className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setBulkOpen(false)}>Cancel</button>
+                <button type="submit" className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={bulkSaving}>{bulkSaving ? 'Saving...' : 'Apply Changes'}</button>
               </div>
             </form>
           </div>
@@ -735,30 +735,30 @@ export default function ManageSchedule() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl relative overflow-hidden">
             {/* Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+            <div className="px-3 pt-3 pb-2 border-b border-gray-100">
               <button
-                className="absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:text-green-700 hover:bg-gray-100"
+                className="absolute top-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-green-700 hover:bg-gray-100"
                 onClick={() => setEditOpen(false)}
                 aria-label="Close"
                 title="Close"
               >✕</button>
-              <h2 className="text-xl font-semibold text-green-800">Edit Predefined Schedule</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <span className="inline-flex items-center gap-2 font-medium text-gray-800">
-                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+              <h2 className="text-sm font-semibold text-green-800">Edit Predefined Schedule</h2>
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+                <span className="inline-flex items-center gap-1 font-medium text-gray-800">
+                  <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                   {editingSchedule.barangay_name}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs uppercase tracking-wide">
+                <span className="px-1.5 py-0 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[9px] uppercase tracking-wide">
                   {editingSchedule.schedule_type}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs">
+                <span className="px-1.5 py-0 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px]">
                   Cluster: {editingSchedule.cluster_id}
                 </span>
               </div>
             </div>
 
             {editError && (
-              <div className="mx-6 mt-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              <div className="mx-3 mt-1.5 rounded-md bg-red-50 border border-red-200 px-2 py-1 text-[10px] text-red-700">
                 {editError}
               </div>
             )}
@@ -882,14 +882,14 @@ export default function ManageSchedule() {
                   setEditSaving(false);
                 }
               }}
-              className="px-6 py-5 space-y-6"
+              className="px-3 py-2 space-y-2"
             >
               {/* When & Frequency */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Day of Week</label>
+                  <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Day of Week</label>
                   <select
-                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-3 py-2 text-gray-800"
+                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-2 py-1 text-gray-800"
                     value={editForm.day_of_week}
                     onChange={(e) => setEditForm({ ...editForm, day_of_week: e.target.value })}
                     required
@@ -900,39 +900,39 @@ export default function ManageSchedule() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Week of Month</label>
+                  <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Week of Month</label>
                   <input
                     type="number"
                     min={1}
                     max={4}
-                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-3 py-2 text-gray-800 disabled:bg-gray-50"
+                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-2 py-1 text-gray-800 disabled:bg-gray-50"
                     value={editForm.week_of_month}
                     onChange={(e) => setEditForm({ ...editForm, week_of_month: e.target.value })}
                     disabled={editingSchedule.schedule_type !== 'weekly_cluster'}
                   />
                   {editingSchedule.schedule_type === 'weekly_cluster' && (
-                    <p className="mt-1 text-xs text-gray-500">Enter a value from 1 to 4.</p>
+                    <p className="mt-0.5 text-[9px] text-gray-500">Enter a value from 1 to 4.</p>
                   )}
                 </div>
               </div>
 
               {/* Time Range */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+                  <label className="block text-[10px] font-medium text-gray-600 mb-0.5">Start Time</label>
                   <input
                     type="time"
-                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-3 py-2 text-gray-800"
+                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-2 py-1 text-gray-800"
                     value={editForm.start_time}
                     onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+                  <label className="block text-[10px] font-medium text-gray-600 mb-0.5">End Time</label>
                   <input
                     type="time"
-                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-3 py-2 text-gray-800"
+                    className="w-full border border-gray-200 focus:border-emerald-500 focus:ring-0 rounded-lg px-2 py-1 text-gray-800"
                     value={editForm.end_time}
                     onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
                     required
@@ -942,11 +942,11 @@ export default function ManageSchedule() {
 
               {/* Actions Row */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
                   {editingSchedule.schedule_type === 'weekly_cluster' && (
                     <button
                       type="button"
-                      className="px-4 py-2 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
+                      className="px-2 py-1 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
                       title="Create a copy on the next week"
                       onClick={async () => {
                         setEditError(null);
@@ -987,10 +987,10 @@ export default function ManageSchedule() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                    className="px-2 py-1 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
                     onClick={async () => {
                       if (!window.confirm('Delete this schedule?')) return;
                       setEditError(null);
@@ -1051,14 +1051,14 @@ export default function ManageSchedule() {
                   </button>
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    className="px-2 py-1 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
                     onClick={() => setEditOpen(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="px-2 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
                     disabled={editSaving}
                   >
                     {editSaving ? 'Saving...' : 'Save Changes'}
@@ -1072,15 +1072,15 @@ export default function ManageSchedule() {
       {/* Add Schedule Modal */}
       {addOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-lg shadow-lg p-3 w-full max-w-sm relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-green-700"
               onClick={() => setAddOpen(false)}
               aria-label="Close"
             >✕</button>
-            <h2 className="text-lg font-semibold text-green-800 mb-4">Add Schedule</h2>
+            <h2 className="text-sm font-semibold text-green-800 mb-2">Add Schedule</h2>
             {addError && (
-              <div className="text-red-600 text-sm mb-3">{addError}</div>
+              <div className="text-red-600 text-[10px] mb-1.5">{addError}</div>
             )}
             <form
               onSubmit={async (e) => {
@@ -1131,12 +1131,12 @@ export default function ManageSchedule() {
                   setAddSaving(false);
                 }
               }}
-              className="space-y-4"
+              className="space-y-2"
             >
               <div>
-                <label className="block text-sm text-green-700 mb-1">Barangay</label>
+                <label className="block text-[10px] text-green-700 mb-0.5">Barangay</label>
                 <select
-                  className="w-full border border-green-200 rounded px-3 py-2"
+                  className="w-full border border-green-200 rounded px-2 py-1"
                   value={addForm.barangay_id}
                   onChange={(e) => setAddForm({ ...addForm, barangay_id: e.target.value })}
                   required
@@ -1150,22 +1150,22 @@ export default function ManageSchedule() {
                     ))}
                 </select>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">Date</label>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Date</label>
                   <input
                     type="date"
-                    className="w-full border border-green-200 rounded px-3 py-2"
+                    className="w-full border border-green-200 rounded px-2 py-1"
                     value={addForm.date}
                     onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-green-700 mb-1">Start Time</label>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Start Time</label>
                   <input
                     type="time"
-                    className="w-full border border-green-200 rounded px-3 py-2"
+                    className="w-full border border-green-200 rounded px-2 py-1"
                     value={addForm.start_time}
                     onChange={(e) => setAddForm({ ...addForm, start_time: e.target.value })}
                     required
@@ -1173,18 +1173,18 @@ export default function ManageSchedule() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-green-700 mb-1">End Time</label>
+                <label className="block text-[10px] text-green-700 mb-0.5">End Time</label>
                 <input
                   type="time"
-                  className="w-full border border-green-200 rounded px-3 py-2"
+                  className="w-full border border-green-200 rounded px-2 py-1"
                   value={addForm.end_time}
                   onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
                   required
                 />
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setAddOpen(false)}>Cancel</button>
-                <button type="submit" className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={addSaving}>
+              <div className="flex items-center justify-end gap-1 pt-1">
+                <button type="button" className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setAddOpen(false)}>Cancel</button>
+                <button type="submit" className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={addSaving}>
                   {addSaving ? 'Saving...' : 'Create Schedule'}
                 </button>
               </div>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Attendance API Test</h1>
+
+    <div class="test-card">
+        <h3>1. Search Personnel</h3>
+        <input type="text" id="searchQuery" placeholder="Enter ID or name" value="Paul">
+        <button onclick="testSearch()">Test Search</button>
+        <div id="searchResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h3>2. Get Attendance</h3>
+        <input type="date" id="attendanceDate" value="2025-11-20">
+        <button onclick="testGetAttendance()">Get Attendance</button>
+        <div id="getAttendanceResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h3>3. Record Time In</h3>
+        <input type="number" id="userIdIn" placeholder="User ID" value="16">
+        <select id="sessionIn">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+        <button onclick="testRecordTimeIn()">Record Time In</button>
+        <div id="recordInResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h3>4. Record Time Out</h3>
+        <input type="number" id="userIdOut" placeholder="User ID" value="16">
+        <select id="sessionOut">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+        </select>
+        <button onclick="testRecordTimeOut()">Record Time Out</button>
+        <div id="recordOutResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/Capstoneee/backend/api';
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result' + (isError ? ' error' : '');
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('searchQuery').value;
+            try {
+                const response = await fetch(`${API_BASE}/search_personnel.php?search=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                showResult('searchResult', data);
+            } catch (error) {
+                showResult('searchResult', { error: error.message }, true);
+            }
+        }
+
+        async function testGetAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            try {
+                const response = await fetch(`${API_BASE}/get_attendance.php?date=${date}`);
+                const data = await response.json();
+                showResult('getAttendanceResult', data);
+            } catch (error) {
+                showResult('getAttendanceResult', { error: error.message }, true);
+            }
+        }
+
+        async function testRecordTimeIn() {
+            const userId = document.getElementById('userIdIn').value;
+            const session = document.getElementById('sessionIn').value;
+            const date = document.getElementById('attendanceDate').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/record_attendance.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        attendance_date: date,
+                        session: session,
+                        action: 'time_in',
+                        recorded_by: 91
+                    })
+                });
+                const data = await response.json();
+                showResult('recordInResult', data, !data.success);
+            } catch (error) {
+                showResult('recordInResult', { error: error.message }, true);
+            }
+        }
+
+        async function testRecordTimeOut() {
+            const userId = document.getElementById('userIdOut').value;
+            const session = document.getElementById('sessionOut').value;
+            const date = document.getElementById('attendanceDate').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/record_attendance.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        attendance_date: date,
+                        session: session,
+                        action: 'time_out',
+                        recorded_by: 91
+                    })
+                });
+                const data = await response.json();
+                showResult('recordOutResult', data, !data.success);
+            } catch (error) {
+                showResult('recordOutResult', { error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html>

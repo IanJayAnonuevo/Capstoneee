@@ -276,6 +276,9 @@ if (!function_exists('kolektrash_enforce_access_for_script')) {
                         case 'admin_only':
                             $allowedRoles = ['admin'];
                             break;
+                        case 'admin_foreman':
+                            $allowedRoles = ['admin', 'foreman'];
+                            break;
                         case 'staff_only':
                             $allowedRoles = ['admin', 'truck_driver', 'garbage_collector', 'foreman'];
                             break;

@@ -13,11 +13,17 @@ return [
     'role_groups' => [
         'admin_only' => [
             'add_resolution_photo_column.php',
-            'assign_task.php',
-            'auto_generate_tasks.php',
             'create_issue_reports_table.php',
             'create_missing_schedules.php',
             'create_pickup_requests_table.php',
+            'regenerate_routes.php',
+            'register_personnel.php',
+            'update_schema.php',
+            'update_user_status.php'
+        ],
+        'admin_foreman' => [
+            'assign_task.php',
+            'auto_generate_tasks.php',
             'create_predefined_schedule.php',
             'delete_assignment.php',
             'generate_tasks_from_predefined.php',
@@ -26,16 +32,12 @@ return [
             'get_assignment_options.php',
             'get_personnel.php',
             'get_trucks.php',
-            'regenerate_routes.php',
-            'register_personnel.php',
             'send_notification.php',
             'support_issues.php',
             'update_assignment.php',
             'update_predefined_schedule.php',
             'update_predefined_schedule_by_fields.php',
-            'update_route_assignment.php',
-            'update_schema.php',
-            'update_user_status.php'
+            'update_route_assignment.php'
         ],
         'staff_only' => [
             'clear_route_active.php',
@@ -58,7 +60,7 @@ return [
         'get_garbage_collector.php' => ['admin', 'garbage_collector'],
         'get_notifications.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman'],
         'get_personnel_schedule.php' => ['admin', 'truck_driver', 'garbage_collector'],
-        'get_pickup_requests.php' => ['admin', 'barangay_head'],
+        'get_pickup_requests.php' => ['admin', 'barangay_head', 'foreman'],
         'get_route_details.php' => ['admin', 'truck_driver', 'garbage_collector', 'barangay_head', 'resident'],
         'get_routes.php' => ['admin', 'truck_driver', 'garbage_collector'],
         'get_scheduled_routes.php' => ['admin', 'truck_driver', 'garbage_collector'],
@@ -67,13 +69,13 @@ return [
         'get_truck_driver.php' => ['admin', 'truck_driver'],
         'get_user.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman'],
         'get_user_details.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman'],
-        'get_user_issue_reports.php' => ['admin', 'resident', 'barangay_head'],
-        'live_trucks.php' => ['admin'],
+        'get_user_issue_reports.php' => ['admin', 'resident', 'barangay_head', 'foreman'],
+        'live_trucks.php' => ['admin', 'foreman'],
         'log_task_event.php' => ['admin', 'truck_driver', 'garbage_collector'],
         'register_personnel.php' => ['admin'],
         'register_resident.php' => null,
         'update_garbage_collector.php' => ['admin', 'garbage_collector'],
-        'update_pickup_request_status.php' => ['admin', 'barangay_head'],
+        'update_pickup_request_status.php' => ['admin', 'barangay_head', 'foreman'],
         'update_profile.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman'],
         'update_truck_driver.php' => ['admin', 'truck_driver'],
         'upload_profile_image.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman']
