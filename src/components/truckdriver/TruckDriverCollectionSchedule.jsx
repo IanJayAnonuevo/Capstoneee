@@ -48,6 +48,12 @@ export default function TruckDriverCollectionSchedule() {
     }
   };
 
+  const parseLocalDate = (dateString) => {
+    if (!dateString) return null;
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   // Group schedules by day of week
   const getSchedulesByDay = (dayName) => {
     const dayMap = {
@@ -59,7 +65,8 @@ export default function TruckDriverCollectionSchedule() {
     };
     
     return schedules.filter(schedule => {
-      const scheduleDate = new Date(schedule.date);
+      const scheduleDate = parseLocalDate(schedule.date);
+      if (!scheduleDate) return false;
       const dayOfWeek = scheduleDate.getDay();
       return dayOfWeek === dayMap[dayName];
     }).sort((a, b) => a.time.localeCompare(b.time));

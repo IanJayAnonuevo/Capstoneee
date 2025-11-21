@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { buildApiUrl } from '../../config/api.js';
 
-const trucks = ['Truck 1', 'Truck 2'];
+const scheduleViewOptions = [
+  { value: 'priority', label: 'Priority Barangays', type: 'priority', clusterId: '1C-PB' },
+  { value: 'clusterA', label: 'Eastern Barangays', type: 'cluster', clusterId: '2C-CA' },
+  { value: 'clusterB', label: 'Western Barangays', type: 'cluster', clusterId: '3C-CB' },
+  { value: 'clusterC', label: 'Northern Barangays', type: 'cluster', clusterId: '4C-CC' },
+  { value: 'clusterD', label: 'Southern Barangays', type: 'cluster', clusterId: '5C-CD' }
+];
 
 // Define the time slots for the grid (6:00 to 17:00, every 30 minutes)
 const timeSlots = [];
@@ -28,13 +34,14 @@ const computeScheduleId = (s) => {
 };
 
 export default function ManageSchedule() {
-  const [selectedTruck, setSelectedTruck] = useState('Truck 1');
-  const [selectedCluster, setSelectedCluster] = useState('2C-CA'); // Default to Cluster A
+  const [selectedView, setSelectedView] = useState('priority');
   const [predefinedSchedules, setPredefinedSchedules] = useState([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [schedulesError, setSchedulesError] = useState(null);
   const [barangayList, setBarangayList] = useState([]);
-  const [clusterList, setClusterList] = useState([]);
+  const selectedOption = scheduleViewOptions.find(opt => opt.value === selectedView) || scheduleViewOptions[0];
+  const isPriorityView = selectedOption.type === 'priority';
+  const selectedClusterId = selectedOption.clusterId;
 
   // Helper function to get auth token
   const getAuthToken = () => {
@@ -170,18 +177,19 @@ export default function ManageSchedule() {
     try {
       setSchedulesLoading(true);
       const weekNumber = getWeekOfMonth(getWeekStart(currentWeek));
-      const isTruck1 = selectedTruck === 'Truck 1';
+      const currentOption = scheduleViewOptions.find(opt => opt.value === selectedView) || scheduleViewOptions[0];
+      const isPriority = currentOption.type === 'priority';
       const params = new URLSearchParams();
       
       // Fetch all schedule types: daily_priority, fixed_days, and weekly_cluster
       // We'll filter them in getFilteredSchedules based on truck selection
-      if (isTruck1) {
-        // For Truck 1, fetch daily_priority and fixed_days
+      if (isPriority) {
+        // Priority barangays use daily_priority and fixed_days schedules
         params.set('schedule_type', 'daily_priority,fixed_days');
       } else {
-        // For Truck 2, fetch weekly_cluster
+        // Clustered barangays use weekly_cluster schedules
         params.set('schedule_type', 'weekly_cluster');
-        params.set('cluster_id', selectedCluster);
+        params.set('cluster_id', currentOption.clusterId);
         params.set('week_of_month', String(weekNumber));
       }
       // Limit to visible days (Monday to Sunday)
@@ -209,7 +217,7 @@ export default function ManageSchedule() {
   useEffect(() => {
     fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTruck, selectedCluster, currentWeek]);
+  }, [selectedView, currentWeek]);
 
   // Fetch barangays for mapping
   useEffect(() => {
@@ -227,35 +235,19 @@ export default function ManageSchedule() {
       });
   }, []);
 
-  // Fetch clusters
-  useEffect(() => {
-    fetch(buildApiUrl('get_clusters.php'), {
-      headers: getAuthHeaders()
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setClusterList(Array.isArray(data.clusters) ? data.clusters : []);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch clusters:', err);
-      });
-  }, []);
-
   // Filter schedules based on truck selection
   const getFilteredSchedules = () => {
-    if (selectedTruck === 'Truck 1') {
-      // Truck 1: Show priority barangays (cluster_id = 1C-PB) with daily_priority or fixed_days schedule types
+    if (isPriorityView) {
+      // Priority: Show priority barangays (cluster_id = 1C-PB) with daily_priority or fixed_days schedule types
       return predefinedSchedules.filter(schedule => 
         schedule.cluster_id === '1C-PB' && 
         (schedule.schedule_type === 'daily_priority' || schedule.schedule_type === 'fixed_days')
       );
     } else {
-      // Truck 2: Show clustered barangays based on selected cluster
+      // Clustered view: Show barangays for the selected cluster
       const weekNumber = getWeekOfMonth(getWeekStart(currentWeek));
       const filtered = predefinedSchedules.filter(schedule => (
-        schedule.cluster_id === selectedCluster &&
+        schedule.cluster_id === selectedClusterId &&
         schedule.schedule_type === 'weekly_cluster' &&
         Number(schedule.week_of_month) === Number(weekNumber)
       ));
@@ -418,7 +410,7 @@ export default function ManageSchedule() {
   useEffect(() => {
     clearSelected();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTruck, selectedCluster, currentWeek]);
+  }, [selectedView, currentWeek]);
 
   return (
     <div className="p-2 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans text-xs">
@@ -468,45 +460,18 @@ export default function ManageSchedule() {
         </button>
         
         <div className="flex items-center gap-3">
-          <div className="rounded px-2 py-1 font-semibold text-xs mr-2 flex items-center">
-            {trucks.map(truck => (
-              <button
-                key={truck}
-                onClick={() => { setSelectedTruck(truck); clearSelected(); }}
-                className={`px-2 py-0.5 rounded mr-1 font-semibold text-[10px] transition ${
-                  selectedTruck === truck 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-transparent text-green-800 border border-green-300 hover:bg-green-50'
-                }`}
-                title={`Select ${truck}`}
-              >
-                {truck}
-              </button>
+          <select
+            className="border border-gray-300 rounded-md px-2 py-0.5 text-[10px] font-semibold text-green-700 focus:border-green-600 focus:outline-none bg-white"
+            value={selectedView}
+            onChange={e => { setSelectedView(e.target.value); clearSelected(); }}
+            title="Select schedule view"
+          >
+            {scheduleViewOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
-          </div>
-          
-          {selectedTruck === 'Truck 1' ? (
-            <span className="font-semibold text-green-700 text-[10px] px-2 py-0.5 bg-green-50 rounded-md">
-              Priority Barangays (1C-PB)
-            </span>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className="font-semibold text-green-700 text-[10px]">
-                Cluster:
-              </span>
-              <select
-                className="border border-gray-300 rounded-md px-2 py-0.5 text-[10px] font-medium focus:border-green-600 focus:outline-none"
-                value={selectedCluster}
-                onChange={e => { setSelectedCluster(e.target.value); clearSelected(); }}
-                title="Select cluster for Truck 2"
-              >
-                <option value="2C-CA">Cluster A</option>
-                <option value="3C-CB">Cluster B</option>
-                <option value="4C-CC">Cluster C</option>
-                <option value="5C-CD">Cluster D</option>
-              </select>
-            </div>
-          )}
+          </select>
           <button
             onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '' }); setAddError(null); setAddOpen(true); }}
             className="ml-1 px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700"
@@ -1100,9 +1065,8 @@ export default function ManageSchedule() {
                   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
                   const dayOfWeek = dayNames[dayIndex];
                   const wom = getWeekOfMonth(addForm.date);
-                  const isTruck1 = selectedTruck === 'Truck 1';
-                  const schedule_type = isTruck1 ? 'daily_priority' : 'weekly_cluster';
-                  const cluster_id = isTruck1 ? '1C-PB' : selectedCluster;
+                  const schedule_type = isPriorityView ? 'daily_priority' : 'weekly_cluster';
+                  const cluster_id = selectedClusterId;
                   const barangay = barangayList.find(b => String(b.barangay_id) === String(addForm.barangay_id));
                   const payload = {
                     barangay_id: addForm.barangay_id,
@@ -1143,8 +1107,7 @@ export default function ManageSchedule() {
                 >
                   <option value="">Select barangay</option>
                   {barangayList
-                    .filter(b => selectedTruck === 'Truck 1' ? b.cluster_id === '1C-PB' : true)
-                    .filter(b => selectedTruck === 'Truck 2' ? b.cluster_id === selectedCluster : true)
+                    .filter(b => isPriorityView ? b.cluster_id === '1C-PB' : b.cluster_id === selectedClusterId)
                     .map(b => (
                       <option key={b.barangay_id} value={b.barangay_id}>{b.barangay_name}</option>
                     ))}

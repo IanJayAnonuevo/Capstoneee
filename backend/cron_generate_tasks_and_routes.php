@@ -24,6 +24,20 @@ function writeLog($message) {
 
 // Check if running via CLI or web
 $isCLI = php_sapi_name() === 'cli';
+$sessionFilter = null;
+
+if ($isCLI && isset($argv)) {
+    foreach ($argv as $arg) {
+        if (strpos($arg, '--session=') === 0) {
+            $value = strtoupper(substr($arg, 10));
+            if (in_array($value, ['AM', 'PM'], true)) {
+                $sessionFilter = $value;
+            } else {
+                writeLog("Invalid session argument '$value'. Use AM or PM.");
+            }
+        }
+    }
+}
 
 if (!$isCLI) {
     // If running via web, check for authentication token
@@ -59,6 +73,10 @@ try {
         'end_date' => $tomorrow,
         'overwrite' => false
     ];
+    if ($sessionFilter) {
+        $apiData['session'] = $sessionFilter;
+        writeLog("Restricting generation to {$sessionFilter} session.");
+    }
     
     // Call the task generation API
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
@@ -113,6 +131,11 @@ try {
     
     $tasksGenerated = $taskResult['total_generated'] ?? 0;
     $tasksSkipped = $taskResult['skipped_duplicates'] ?? 0;
+    if (!empty($taskResult['session_issues'])) {
+        foreach ($taskResult['session_issues'] as $issue) {
+            writeLog("Session issue ({$issue['date']} {$issue['session']}): {$issue['message']}");
+        }
+    }
     writeLog("Task generation SUCCESS: Generated $tasksGenerated tasks, Skipped $tasksSkipped duplicates");
     
     // STEP 2: Generate Routes (only if tasks were generated)

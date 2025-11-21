@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
-import { MdPrint, MdFileDownload, MdCheckCircle, MdCancel, MdPending, MdAccessTime } from 'react-icons/md';
-
-const API_BASE_URL = 'http://localhost/Capstoneee/backend/api';
+import { MdPrint, MdFileDownload, MdCheckCircle, MdCancel, MdPending, MdAccessTime, MdImage, MdRefresh } from 'react-icons/md';
+import { API_BASE_URL } from '../../config/api';
 
 export default function ForemanAttendance() {
   const navigate = useNavigate();
@@ -11,10 +10,12 @@ export default function ForemanAttendance() {
   const [attendanceData, setAttendanceData] = useState([]);
   const [filterStatus, setFilterStatus] = useState('pending'); // 'all', 'pending', 'verified', 'rejected'
   const [summary, setSummary] = useState({
-    pending: { AM: 0, PM: 0 },
-    verified: { AM: 0, PM: 0 },
-    rejected: { AM: 0, PM: 0 }
+    pending: 0,
+    approved: 0,
+    declined: 0
   });
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -22,64 +23,110 @@ export default function ForemanAttendance() {
     fetchAttendance();
   }, [selectedDate, filterStatus]);
 
+  // Auto-refresh every 30 seconds to catch new requests
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (filterStatus === 'pending') {
+        fetchAttendance();
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [filterStatus, selectedDate]);
+
   const fetchAttendance = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
       const statusParam = filterStatus === 'all' ? '' : `&status=${filterStatus}`;
-      const response = await fetch(`${API_BASE_URL}/get_pending_attendance.php?date=${selectedDate}${statusParam}`, {
+      const dateFrom = selectedDate;
+      const dateTo = selectedDate;
+      
+      const url = `${API_BASE_URL}/list_attendance_requests.php?date_from=${dateFrom}&date_to=${dateTo}${statusParam}`;
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Server error' }));
+        if (response.status === 401) {
+          // Token expired - prompt to login again
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
       
-      if (data.success) {
-        setAttendanceData(data.attendance);
-        setSummary(data.summary);
+      if (data.status === 'success') {
+        setAttendanceData(data.data.requests || []);
+        
+        // Calculate summary
+        const requests = data.data.requests || [];
+        setSummary({
+          pending: requests.filter(r => r.request_status === 'pending').length,
+          approved: requests.filter(r => r.request_status === 'approved').length,
+          declined: requests.filter(r => r.request_status === 'declined').length
+        });
+        setMessage({ type: '', text: '' }); // Clear any previous errors
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to fetch attendance requests' });
+        setAttendanceData([]);
+        setSummary({ pending: 0, approved: 0, declined: 0 });
       }
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setMessage({ type: 'error', text: error.message || 'Network error. Please try again.' });
+      setAttendanceData([]);
+      setSummary({ pending: 0, approved: 0, declined: 0 });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleVerification = async (attendanceId, status, personName) => {
+  const handleReview = async (requestId, decision, personName) => {
     setLoading(true);
     setMessage({ type: '', text: '' });
 
     try {
       const token = localStorage.getItem('access_token');
-      const userData = JSON.parse(localStorage.getItem('user'));
-      const foremanId = userData?.user_id || 91;
       
-      const response = await fetch(`${API_BASE_URL}/verify_attendance.php`, {
+      const response = await fetch(`${API_BASE_URL}/review_attendance_request.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          attendance_id: attendanceId,
-          foreman_id: foremanId,
-          verification_status: status
+          request_id: requestId,
+          decision: decision,
+          review_note: ''
         })
       });
 
       const data = await response.json();
       
-      if (data.success) {
-        const actionText = status === 'verified' ? 'Verified' : 'Rejected';
+      if (data.status === 'success') {
+        const actionText = decision === 'approved' ? 'Approved' : 'Declined';
         setMessage({ 
           type: 'success', 
           text: `${personName} - ${actionText} successfully` 
         });
         fetchAttendance();
+        setShowPhotoModal(false);
+        setSelectedRequest(null);
         
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       } else {
-        setMessage({ type: 'error', text: data.message });
+        setMessage({ type: 'error', text: data.message || 'Failed to review request' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to verify attendance' });
+      console.error('Review error:', error);
+      setMessage({ type: 'error', text: 'Network error. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -155,7 +202,7 @@ export default function ForemanAttendance() {
     }
   };
 
-  const pendingCount = summary.pending.AM + summary.pending.PM;
+  const pendingCount = summary.pending;
   const filteredData = attendanceData;
 
   return (
@@ -197,7 +244,27 @@ export default function ForemanAttendance() {
       <div className="bg-white rounded-lg shadow p-3 mb-3">
         {/* Date Selection */}
         <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+          <div className="flex items-center gap-2 mb-1">
+            <label className="block text-xs font-medium text-gray-700 flex-1">Date</label>
+            <button
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0];
+                setSelectedDate(today);
+              }}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              title="Set to today"
+            >
+              Today
+            </button>
+            <button
+              onClick={fetchAttendance}
+              disabled={loading}
+              className="p-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded disabled:opacity-50"
+              title="Refresh"
+            >
+              <MdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <input
             type="date"
             value={selectedDate}
@@ -218,17 +285,27 @@ export default function ForemanAttendance() {
                   : 'bg-white text-gray-600 border border-gray-300'
               }`}
             >
-              Pending ({summary.pending.AM + summary.pending.PM})
+              Pending ({summary.pending})
             </button>
             <button
-              onClick={() => setFilterStatus('verified')}
+              onClick={() => setFilterStatus('approved')}
               className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${
-                filterStatus === 'verified'
+                filterStatus === 'approved'
                   ? 'bg-green-500 text-white'
                   : 'bg-white text-gray-600 border border-gray-300'
               }`}
             >
-              Verified ({summary.verified.AM + summary.verified.PM})
+              Approved ({summary.approved})
+            </button>
+            <button
+              onClick={() => setFilterStatus('declined')}
+              className={`flex-1 py-2 px-2 rounded text-xs font-medium transition-all ${
+                filterStatus === 'declined'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-300'
+              }`}
+            >
+              Declined ({summary.declined})
             </button>
             <button
               onClick={() => setFilterStatus('all')}
@@ -257,28 +334,19 @@ export default function ForemanAttendance() {
           <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
             <div className="text-yellow-800 text-xs font-medium">Pending</div>
             <div className="text-lg font-bold text-yellow-900">
-              {summary.pending.AM + summary.pending.PM}
-            </div>
-            <div className="text-[10px] text-yellow-700">
-              AM:{summary.pending.AM} PM:{summary.pending.PM}
+              {summary.pending}
             </div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded p-2">
-            <div className="text-green-800 text-xs font-medium">Verified</div>
+            <div className="text-green-800 text-xs font-medium">Approved</div>
             <div className="text-lg font-bold text-green-900">
-              {summary.verified.AM + summary.verified.PM}
-            </div>
-            <div className="text-[10px] text-green-700">
-              AM:{summary.verified.AM} PM:{summary.verified.PM}
+              {summary.approved}
             </div>
           </div>
           <div className="bg-red-50 border border-red-200 rounded p-2">
-            <div className="text-red-800 text-xs font-medium">Rejected</div>
+            <div className="text-red-800 text-xs font-medium">Declined</div>
             <div className="text-lg font-bold text-red-900">
-              {summary.rejected.AM + summary.rejected.PM}
-            </div>
-            <div className="text-[10px] text-red-700">
-              AM:{summary.rejected.AM} PM:{summary.rejected.PM}
+              {summary.declined}
             </div>
           </div>
         </div>
@@ -288,8 +356,9 @@ export default function ForemanAttendance() {
       <div className="bg-white rounded-lg shadow p-3 mb-3">
         <div className="mb-3">
           <h2 className="text-sm font-semibold text-green-700">
-            {filterStatus === 'pending' ? 'Pending' : 
-             filterStatus === 'verified' ? 'Verified' : 'All Records'}
+            {filterStatus === 'pending' ? 'Pending Requests' : 
+             filterStatus === 'approved' ? 'Approved Requests' : 
+             filterStatus === 'declined' ? 'Declined Requests' : 'All Requests'}
           </h2>
           <h3 className="text-xs font-medium text-gray-900">
             {new Date(selectedDate).toLocaleDateString('en-US', { 
@@ -314,74 +383,93 @@ export default function ForemanAttendance() {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="border border-gray-800 px-2 py-1 text-left font-semibold text-gray-900">Name</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Shift</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Time In</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Time Out</th>
+                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Role</th>
+                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Submitted</th>
+                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Photo</th>
                   <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Status</th>
-                  <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Verify</th>
                   {filterStatus === 'pending' && (
                     <th className="border border-gray-800 px-1 py-1 text-center font-semibold text-gray-900">Action</th>
                   )}
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((record) => {
-                  const personName = `${record.firstname || ''} ${record.lastname || ''}`.trim() || record.username;
+                {filteredData.map((request) => {
+                  const personName = request.personnel_name || request.username || 'Unknown';
                   
                   return (
-                    <tr key={record.attendance_id} className="hover:bg-gray-50">
+                    <tr key={request.id} className="hover:bg-gray-50">
                       <td className="border border-gray-800 px-2 py-1 text-gray-900 font-medium">
                         <div className="text-[11px] leading-tight">
                           {personName}
-                          <div className="text-[9px] text-gray-500">{record.designation}</div>
+                          {request.remarks && (
+                            <div className="text-[9px] text-gray-500 mt-1">Note: {request.remarks}</div>
+                          )}
                         </div>
                       </td>
                       <td className="border border-gray-800 px-1 py-1 text-center">
-                        <span className={`inline-block px-1 rounded text-[10px] font-bold ${
-                          record.session === 'AM' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-                        }`}>
-                          {record.session}
+                        <span className="inline-block px-1 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
+                          {request.role_name || 'N/A'}
                         </span>
                       </td>
+                      <td className="border border-gray-800 px-1 py-1 text-center text-[10px]">
+                        {request.submitted_at ? new Date(request.submitted_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '-'}
+                      </td>
                       <td className="border border-gray-800 px-1 py-1 text-center">
-                        {record.time_in ? (
-                          <div className="text-[10px]">
-                            {formatTime(record.time_in)}
-                            {isLate(record.time_in, record.session) && (
-                              <div className="text-red-600 font-bold">⚠️</div>
-                            )}
-                          </div>
+                        {request.photo_url ? (
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setShowPhotoModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="View photo"
+                          >
+                            <MdImage className="w-5 h-5 mx-auto" />
+                          </button>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="border border-gray-800 px-1 py-1 text-center text-[10px]">
-                        {record.time_out ? formatTime(record.time_out) : '-'}
-                      </td>
                       <td className="border border-gray-800 px-1 py-1 text-center">
-                        {getAttendanceStatusBadge(record.status)}
-                      </td>
-                      <td className="border border-gray-800 px-1 py-1 text-center">
-                        {getVerificationBadge(record.verification_status)}
+                        {request.request_status === 'pending' && (
+                          <span className="inline-block px-1 rounded text-[9px] font-medium bg-yellow-100 text-yellow-800">
+                            ⏳ Pending
+                          </span>
+                        )}
+                        {request.request_status === 'approved' && (
+                          <span className="inline-block px-1 rounded text-[9px] font-medium bg-green-100 text-green-800">
+                            ✓ Approved
+                          </span>
+                        )}
+                        {request.request_status === 'declined' && (
+                          <span className="inline-block px-1 rounded text-[9px] font-medium bg-red-100 text-red-800">
+                            ✗ Declined
+                          </span>
+                        )}
                       </td>
                       {filterStatus === 'pending' && (
                         <td className="border border-gray-800 px-1 py-1">
                           <div className="flex flex-col gap-1">
                             <button
-                              onClick={() => handleVerification(record.attendance_id, 'verified', personName)}
+                              onClick={() => handleReview(request.id, 'approved', personName)}
                               disabled={loading}
                               className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-medium hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-1"
                             >
                               <MdCheckCircle className="w-3 h-3" />
-                              ✓
+                              Approve
                             </button>
                             <button
-                              onClick={() => handleVerification(record.attendance_id, 'rejected', personName)}
+                              onClick={() => handleReview(request.id, 'declined', personName)}
                               disabled={loading}
                               className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-medium hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-1"
                             >
                               <MdCancel className="w-3 h-3" />
-                              ✗
+                              Decline
                             </button>
                           </div>
                         </td>
@@ -413,6 +501,65 @@ export default function ForemanAttendance() {
           </button>
         </div>
       </div>
+
+      {/* Photo Modal */}
+      {showPhotoModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">
+                Photo Proof - {selectedRequest.personnel_name || 'Personnel'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowPhotoModal(false);
+                  setSelectedRequest(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <IoChevronBack className="w-6 h-6 rotate-180" />
+              </button>
+            </div>
+            <div className="p-6">
+              {selectedRequest.photo_url ? (
+                <img
+                  src={selectedRequest.photo_url}
+                  alt="Attendance proof"
+                  className="w-full h-auto rounded-lg border border-gray-300"
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">No photo available</div>
+              )}
+              {selectedRequest.remarks && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-1">Remarks:</p>
+                  <p className="text-sm text-gray-600">{selectedRequest.remarks}</p>
+                </div>
+              )}
+              {filterStatus === 'pending' && (
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => handleReview(selectedRequest.id, 'approved', selectedRequest.personnel_name)}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <MdCheckCircle className="w-5 h-5" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReview(selectedRequest.id, 'declined', selectedRequest.personnel_name)}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <MdCancel className="w-5 h-5" />
+                    Decline
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

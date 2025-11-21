@@ -50,8 +50,8 @@ try {
                   LEFT JOIN truck t ON ct.truck_id = t.truck_id
                   LEFT JOIN daily_route dr ON dr.team_id = ct.team_id
                   WHERE ct.driver_id = ? 
-                    AND ct.status IN ('accepted', 'confirmed')
-                    AND cs.status IN ('scheduled', 'pending')
+                    AND ct.status IN ('accepted', 'confirmed', 'approved')
+                    AND cs.status IN ('scheduled', 'pending', 'approved')
                   ORDER BY cs.scheduled_date ASC, cs.start_time ASC";
         
         $stmt = $db->prepare($query);
@@ -89,10 +89,10 @@ try {
                                         SELECT DISTINCT ctm.team_id, ctm.response_status
                                         FROM collection_team_member ctm
                                         WHERE ctm.collector_id = :uid
-                                            AND ctm.response_status IN ('accepted','confirmed','pending')
+                                            AND ctm.response_status IN ('accepted','confirmed','pending','approved')
                                     ) uctm ON uctm.team_id = ct.team_id
-                                    WHERE ct.status IN ('accepted', 'confirmed', 'pending')
-                                        AND cs.status IN ('scheduled', 'pending')
+                                    WHERE ct.status IN ('accepted', 'confirmed', 'pending', 'approved')
+                                        AND cs.status IN ('scheduled', 'pending', 'approved')
                                     ORDER BY cs.scheduled_date ASC, cs.start_time ASC";
 
                 $stmt = $db->prepare($query);

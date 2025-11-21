@@ -9,6 +9,7 @@ import eventTp from '../../assets/images/users/tp.jpg';
 import eventCd from '../../assets/images/users/cd.jpg';
 import eventS from '../../assets/images/users/s.jpg';
 import eventAn from '../../assets/images/users/an.jpg';
+import TimeInModal from '../shared/TimeInModal';
 
 // MENRO events carousel images
 const eventImages = [
@@ -61,6 +62,7 @@ function GarbageCollectorHome() {
   const [attendanceStatus, setAttendanceStatus] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState({ type: '', text: '' });
+  const [showTimeInModal, setShowTimeInModal] = React.useState(false);
   const [showAbsentModal, setShowAbsentModal] = React.useState(false);
   const [absentReason, setAbsentReason] = React.useState('');
   const [absentRequirements, setAbsentRequirements] = React.useState('');
@@ -348,7 +350,7 @@ function GarbageCollectorHome() {
           <button 
             type="button" 
             disabled={!timeInEnabled || loading} 
-            onClick={() => handleAttendance('time_in')}
+            onClick={() => setShowTimeInModal(true)}
             className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
           >
             <div className="flex items-center gap-3">
@@ -540,6 +542,17 @@ function GarbageCollectorHome() {
           </div>
         </div>
       )}
+
+      {/* Time In Modal */}
+      <TimeInModal
+        isOpen={showTimeInModal}
+        onClose={() => setShowTimeInModal(false)}
+        userData={JSON.parse(localStorage.getItem('user') || '{}')}
+        onSuccess={() => {
+          setMessage({ type: 'success', text: 'Attendance request submitted! Waiting for foreman approval.' });
+          setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+        }}
+      />
     </div>
   );
 }

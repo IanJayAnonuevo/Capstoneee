@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 20, 2025 at 06:03 PM
+-- Generation Time: Nov 22, 2025 at 12:13 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -31,6 +31,72 @@ CREATE TABLE `admin` (
   `user_id` int(11) NOT NULL,
   `position_title` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `attendance`
+--
+
+CREATE TABLE `attendance` (
+  `attendance_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `attendance_date` date NOT NULL,
+  `session` enum('AM','PM') NOT NULL,
+  `time_in` time DEFAULT NULL,
+  `time_out` time DEFAULT NULL,
+  `status` enum('present','absent','on-leave','pending') DEFAULT 'pending',
+  `verification_status` enum('pending','verified','rejected') DEFAULT 'pending',
+  `recorded_by` int(11) DEFAULT NULL COMMENT 'Foreman user_id who recorded attendance',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `attendance`
+--
+
+INSERT INTO `attendance` (`attendance_id`, `user_id`, `attendance_date`, `session`, `time_in`, `time_out`, `status`, `verification_status`, `recorded_by`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 17, '2025-11-21', 'AM', '05:12:59', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:25:46', '2025-11-21 16:25:46'),
+(2, 16, '2025-11-21', 'AM', '05:12:28', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:29', '2025-11-21 16:26:29'),
+(3, 30, '2025-11-21', 'AM', '05:13:28', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:30', '2025-11-21 16:26:30'),
+(4, 35, '2025-11-21', 'AM', '05:14:04', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:31', '2025-11-21 16:26:31'),
+(5, 29, '2025-11-21', 'AM', '05:14:33', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:32', '2025-11-21 16:26:32'),
+(6, 33, '2025-11-21', 'AM', '05:15:04', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:33', '2025-11-21 16:26:33');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `attendance_request`
+--
+
+CREATE TABLE `attendance_request` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `schedule_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `photo_path` varchar(255) NOT NULL,
+  `remarks` varchar(255) DEFAULT NULL,
+  `request_status` enum('pending','approved','declined') NOT NULL DEFAULT 'pending',
+  `foreman_id` int(11) DEFAULT NULL,
+  `review_note` varchar(255) DEFAULT NULL,
+  `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `reviewed_at` datetime DEFAULT NULL,
+  `location_lat` decimal(10,7) DEFAULT NULL,
+  `location_lng` decimal(10,7) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `attendance_request`
+--
+
+INSERT INTO `attendance_request` (`id`, `user_id`, `schedule_id`, `photo_path`, `remarks`, `request_status`, `foreman_id`, `review_note`, `submitted_at`, `reviewed_at`, `location_lat`, `location_lng`) VALUES
+(12, 16, NULL, 'uploads/attendance/attendance_16_20251121171228_f0ef3f91.jpg', NULL, 'approved', 91, NULL, '2025-11-21 05:12:28', '2025-11-21 05:26:29', NULL, NULL),
+(13, 17, NULL, 'uploads/attendance/attendance_17_20251121171259_9592d81e.jpg', NULL, 'approved', 91, NULL, '2025-11-21 05:12:59', '2025-11-21 05:25:46', NULL, NULL),
+(14, 30, NULL, 'uploads/attendance/attendance_30_20251121171328_3899acf8.png', NULL, 'approved', 91, NULL, '2025-11-21 05:13:28', '2025-11-21 05:26:30', NULL, NULL),
+(15, 35, NULL, 'uploads/attendance/attendance_35_20251121171404_d4ea96e8.png', NULL, 'approved', 91, NULL, '2025-11-21 05:14:04', '2025-11-21 05:26:31', NULL, NULL),
+(16, 29, NULL, 'uploads/attendance/attendance_29_20251121171433_caf7aadd.jpg', NULL, 'approved', 91, NULL, '2025-11-21 05:14:33', '2025-11-21 05:26:32', NULL, NULL),
+(17, 33, NULL, 'uploads/attendance/attendance_33_20251121171504_585ea45f.png', NULL, 'approved', 91, NULL, '2025-11-21 05:15:04', '2025-11-21 05:26:33', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -286,6 +352,7 @@ CREATE TABLE `collection_schedule` (
   `barangay_id` varchar(10) DEFAULT NULL,
   `type_id` int(11) DEFAULT NULL,
   `scheduled_date` date DEFAULT NULL,
+  `session` enum('AM','PM') NOT NULL DEFAULT 'AM',
   `created_by` int(11) DEFAULT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
@@ -296,93 +363,101 @@ CREATE TABLE `collection_schedule` (
 -- Dumping data for table `collection_schedule`
 --
 
-INSERT INTO `collection_schedule` (`schedule_id`, `barangay_id`, `type_id`, `scheduled_date`, `created_by`, `start_time`, `end_time`, `status`) VALUES
-(1427, '20-IMPG', NULL, '2025-10-08', NULL, '08:00:00', '10:00:00', 'pending'),
-(1428, '42-TR', NULL, '2025-10-08', NULL, '10:00:00', '12:00:00', 'pending'),
-(1429, '22-LBGNJ', NULL, '2025-10-08', NULL, '09:00:00', '10:00:00', 'pending'),
-(1430, '26-MNNGL', NULL, '2025-10-08', NULL, '10:00:00', '11:00:00', 'pending'),
-(1431, '31-NRTHC', NULL, '2025-10-08', NULL, '06:00:00', '07:00:00', 'pending'),
-(1432, '31-NRTHC', NULL, '2025-10-08', NULL, '10:00:00', '11:00:00', 'pending'),
-(1433, '31-NRTHC', NULL, '2025-10-08', NULL, '13:00:00', '14:00:00', 'pending'),
-(1434, '31-NRTHC', NULL, '2025-10-08', NULL, '16:00:00', '17:00:00', 'pending'),
-(1435, '39-STHCN', NULL, '2025-10-08', NULL, '07:00:00', '08:00:00', 'pending'),
-(1436, '39-STHCN', NULL, '2025-10-08', NULL, '11:00:00', '12:00:00', 'pending'),
-(1437, '39-STHCN', NULL, '2025-10-08', NULL, '14:00:00', '15:00:00', 'pending'),
-(1438, '39-STHCN', NULL, '2025-10-08', NULL, '17:00:00', '18:00:00', 'pending'),
-(1439, '20-IMPG', NULL, '2025-10-10', NULL, '09:00:00', '10:00:00', 'pending'),
-(1440, '25-MLBG', NULL, '2025-10-10', NULL, '08:00:00', '10:00:00', 'pending'),
-(1441, '42-TR', NULL, '2025-10-10', NULL, '10:00:00', '12:00:00', 'pending'),
-(1442, '05-AZCN', NULL, '2025-10-10', NULL, '13:00:00', '15:00:00', 'pending'),
-(1443, '11-BLWN', NULL, '2025-10-10', NULL, '11:00:00', '12:00:00', 'pending'),
-(1444, '31-NRTHC', NULL, '2025-10-10', NULL, '06:00:00', '07:00:00', 'pending'),
-(1445, '31-NRTHC', NULL, '2025-10-10', NULL, '10:00:00', '11:00:00', 'pending'),
-(1446, '31-NRTHC', NULL, '2025-10-10', NULL, '13:00:00', '14:00:00', 'pending'),
-(1447, '31-NRTHC', NULL, '2025-10-10', NULL, '16:00:00', '17:00:00', 'pending'),
-(1448, '39-STHCN', NULL, '2025-10-10', NULL, '07:00:00', '08:00:00', 'pending'),
-(1449, '39-STHCN', NULL, '2025-10-10', NULL, '11:00:00', '12:00:00', 'pending'),
-(1450, '39-STHCN', NULL, '2025-10-10', NULL, '14:00:00', '15:00:00', 'pending'),
-(1451, '39-STHCN', NULL, '2025-10-10', NULL, '17:00:00', '18:00:00', 'pending'),
-(1452, '20-IMPG', NULL, '2025-10-13', NULL, '08:00:00', '10:00:00', 'pending'),
-(1453, '42-TR', NULL, '2025-10-13', NULL, '10:00:00', '12:00:00', 'pending'),
-(1454, '07-BNHN', NULL, '2025-10-13', NULL, '08:00:00', '09:00:00', 'pending'),
-(1455, '13-CM', NULL, '2025-10-13', NULL, '10:00:00', '11:00:00', 'pending'),
-(1456, '06-BGNGS', NULL, '2025-10-13', NULL, '11:00:00', '12:00:00', 'pending'),
-(1457, '31-NRTHC', NULL, '2025-10-13', NULL, '06:00:00', '07:00:00', 'pending'),
-(1458, '31-NRTHC', NULL, '2025-10-13', NULL, '10:00:00', '11:00:00', 'pending'),
-(1459, '31-NRTHC', NULL, '2025-10-13', NULL, '13:00:00', '14:00:00', 'pending'),
-(1460, '31-NRTHC', NULL, '2025-10-13', NULL, '16:00:00', '17:00:00', 'pending'),
-(1461, '39-STHCN', NULL, '2025-10-13', NULL, '07:00:00', '08:00:00', 'pending'),
-(1462, '39-STHCN', NULL, '2025-10-13', NULL, '11:00:00', '12:00:00', 'pending'),
-(1463, '39-STHCN', NULL, '2025-10-13', NULL, '14:00:00', '15:00:00', 'pending'),
-(1464, '39-STHCN', NULL, '2025-10-13', NULL, '17:00:00', '18:00:00', 'pending'),
-(1465, '25-MLBG', NULL, '2025-10-14', NULL, '08:00:00', '10:00:00', 'pending'),
-(1466, '16-CRYRY', NULL, '2025-10-14', NULL, '08:00:00', '09:00:00', 'pending'),
-(1467, '21-LPLP', NULL, '2025-10-14', NULL, '10:00:00', '11:00:00', 'pending'),
-(1468, '23-LBGNS', NULL, '2025-10-14', NULL, '11:00:00', '12:00:00', 'pending'),
-(1469, '31-NRTHC', NULL, '2025-10-14', NULL, '06:00:00', '07:00:00', 'pending'),
-(1470, '31-NRTHC', NULL, '2025-10-14', NULL, '10:00:00', '11:00:00', 'pending'),
-(1471, '31-NRTHC', NULL, '2025-10-14', NULL, '13:00:00', '14:00:00', 'pending'),
-(1472, '31-NRTHC', NULL, '2025-10-14', NULL, '16:00:00', '17:00:00', 'pending'),
-(1473, '39-STHCN', NULL, '2025-10-14', NULL, '07:00:00', '08:00:00', 'pending'),
-(1474, '39-STHCN', NULL, '2025-10-14', NULL, '11:00:00', '12:00:00', 'pending'),
-(1475, '39-STHCN', NULL, '2025-10-14', NULL, '14:00:00', '15:00:00', 'pending'),
-(1476, '39-STHCN', NULL, '2025-10-14', NULL, '17:00:00', '18:00:00', 'pending'),
-(1477, '20-IMPG', NULL, '2025-10-15', NULL, '08:00:00', '10:00:00', 'pending'),
-(1478, '42-TR', NULL, '2025-10-15', NULL, '10:00:00', '12:00:00', 'pending'),
-(1479, '46-YB', NULL, '2025-10-15', NULL, '09:00:00', '10:00:00', 'pending'),
-(1480, '34-SLND', NULL, '2025-10-15', NULL, '10:00:00', '11:00:00', 'pending'),
-(1481, '31-NRTHC', NULL, '2025-10-15', NULL, '06:00:00', '07:00:00', 'pending'),
-(1482, '31-NRTHC', NULL, '2025-10-15', NULL, '10:00:00', '11:00:00', 'pending'),
-(1483, '31-NRTHC', NULL, '2025-10-15', NULL, '13:00:00', '14:00:00', 'pending'),
-(1484, '31-NRTHC', NULL, '2025-10-15', NULL, '16:00:00', '17:00:00', 'pending'),
-(1485, '39-STHCN', NULL, '2025-10-15', NULL, '07:00:00', '08:00:00', 'pending'),
-(1486, '39-STHCN', NULL, '2025-10-15', NULL, '11:00:00', '12:00:00', 'pending'),
-(1487, '39-STHCN', NULL, '2025-10-15', NULL, '14:00:00', '15:00:00', 'pending'),
-(1488, '39-STHCN', NULL, '2025-10-15', NULL, '17:00:00', '18:00:00', 'pending'),
-(1489, '19-GNGN', NULL, '2025-10-16', NULL, '08:00:00', '11:00:00', 'pending'),
-(1490, '09-BLSR', NULL, '2025-10-16', NULL, '09:00:00', '10:00:00', 'pending'),
-(1491, '02-ALTZ', NULL, '2025-10-16', NULL, '10:00:00', '11:00:00', 'pending'),
-(1492, '31-NRTHC', NULL, '2025-10-16', NULL, '06:00:00', '07:00:00', 'pending'),
-(1493, '31-NRTHC', NULL, '2025-10-16', NULL, '10:00:00', '11:00:00', 'pending'),
-(1494, '31-NRTHC', NULL, '2025-10-16', NULL, '13:00:00', '14:00:00', 'pending'),
-(1495, '31-NRTHC', NULL, '2025-10-16', NULL, '16:00:00', '17:00:00', 'pending'),
-(1496, '39-STHCN', NULL, '2025-10-16', NULL, '07:00:00', '08:00:00', 'pending'),
-(1497, '39-STHCN', NULL, '2025-10-16', NULL, '11:00:00', '12:00:00', 'pending'),
-(1498, '39-STHCN', NULL, '2025-10-16', NULL, '14:00:00', '15:00:00', 'pending'),
-(1499, '39-STHCN', NULL, '2025-10-16', NULL, '17:00:00', '18:00:00', 'pending'),
-(1500, '20-IMPG', NULL, '2025-10-17', NULL, '09:00:00', '10:00:00', 'pending'),
-(1501, '25-MLBG', NULL, '2025-10-17', NULL, '08:00:00', '10:00:00', 'pending'),
-(1502, '42-TR', NULL, '2025-10-17', NULL, '10:00:00', '12:00:00', 'pending'),
-(1503, '05-AZCN', NULL, '2025-10-17', NULL, '13:00:00', '15:00:00', 'pending'),
-(1504, '40-STHVL', NULL, '2025-10-17', NULL, '09:00:00', '11:00:00', 'pending'),
-(1505, '31-NRTHC', NULL, '2025-10-17', NULL, '06:00:00', '07:00:00', 'pending'),
-(1506, '31-NRTHC', NULL, '2025-10-17', NULL, '10:00:00', '11:00:00', 'pending'),
-(1507, '31-NRTHC', NULL, '2025-10-17', NULL, '13:00:00', '14:00:00', 'pending'),
-(1508, '31-NRTHC', NULL, '2025-10-17', NULL, '16:00:00', '17:00:00', 'pending'),
-(1509, '39-STHCN', NULL, '2025-10-17', NULL, '07:00:00', '08:00:00', 'pending'),
-(1510, '39-STHCN', NULL, '2025-10-17', NULL, '11:00:00', '12:00:00', 'pending'),
-(1511, '39-STHCN', NULL, '2025-10-17', NULL, '14:00:00', '15:00:00', 'pending'),
-(1512, '39-STHCN', NULL, '2025-10-17', NULL, '17:00:00', '18:00:00', 'pending');
+INSERT INTO `collection_schedule` (`schedule_id`, `barangay_id`, `type_id`, `scheduled_date`, `session`, `created_by`, `start_time`, `end_time`, `status`) VALUES
+(1427, '20-IMPG', NULL, '2025-10-08', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1428, '42-TR', NULL, '2025-10-08', 'AM', NULL, '10:00:00', '12:00:00', 'pending'),
+(1429, '22-LBGNJ', NULL, '2025-10-08', 'AM', NULL, '09:00:00', '10:00:00', 'pending'),
+(1430, '26-MNNGL', NULL, '2025-10-08', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1431, '31-NRTHC', NULL, '2025-10-08', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1432, '31-NRTHC', NULL, '2025-10-08', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1433, '31-NRTHC', NULL, '2025-10-08', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1434, '31-NRTHC', NULL, '2025-10-08', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1435, '39-STHCN', NULL, '2025-10-08', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1436, '39-STHCN', NULL, '2025-10-08', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1437, '39-STHCN', NULL, '2025-10-08', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1438, '39-STHCN', NULL, '2025-10-08', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1439, '20-IMPG', NULL, '2025-10-10', 'AM', NULL, '09:00:00', '10:00:00', 'pending'),
+(1440, '25-MLBG', NULL, '2025-10-10', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1441, '42-TR', NULL, '2025-10-10', 'AM', NULL, '10:00:00', '12:00:00', 'pending'),
+(1442, '05-AZCN', NULL, '2025-10-10', 'AM', NULL, '13:00:00', '15:00:00', 'pending'),
+(1443, '11-BLWN', NULL, '2025-10-10', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1444, '31-NRTHC', NULL, '2025-10-10', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1445, '31-NRTHC', NULL, '2025-10-10', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1446, '31-NRTHC', NULL, '2025-10-10', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1447, '31-NRTHC', NULL, '2025-10-10', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1448, '39-STHCN', NULL, '2025-10-10', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1449, '39-STHCN', NULL, '2025-10-10', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1450, '39-STHCN', NULL, '2025-10-10', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1451, '39-STHCN', NULL, '2025-10-10', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1452, '20-IMPG', NULL, '2025-10-13', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1453, '42-TR', NULL, '2025-10-13', 'AM', NULL, '10:00:00', '12:00:00', 'pending'),
+(1454, '07-BNHN', NULL, '2025-10-13', 'AM', NULL, '08:00:00', '09:00:00', 'pending'),
+(1455, '13-CM', NULL, '2025-10-13', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1456, '06-BGNGS', NULL, '2025-10-13', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1457, '31-NRTHC', NULL, '2025-10-13', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1458, '31-NRTHC', NULL, '2025-10-13', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1459, '31-NRTHC', NULL, '2025-10-13', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1460, '31-NRTHC', NULL, '2025-10-13', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1461, '39-STHCN', NULL, '2025-10-13', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1462, '39-STHCN', NULL, '2025-10-13', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1463, '39-STHCN', NULL, '2025-10-13', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1464, '39-STHCN', NULL, '2025-10-13', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1465, '25-MLBG', NULL, '2025-10-14', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1466, '16-CRYRY', NULL, '2025-10-14', 'AM', NULL, '08:00:00', '09:00:00', 'pending'),
+(1467, '21-LPLP', NULL, '2025-10-14', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1468, '23-LBGNS', NULL, '2025-10-14', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1469, '31-NRTHC', NULL, '2025-10-14', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1470, '31-NRTHC', NULL, '2025-10-14', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1471, '31-NRTHC', NULL, '2025-10-14', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1472, '31-NRTHC', NULL, '2025-10-14', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1473, '39-STHCN', NULL, '2025-10-14', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1474, '39-STHCN', NULL, '2025-10-14', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1475, '39-STHCN', NULL, '2025-10-14', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1476, '39-STHCN', NULL, '2025-10-14', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1477, '20-IMPG', NULL, '2025-10-15', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1478, '42-TR', NULL, '2025-10-15', 'AM', NULL, '10:00:00', '12:00:00', 'pending'),
+(1479, '46-YB', NULL, '2025-10-15', 'AM', NULL, '09:00:00', '10:00:00', 'pending'),
+(1480, '34-SLND', NULL, '2025-10-15', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1481, '31-NRTHC', NULL, '2025-10-15', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1482, '31-NRTHC', NULL, '2025-10-15', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1483, '31-NRTHC', NULL, '2025-10-15', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1484, '31-NRTHC', NULL, '2025-10-15', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1485, '39-STHCN', NULL, '2025-10-15', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1486, '39-STHCN', NULL, '2025-10-15', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1487, '39-STHCN', NULL, '2025-10-15', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1488, '39-STHCN', NULL, '2025-10-15', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1489, '19-GNGN', NULL, '2025-10-16', 'AM', NULL, '08:00:00', '11:00:00', 'pending'),
+(1490, '09-BLSR', NULL, '2025-10-16', 'AM', NULL, '09:00:00', '10:00:00', 'pending'),
+(1491, '02-ALTZ', NULL, '2025-10-16', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1492, '31-NRTHC', NULL, '2025-10-16', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1493, '31-NRTHC', NULL, '2025-10-16', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1494, '31-NRTHC', NULL, '2025-10-16', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1495, '31-NRTHC', NULL, '2025-10-16', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1496, '39-STHCN', NULL, '2025-10-16', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1497, '39-STHCN', NULL, '2025-10-16', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1498, '39-STHCN', NULL, '2025-10-16', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1499, '39-STHCN', NULL, '2025-10-16', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1500, '20-IMPG', NULL, '2025-10-17', 'AM', NULL, '09:00:00', '10:00:00', 'pending'),
+(1501, '25-MLBG', NULL, '2025-10-17', 'AM', NULL, '08:00:00', '10:00:00', 'pending'),
+(1502, '42-TR', NULL, '2025-10-17', 'AM', NULL, '10:00:00', '12:00:00', 'pending'),
+(1503, '05-AZCN', NULL, '2025-10-17', 'AM', NULL, '13:00:00', '15:00:00', 'pending'),
+(1504, '40-STHVL', NULL, '2025-10-17', 'AM', NULL, '09:00:00', '11:00:00', 'pending'),
+(1505, '31-NRTHC', NULL, '2025-10-17', 'AM', NULL, '06:00:00', '07:00:00', 'pending'),
+(1506, '31-NRTHC', NULL, '2025-10-17', 'AM', NULL, '10:00:00', '11:00:00', 'pending'),
+(1507, '31-NRTHC', NULL, '2025-10-17', 'AM', NULL, '13:00:00', '14:00:00', 'pending'),
+(1508, '31-NRTHC', NULL, '2025-10-17', 'AM', NULL, '16:00:00', '17:00:00', 'pending'),
+(1509, '39-STHCN', NULL, '2025-10-17', 'AM', NULL, '07:00:00', '08:00:00', 'pending'),
+(1510, '39-STHCN', NULL, '2025-10-17', 'AM', NULL, '11:00:00', '12:00:00', 'pending'),
+(1511, '39-STHCN', NULL, '2025-10-17', 'AM', NULL, '14:00:00', '15:00:00', 'pending'),
+(1512, '39-STHCN', NULL, '2025-10-17', 'AM', NULL, '17:00:00', '18:00:00', 'pending'),
+(1576, '20-IMPG', NULL, '2025-11-21', 'AM', NULL, '09:00:00', '10:00:00', 'approved'),
+(1577, '25-MLBG', NULL, '2025-11-21', 'AM', NULL, '08:00:00', '10:00:00', 'approved'),
+(1578, '42-TR', NULL, '2025-11-21', 'AM', NULL, '10:00:00', '12:00:00', 'approved'),
+(1579, '31-NRTHC', NULL, '2025-11-21', 'AM', NULL, '06:00:00', '07:00:00', 'approved'),
+(1580, '31-NRTHC', NULL, '2025-11-21', 'AM', NULL, '10:00:00', '11:00:00', 'approved'),
+(1581, '39-STHCN', NULL, '2025-11-21', 'AM', NULL, '07:00:00', '08:00:00', 'approved'),
+(1582, '39-STHCN', NULL, '2025-11-21', 'AM', NULL, '11:00:00', '12:00:00', 'approved'),
+(1583, '46-YB', NULL, '2025-11-21', 'AM', NULL, '09:00:00', '10:00:00', 'approved');
 
 -- --------------------------------------------------------
 
@@ -395,6 +470,8 @@ CREATE TABLE `collection_team` (
   `schedule_id` int(11) DEFAULT NULL,
   `truck_id` int(11) DEFAULT NULL,
   `driver_id` int(11) DEFAULT NULL,
+  `session` enum('AM','PM') NOT NULL DEFAULT 'AM',
+  `attendance_snapshot` text DEFAULT NULL,
   `status` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -402,93 +479,101 @@ CREATE TABLE `collection_team` (
 -- Dumping data for table `collection_team`
 --
 
-INSERT INTO `collection_team` (`team_id`, `schedule_id`, `truck_id`, `driver_id`, `status`) VALUES
-(1163, 1427, 1, 16, 'pending'),
-(1164, 1428, 1, 16, 'pending'),
-(1165, 1429, 2, 17, 'accepted'),
-(1166, 1430, 2, 17, 'accepted'),
-(1167, 1431, 1, 16, 'pending'),
-(1168, 1432, 1, 16, 'pending'),
-(1169, 1433, 1, 16, 'pending'),
-(1170, 1434, 1, 16, 'pending'),
-(1171, 1435, 1, 16, 'pending'),
-(1172, 1436, 1, 16, 'pending'),
-(1173, 1437, 1, 16, 'pending'),
-(1174, 1438, 1, 16, 'pending'),
-(1175, 1439, 1, 16, 'pending'),
-(1176, 1440, 1, 16, 'pending'),
-(1177, 1441, 1, 16, 'pending'),
-(1178, 1442, 1, 16, 'pending'),
-(1179, 1443, 2, 17, 'pending'),
-(1180, 1444, 1, 16, 'pending'),
-(1181, 1445, 1, 16, 'pending'),
-(1182, 1446, 1, 16, 'pending'),
-(1183, 1447, 1, 16, 'pending'),
-(1184, 1448, 1, 16, 'pending'),
-(1185, 1449, 1, 16, 'pending'),
-(1186, 1450, 1, 16, 'pending'),
-(1187, 1451, 1, 16, 'pending'),
-(1188, 1452, 1, 16, 'pending'),
-(1189, 1453, 1, 16, 'pending'),
-(1190, 1454, 2, 17, 'pending'),
-(1191, 1455, 2, 17, 'pending'),
-(1192, 1456, 2, 17, 'pending'),
-(1193, 1457, 1, 16, 'pending'),
-(1194, 1458, 1, 16, 'pending'),
-(1195, 1459, 1, 16, 'pending'),
-(1196, 1460, 1, 16, 'pending'),
-(1197, 1461, 1, 16, 'pending'),
-(1198, 1462, 1, 16, 'pending'),
-(1199, 1463, 1, 16, 'pending'),
-(1200, 1464, 1, 16, 'pending'),
-(1201, 1465, 1, 16, 'pending'),
-(1202, 1466, 2, 17, 'pending'),
-(1203, 1467, 2, 17, 'pending'),
-(1204, 1468, 2, 17, 'pending'),
-(1205, 1469, 1, 16, 'pending'),
-(1206, 1470, 1, 16, 'pending'),
-(1207, 1471, 1, 16, 'pending'),
-(1208, 1472, 1, 16, 'pending'),
-(1209, 1473, 1, 16, 'pending'),
-(1210, 1474, 1, 16, 'pending'),
-(1211, 1475, 1, 16, 'pending'),
-(1212, 1476, 1, 16, 'pending'),
-(1213, 1477, 1, 16, 'pending'),
-(1214, 1478, 1, 16, 'pending'),
-(1215, 1479, 2, 17, 'pending'),
-(1216, 1480, 2, 17, 'pending'),
-(1217, 1481, 1, 16, 'pending'),
-(1218, 1482, 1, 16, 'pending'),
-(1219, 1483, 1, 16, 'pending'),
-(1220, 1484, 1, 16, 'pending'),
-(1221, 1485, 1, 16, 'pending'),
-(1222, 1486, 1, 16, 'pending'),
-(1223, 1487, 1, 16, 'pending'),
-(1224, 1488, 1, 16, 'pending'),
-(1225, 1489, 1, 16, 'pending'),
-(1226, 1490, 2, 17, 'pending'),
-(1227, 1491, 2, 17, 'pending'),
-(1228, 1492, 1, 16, 'pending'),
-(1229, 1493, 1, 16, 'pending'),
-(1230, 1494, 1, 16, 'pending'),
-(1231, 1495, 1, 16, 'pending'),
-(1232, 1496, 1, 16, 'pending'),
-(1233, 1497, 1, 16, 'pending'),
-(1234, 1498, 1, 16, 'pending'),
-(1235, 1499, 1, 16, 'pending'),
-(1236, 1500, 1, 16, 'pending'),
-(1237, 1501, 1, 16, 'pending'),
-(1238, 1502, 1, 16, 'pending'),
-(1239, 1503, 1, 16, 'pending'),
-(1240, 1504, 2, 17, 'pending'),
-(1241, 1505, 1, 16, 'pending'),
-(1242, 1506, 1, 16, 'pending'),
-(1243, 1507, 1, 16, 'pending'),
-(1244, 1508, 1, 16, 'pending'),
-(1245, 1509, 1, 16, 'pending'),
-(1246, 1510, 1, 16, 'pending'),
-(1247, 1511, 1, 16, 'pending'),
-(1248, 1512, 1, 16, 'pending');
+INSERT INTO `collection_team` (`team_id`, `schedule_id`, `truck_id`, `driver_id`, `session`, `attendance_snapshot`, `status`) VALUES
+(1163, 1427, 1, 16, 'AM', NULL, 'pending'),
+(1164, 1428, 1, 16, 'AM', NULL, 'pending'),
+(1165, 1429, 2, 17, 'AM', NULL, 'accepted'),
+(1166, 1430, 2, 17, 'AM', NULL, 'accepted'),
+(1167, 1431, 1, 16, 'AM', NULL, 'pending'),
+(1168, 1432, 1, 16, 'AM', NULL, 'pending'),
+(1169, 1433, 1, 16, 'AM', NULL, 'pending'),
+(1170, 1434, 1, 16, 'AM', NULL, 'pending'),
+(1171, 1435, 1, 16, 'AM', NULL, 'pending'),
+(1172, 1436, 1, 16, 'AM', NULL, 'pending'),
+(1173, 1437, 1, 16, 'AM', NULL, 'pending'),
+(1174, 1438, 1, 16, 'AM', NULL, 'pending'),
+(1175, 1439, 1, 16, 'AM', NULL, 'pending'),
+(1176, 1440, 1, 16, 'AM', NULL, 'pending'),
+(1177, 1441, 1, 16, 'AM', NULL, 'pending'),
+(1178, 1442, 1, 16, 'AM', NULL, 'pending'),
+(1179, 1443, 2, 17, 'AM', NULL, 'pending'),
+(1180, 1444, 1, 16, 'AM', NULL, 'pending'),
+(1181, 1445, 1, 16, 'AM', NULL, 'pending'),
+(1182, 1446, 1, 16, 'AM', NULL, 'pending'),
+(1183, 1447, 1, 16, 'AM', NULL, 'pending'),
+(1184, 1448, 1, 16, 'AM', NULL, 'pending'),
+(1185, 1449, 1, 16, 'AM', NULL, 'pending'),
+(1186, 1450, 1, 16, 'AM', NULL, 'pending'),
+(1187, 1451, 1, 16, 'AM', NULL, 'pending'),
+(1188, 1452, 1, 16, 'AM', NULL, 'pending'),
+(1189, 1453, 1, 16, 'AM', NULL, 'pending'),
+(1190, 1454, 2, 17, 'AM', NULL, 'pending'),
+(1191, 1455, 2, 17, 'AM', NULL, 'pending'),
+(1192, 1456, 2, 17, 'AM', NULL, 'pending'),
+(1193, 1457, 1, 16, 'AM', NULL, 'pending'),
+(1194, 1458, 1, 16, 'AM', NULL, 'pending'),
+(1195, 1459, 1, 16, 'AM', NULL, 'pending'),
+(1196, 1460, 1, 16, 'AM', NULL, 'pending'),
+(1197, 1461, 1, 16, 'AM', NULL, 'pending'),
+(1198, 1462, 1, 16, 'AM', NULL, 'pending'),
+(1199, 1463, 1, 16, 'AM', NULL, 'pending'),
+(1200, 1464, 1, 16, 'AM', NULL, 'pending'),
+(1201, 1465, 1, 16, 'AM', NULL, 'pending'),
+(1202, 1466, 2, 17, 'AM', NULL, 'pending'),
+(1203, 1467, 2, 17, 'AM', NULL, 'pending'),
+(1204, 1468, 2, 17, 'AM', NULL, 'pending'),
+(1205, 1469, 1, 16, 'AM', NULL, 'pending'),
+(1206, 1470, 1, 16, 'AM', NULL, 'pending'),
+(1207, 1471, 1, 16, 'AM', NULL, 'pending'),
+(1208, 1472, 1, 16, 'AM', NULL, 'pending'),
+(1209, 1473, 1, 16, 'AM', NULL, 'pending'),
+(1210, 1474, 1, 16, 'AM', NULL, 'pending'),
+(1211, 1475, 1, 16, 'AM', NULL, 'pending'),
+(1212, 1476, 1, 16, 'AM', NULL, 'pending'),
+(1213, 1477, 1, 16, 'AM', NULL, 'pending'),
+(1214, 1478, 1, 16, 'AM', NULL, 'pending'),
+(1215, 1479, 2, 17, 'AM', NULL, 'pending'),
+(1216, 1480, 2, 17, 'AM', NULL, 'pending'),
+(1217, 1481, 1, 16, 'AM', NULL, 'pending'),
+(1218, 1482, 1, 16, 'AM', NULL, 'pending'),
+(1219, 1483, 1, 16, 'AM', NULL, 'pending'),
+(1220, 1484, 1, 16, 'AM', NULL, 'pending'),
+(1221, 1485, 1, 16, 'AM', NULL, 'pending'),
+(1222, 1486, 1, 16, 'AM', NULL, 'pending'),
+(1223, 1487, 1, 16, 'AM', NULL, 'pending'),
+(1224, 1488, 1, 16, 'AM', NULL, 'pending'),
+(1225, 1489, 1, 16, 'AM', NULL, 'pending'),
+(1226, 1490, 2, 17, 'AM', NULL, 'pending'),
+(1227, 1491, 2, 17, 'AM', NULL, 'pending'),
+(1228, 1492, 1, 16, 'AM', NULL, 'pending'),
+(1229, 1493, 1, 16, 'AM', NULL, 'pending'),
+(1230, 1494, 1, 16, 'AM', NULL, 'pending'),
+(1231, 1495, 1, 16, 'AM', NULL, 'pending'),
+(1232, 1496, 1, 16, 'AM', NULL, 'pending'),
+(1233, 1497, 1, 16, 'AM', NULL, 'pending'),
+(1234, 1498, 1, 16, 'AM', NULL, 'pending'),
+(1235, 1499, 1, 16, 'AM', NULL, 'pending'),
+(1236, 1500, 1, 16, 'AM', NULL, 'pending'),
+(1237, 1501, 1, 16, 'AM', NULL, 'pending'),
+(1238, 1502, 1, 16, 'AM', NULL, 'pending'),
+(1239, 1503, 1, 16, 'AM', NULL, 'pending'),
+(1240, 1504, 2, 17, 'AM', NULL, 'pending'),
+(1241, 1505, 1, 16, 'AM', NULL, 'pending'),
+(1242, 1506, 1, 16, 'AM', NULL, 'pending'),
+(1243, 1507, 1, 16, 'AM', NULL, 'pending'),
+(1244, 1508, 1, 16, 'AM', NULL, 'pending'),
+(1245, 1509, 1, 16, 'AM', NULL, 'pending'),
+(1246, 1510, 1, 16, 'AM', NULL, 'pending'),
+(1247, 1511, 1, 16, 'AM', NULL, 'pending'),
+(1248, 1512, 1, 16, 'AM', NULL, 'pending'),
+(1312, 1576, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1313, 1577, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1314, 1578, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1315, 1579, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1316, 1580, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1317, 1581, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1318, 1582, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
+(1319, 1583, 2, 17, 'AM', '{\"driver_attendance_id\":1,\"collector_attendance_ids\":[6]}', 'approved');
 
 -- --------------------------------------------------------
 
@@ -693,79 +778,28 @@ INSERT INTO `collection_team_member` (`team_member_id`, `team_id`, `collector_id
 (3645, 1223, 30, 'pending'),
 (3646, 1224, 28, 'pending'),
 (3647, 1224, 29, 'pending'),
-(3648, 1224, 30, 'pending'),
-(3649, 1225, 28, 'pending'),
-(3650, 1225, 29, 'pending'),
-(3651, 1225, 30, 'pending'),
-(3652, 1226, 33, 'pending'),
-(3653, 1226, 34, 'pending'),
-(3654, 1226, 35, 'pending'),
-(3655, 1227, 33, 'pending'),
-(3656, 1227, 34, 'pending'),
-(3657, 1227, 35, 'pending'),
-(3658, 1228, 28, 'pending'),
-(3659, 1228, 29, 'pending'),
-(3660, 1228, 30, 'pending'),
-(3661, 1229, 28, 'pending'),
-(3662, 1229, 29, 'pending'),
-(3663, 1229, 30, 'pending'),
-(3664, 1230, 28, 'pending'),
-(3665, 1230, 29, 'pending'),
-(3666, 1230, 30, 'pending'),
-(3667, 1231, 28, 'pending'),
-(3668, 1231, 29, 'pending'),
-(3669, 1231, 30, 'pending'),
-(3670, 1232, 28, 'pending'),
-(3671, 1232, 29, 'pending'),
-(3672, 1232, 30, 'pending'),
-(3673, 1233, 28, 'pending'),
-(3674, 1233, 29, 'pending'),
-(3675, 1233, 30, 'pending'),
-(3676, 1234, 28, 'pending'),
-(3677, 1234, 29, 'pending'),
-(3678, 1234, 30, 'pending'),
-(3679, 1235, 28, 'pending'),
-(3680, 1235, 29, 'pending'),
-(3681, 1235, 30, 'pending'),
-(3682, 1236, 28, 'pending'),
-(3683, 1236, 29, 'pending'),
-(3684, 1236, 30, 'pending'),
-(3685, 1237, 28, 'pending'),
-(3686, 1237, 29, 'pending'),
-(3687, 1237, 30, 'pending'),
-(3688, 1238, 28, 'pending'),
-(3689, 1238, 29, 'pending'),
-(3690, 1238, 30, 'pending'),
-(3691, 1239, 28, 'pending'),
-(3692, 1239, 29, 'pending'),
-(3693, 1239, 30, 'pending'),
-(3694, 1240, 33, 'pending'),
-(3695, 1240, 34, 'pending'),
-(3696, 1240, 35, 'pending'),
-(3697, 1241, 28, 'pending'),
-(3698, 1241, 29, 'pending'),
-(3699, 1241, 30, 'pending'),
-(3700, 1242, 28, 'pending'),
-(3701, 1242, 29, 'pending'),
-(3702, 1242, 30, 'pending'),
-(3703, 1243, 28, 'pending'),
-(3704, 1243, 29, 'pending'),
-(3705, 1243, 30, 'pending'),
-(3706, 1244, 28, 'pending'),
-(3707, 1244, 29, 'pending'),
-(3708, 1244, 30, 'pending'),
-(3709, 1245, 28, 'pending'),
-(3710, 1245, 29, 'pending'),
-(3711, 1245, 30, 'pending'),
-(3712, 1246, 28, 'pending'),
-(3713, 1246, 29, 'pending'),
-(3714, 1246, 30, 'pending'),
-(3715, 1247, 28, 'pending'),
-(3716, 1247, 29, 'pending'),
-(3717, 1247, 30, 'pending'),
-(3718, 1248, 28, 'pending'),
-(3719, 1248, 29, 'pending'),
-(3720, 1248, 30, 'pending');
+(3898, 1312, 30, 'approved'),
+(3899, 1312, 35, 'approved'),
+(3900, 1312, 29, 'approved'),
+(3901, 1313, 30, 'approved'),
+(3902, 1313, 35, 'approved'),
+(3903, 1313, 29, 'approved'),
+(3904, 1314, 30, 'approved'),
+(3905, 1314, 35, 'approved'),
+(3906, 1314, 29, 'approved'),
+(3907, 1315, 30, 'approved'),
+(3908, 1315, 35, 'approved'),
+(3909, 1315, 29, 'approved'),
+(3910, 1316, 30, 'approved'),
+(3911, 1316, 35, 'approved'),
+(3912, 1316, 29, 'approved'),
+(3913, 1317, 30, 'approved'),
+(3914, 1317, 35, 'approved'),
+(3915, 1317, 29, 'approved'),
+(3916, 1318, 30, 'approved'),
+(3917, 1318, 35, 'approved'),
+(3918, 1318, 29, 'approved'),
+(3919, 1319, 33, 'approved');
 
 -- --------------------------------------------------------
 
@@ -1596,7 +1630,7 @@ INSERT INTO `issue_reports` (`id`, `reporter_id`, `reporter_name`, `barangay`, `
 (24, 10, 'Ian Jay Anonuevo', '39-STHCN', 'test bh', 'gaongan city', 'bh bh', NULL, 'closed', '2025-10-07 06:32:37', '2025-10-07 07:50:50', '2025-10-07 07:50:50', 1, NULL, NULL, 'medium', NULL, NULL),
 (25, 68, 'Emeir Amado', 'Gaongan', 'Overflowing or insufficient bins', 'Centro 2 City', 'HAHAHAHA', 'uploads/issue_reports/issue_68_1759843381_68e5143533d01.jpg', 'pending', '2025-10-07 13:23:01', '2025-10-07 13:23:01', NULL, NULL, NULL, NULL, 'medium', NULL, NULL),
 (26, 68, 'Emeir Amado', 'Gaongan', 'Missed or delayed pickups', 'Tara Sipocot', 'October 8', NULL, 'pending', '2025-10-07 21:20:42', '2025-10-07 21:20:42', NULL, NULL, NULL, NULL, 'medium', NULL, NULL),
-(27, 68, 'Emeir Amado', 'Gaongan', 'Missed or delayed pickups', 'Tara Sipocot', 'Namiss u', NULL, 'pending', '2025-10-08 00:37:10', '2025-10-08 00:37:10', NULL, NULL, NULL, NULL, 'medium', NULL, NULL),
+(27, 68, 'Emeir Amado', 'Gaongan', 'Missed or delayed pickups', 'Tara Sipocot', 'Namiss u', NULL, 'pending', '2025-10-08 00:37:10', '2025-11-21 06:41:42', NULL, 1, NULL, NULL, 'medium', NULL, NULL),
 (28, 68, 'Emeir Amado', 'Gaongan', 'Missed or delayed pickups', 'south centro', 'hjghfgh', NULL, 'resolved', '2025-10-08 01:35:05', '2025-10-08 02:22:51', '2025-10-08 02:22:51', 1, NULL, 'uploads/issue_resolutions/resolution_28_1759890171.png', 'medium', NULL, NULL);
 
 -- --------------------------------------------------------
@@ -1724,7 +1758,83 @@ INSERT INTO `notification` (`notification_id`, `recipient_id`, `message`, `creat
 (11640, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-10-17\",\"assignments\":[{\"team_id\":1240,\"barangay\":\"South Villazar\",\"cluster\":\"4C-CC\",\"date\":\"2025-10-17\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-10-16 01:49:02', 'unread'),
 (11641, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-10-17\",\"assignments\":[{\"team_id\":1240,\"barangay\":\"South Villazar\",\"cluster\":\"4C-CC\",\"date\":\"2025-10-17\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-10-16 01:49:02', 'unread'),
 (11642, 34, '{\"type\":\"daily_assignments\",\"date\":\"2025-10-17\",\"assignments\":[{\"team_id\":1240,\"barangay\":\"South Villazar\",\"cluster\":\"4C-CC\",\"date\":\"2025-10-17\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-10-16 01:49:02', 'unread'),
-(11643, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-10-17\",\"assignments\":[{\"team_id\":1240,\"barangay\":\"South Villazar\",\"cluster\":\"4C-CC\",\"date\":\"2025-10-17\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-10-16 01:49:02', 'unread');
+(11643, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-10-17\",\"assignments\":[{\"team_id\":1240,\"barangay\":\"South Villazar\",\"cluster\":\"4C-CC\",\"date\":\"2025-10-17\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-10-16 01:49:02', 'unread'),
+(11644, 91, '{\"type\":\"attendance_request\",\"request_id\":1,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:11:02\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121171102_8af0b2f0.jpg\"}', '2025-11-21 05:11:02', 'unread'),
+(11645, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":1,\"decision\":\"declined\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:15:30\",\"review_note\":null}', '2025-11-21 05:15:30', 'read'),
+(11646, 91, '{\"type\":\"attendance_request\",\"request_id\":2,\"user_id\":30,\"name\":\"Joseph Osela\",\"submitted_at\":\"2025-11-21 05:11:43\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_30_20251121171143_a4fafe38.png\"}', '2025-11-21 05:11:43', 'unread'),
+(11647, 91, '{\"type\":\"attendance_request\",\"request_id\":3,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:23:41\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121172341_d20ee693.png\"}', '2025-11-21 05:23:41', 'unread'),
+(11648, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":3,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:03\",\"review_note\":null}', '2025-11-21 05:26:03', 'read'),
+(11649, 91, '{\"type\":\"attendance_request\",\"request_id\":4,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:11:13\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121171113_a4136a62.jpg\"}', '2025-11-21 05:11:13', 'unread'),
+(11650, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":4,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:11:58\",\"review_note\":null}', '2025-11-21 05:11:58', 'unread'),
+(11651, 91, '{\"type\":\"attendance_request\",\"request_id\":5,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:12:19\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121171219_366fc01f.png\"}', '2025-11-21 05:12:19', 'unread'),
+(11652, 91, '{\"type\":\"attendance_request\",\"request_id\":6,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:12:53\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121171253_088c8984.jpg\"}', '2025-11-21 05:12:53', 'unread'),
+(11653, 91, '{\"type\":\"attendance_request\",\"request_id\":7,\"user_id\":17,\"name\":\"Ronald Frondozo\",\"submitted_at\":\"2025-11-21 05:13:21\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_17_20251121171321_7d202f1f.png\"}', '2025-11-21 05:13:21', 'unread'),
+(11654, 91, '{\"type\":\"attendance_request\",\"request_id\":8,\"user_id\":30,\"name\":\"Joseph Osela\",\"submitted_at\":\"2025-11-21 05:13:45\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_30_20251121171345_e9054bce.png\"}', '2025-11-21 05:13:45', 'unread'),
+(11655, 91, '{\"type\":\"attendance_request\",\"request_id\":9,\"user_id\":35,\"name\":\"Rosario Mabini\",\"submitted_at\":\"2025-11-21 05:14:12\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_35_20251121171412_57bba6cf.jpg\"}', '2025-11-21 05:14:12', 'unread'),
+(11656, 91, '{\"type\":\"attendance_request\",\"request_id\":10,\"user_id\":29,\"name\":\"Rico Maralit\",\"submitted_at\":\"2025-11-21 05:14:34\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_29_20251121171434_ab2ce96e.png\"}', '2025-11-21 05:14:34', 'unread'),
+(11657, 91, '{\"type\":\"attendance_request\",\"request_id\":11,\"user_id\":33,\"name\":\"Joseph Collantes\",\"submitted_at\":\"2025-11-21 05:18:08\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_33_20251121171808_402ff41b.png\"}', '2025-11-21 05:18:08', 'unread'),
+(11658, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":6,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:14\",\"review_note\":null}', '2025-11-21 05:18:14', 'unread'),
+(11659, 17, '{\"type\":\"attendance_reviewed\",\"request_id\":7,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:15\",\"review_note\":null}', '2025-11-21 05:18:15', 'unread'),
+(11660, 30, '{\"type\":\"attendance_reviewed\",\"request_id\":8,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:16\",\"review_note\":null}', '2025-11-21 05:18:16', 'unread'),
+(11661, 35, '{\"type\":\"attendance_reviewed\",\"request_id\":9,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:17\",\"review_note\":null}', '2025-11-21 05:18:17', 'unread'),
+(11662, 29, '{\"type\":\"attendance_reviewed\",\"request_id\":10,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:18\",\"review_note\":null}', '2025-11-21 05:18:18', 'unread'),
+(11663, 33, '{\"type\":\"attendance_reviewed\",\"request_id\":11,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:18:19\",\"review_note\":null}', '2025-11-21 05:18:19', 'unread'),
+(11664, 91, '{\"type\":\"attendance_request\",\"request_id\":12,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-21 05:12:28\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251121171228_f0ef3f91.jpg\"}', '2025-11-21 05:12:28', 'unread'),
+(11665, 91, '{\"type\":\"attendance_request\",\"request_id\":13,\"user_id\":17,\"name\":\"Ronald Frondozo\",\"submitted_at\":\"2025-11-21 05:12:59\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_17_20251121171259_9592d81e.jpg\"}', '2025-11-21 05:12:59', 'unread'),
+(11666, 91, '{\"type\":\"attendance_request\",\"request_id\":14,\"user_id\":30,\"name\":\"Joseph Osela\",\"submitted_at\":\"2025-11-21 05:13:28\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_30_20251121171328_3899acf8.png\"}', '2025-11-21 05:13:28', 'unread'),
+(11667, 91, '{\"type\":\"attendance_request\",\"request_id\":15,\"user_id\":35,\"name\":\"Rosario Mabini\",\"submitted_at\":\"2025-11-21 05:14:04\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_35_20251121171404_d4ea96e8.png\"}', '2025-11-21 05:14:04', 'unread'),
+(11668, 91, '{\"type\":\"attendance_request\",\"request_id\":16,\"user_id\":29,\"name\":\"Rico Maralit\",\"submitted_at\":\"2025-11-21 05:14:33\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_29_20251121171433_caf7aadd.jpg\"}', '2025-11-21 05:14:33', 'unread'),
+(11669, 91, '{\"type\":\"attendance_request\",\"request_id\":17,\"user_id\":33,\"name\":\"Joseph Collantes\",\"submitted_at\":\"2025-11-21 05:15:04\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_33_20251121171504_585ea45f.png\"}', '2025-11-21 05:15:04', 'unread'),
+(11670, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":12,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:15:39\",\"review_note\":null}', '2025-11-21 05:15:39', 'unread'),
+(11671, 17, '{\"type\":\"attendance_reviewed\",\"request_id\":13,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:25:46\",\"review_note\":null}', '2025-11-21 05:25:46', 'unread'),
+(11672, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":12,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:29\",\"review_note\":null}', '2025-11-21 05:26:29', 'unread'),
+(11673, 30, '{\"type\":\"attendance_reviewed\",\"request_id\":14,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:30\",\"review_note\":null}', '2025-11-21 05:26:30', 'unread'),
+(11674, 35, '{\"type\":\"attendance_reviewed\",\"request_id\":15,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:31\",\"review_note\":null}', '2025-11-21 05:26:31', 'unread'),
+(11675, 29, '{\"type\":\"attendance_reviewed\",\"request_id\":16,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:32\",\"review_note\":null}', '2025-11-21 05:26:32', 'unread'),
+(11676, 33, '{\"type\":\"attendance_reviewed\",\"request_id\":17,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-21 05:26:33\",\"review_note\":null}', '2025-11-21 05:26:33', 'unread'),
+(11677, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1249,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1250,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1251,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1252,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1253,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1254,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1255,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1256,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1257,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1258,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1259,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1260,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:27:02', 'read'),
+(11678, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1249,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1250,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1251,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1252,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1253,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1254,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1255,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1256,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1257,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1258,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1259,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1260,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:27:02', 'unread'),
+(11679, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1249,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1250,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1251,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1252,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1253,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1254,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1255,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1256,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1257,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1258,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1259,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1260,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:27:02', 'unread'),
+(11680, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1249,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1250,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1251,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1252,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1253,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1254,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1255,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1256,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1257,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1258,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1259,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1260,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:27:02', 'unread'),
+(11681, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1261,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:27:02', 'unread'),
+(11682, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1261,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:27:02', 'read'),
+(11683, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1262,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1263,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1264,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1265,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1266,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1267,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1268,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1269,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1270,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1271,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1272,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1273,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:36:49', 'read'),
+(11684, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1262,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1263,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1264,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1265,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1266,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1267,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1268,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1269,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1270,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1271,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1272,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1273,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:36:49', 'unread'),
+(11685, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1262,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1263,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1264,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1265,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1266,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1267,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1268,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1269,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1270,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1271,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1272,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1273,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:36:49', 'unread'),
+(11686, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1262,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1263,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1264,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1265,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1266,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1267,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1268,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1269,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1270,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1271,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1272,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1273,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:36:49', 'unread'),
+(11687, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1274,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:36:49', 'unread'),
+(11688, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1274,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:36:49', 'unread'),
+(11689, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1275,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1276,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1277,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1278,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1279,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1280,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1281,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1282,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1283,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1284,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1285,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1286,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:46:37', 'read'),
+(11690, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1275,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1276,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1277,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1278,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1279,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1280,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1281,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1282,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1283,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1284,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1285,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1286,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:46:37', 'unread'),
+(11691, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1275,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1276,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1277,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1278,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1279,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1280,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1281,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1282,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1283,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1284,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1285,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1286,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:46:37', 'unread'),
+(11692, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1275,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1276,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1277,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1278,\"barangay\":\"Azucena\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1279,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1280,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1281,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"13:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1282,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"16:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1283,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1284,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1285,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"14:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1286,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"17:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:46:37', 'unread'),
+(11693, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1287,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:46:37', 'unread'),
+(11694, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1287,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:46:37', 'unread'),
+(11695, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1288,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1289,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1290,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1291,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1292,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1293,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1294,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:51:24', 'read'),
+(11696, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1288,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1289,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1290,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1291,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1292,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1293,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1294,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:51:24', 'unread'),
+(11697, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1288,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1289,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1290,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1291,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1292,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1293,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1294,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:51:24', 'unread'),
+(11698, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1288,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1289,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1290,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1291,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1292,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1293,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1294,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 05:51:24', 'unread'),
+(11699, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1295,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:51:24', 'unread'),
+(11700, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1295,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 05:51:24', 'unread'),
+(11701, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1296,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1297,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1298,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1299,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1300,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1301,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1302,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:05:43', 'unread'),
+(11702, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1296,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1297,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1298,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1299,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1300,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1301,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1302,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:05:43', 'unread'),
+(11703, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1296,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1297,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1298,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1299,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1300,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1301,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1302,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:05:43', 'unread'),
+(11704, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1296,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1297,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1298,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1299,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1300,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1301,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1302,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:05:43', 'unread');
+INSERT INTO `notification` (`notification_id`, `recipient_id`, `message`, `created_at`, `response_status`) VALUES
+(11705, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1303,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:05:43', 'unread'),
+(11706, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1303,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:05:43', 'unread'),
+(11707, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1304,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1305,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1306,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1307,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1308,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1309,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1310,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11708, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1304,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1305,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1306,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1307,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1308,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1309,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1310,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11709, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1304,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1305,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1306,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1307,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1308,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1309,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1310,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11710, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1304,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1305,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1306,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1307,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1308,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1309,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1310,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11711, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1311,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11712, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1311,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:08:29', 'unread'),
+(11713, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1312,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1313,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1314,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1315,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1316,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1317,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1318,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:24:07', 'unread'),
+(11714, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1312,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1313,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1314,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1315,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1316,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1317,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1318,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:24:07', 'read'),
+(11715, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1312,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1313,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1314,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1315,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1316,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1317,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1318,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:24:07', 'unread'),
+(11716, 29, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1312,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1313,\"barangay\":\"Malubago\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1314,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1315,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1316,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1317,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1318,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-21\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-21 06:24:07', 'unread'),
+(11717, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1319,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:24:07', 'unread'),
+(11718, 33, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-21\",\"assignments\":[{\"team_id\":1319,\"barangay\":\"Yabo\",\"cluster\":\"4C-CC\",\"date\":\"2025-11-21\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-21 06:24:07', 'unread');
 
 -- --------------------------------------------------------
 
@@ -1824,6 +1934,7 @@ CREATE TABLE `predefined_schedules` (
   `cluster_id` varchar(50) NOT NULL,
   `schedule_type` enum('daily_priority','fixed_days','weekly_cluster') NOT NULL,
   `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
+  `session` enum('AM','PM') NOT NULL DEFAULT 'AM',
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `frequency_per_day` int(11) DEFAULT 1,
@@ -1837,111 +1948,111 @@ CREATE TABLE `predefined_schedules` (
 -- Dumping data for table `predefined_schedules`
 --
 
-INSERT INTO `predefined_schedules` (`schedule_template_id`, `barangay_id`, `barangay_name`, `cluster_id`, `schedule_type`, `day_of_week`, `start_time`, `end_time`, `frequency_per_day`, `week_of_month`, `is_active`, `created_at`, `updated_at`) VALUES
-(11, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Monday', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(12, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Wednesday', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(13, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Friday', '09:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-10-07 12:32:56'),
-(14, '25-MLBG', 'Malubago', '1C-PB', 'fixed_days', 'Tuesday', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(15, '25-MLBG', 'Malubago', '1C-PB', 'fixed_days', 'Friday', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(16, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Monday', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(17, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Wednesday', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(18, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Friday', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(19, '19-GNGN', 'Gaongan', '1C-PB', 'fixed_days', 'Thursday', '08:00:00', '11:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(20, '05-AZCN', 'Azucena', '1C-PB', 'fixed_days', 'Friday', '13:00:00', '15:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
-(59, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(60, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(61, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(62, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(63, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(64, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(65, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(66, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(67, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(68, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(69, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(70, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(71, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(72, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(73, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(74, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(75, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(76, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(77, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(78, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(79, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(80, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(81, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(82, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(83, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(84, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(85, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(86, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(87, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(88, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(89, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(90, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(91, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(92, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(93, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(94, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(95, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(96, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(97, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(98, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
-(260, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(261, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(262, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(263, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(264, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', '06:00:00', '07:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(265, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', '10:00:00', '11:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(266, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', '13:00:00', '14:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(267, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', '16:00:00', '17:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(268, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(269, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(270, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(271, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(272, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', '07:00:00', '08:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(273, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', '11:00:00', '12:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(274, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', '14:00:00', '15:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(275, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', '17:00:00', '18:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
-(284, '33-SGRDF', 'Sagrada Familia', '2C-CA', 'weekly_cluster', 'Monday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(285, '12-CBY', 'Cabuyao', '2C-CA', 'weekly_cluster', 'Tuesday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(286, '10-BLN', 'Bulan', '2C-CA', 'weekly_cluster', 'Wednesday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(287, '45-VGN', 'Vigaan', '2C-CA', 'weekly_cluster', 'Thursday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(288, '44-TLTL', 'Tula-tula', '2C-CA', 'weekly_cluster', 'Friday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(289, '35-SLVCN', 'Salvacion', '2C-CA', 'weekly_cluster', 'Saturday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(290, '01-ALDZR', 'Aldezar', '2C-CA', 'weekly_cluster', 'Sunday', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(291, '38-SRRNZ', 'Serranzana', '2C-CA', 'weekly_cluster', 'Sunday', '10:00:00', '11:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
-(292, '07-BNHN', 'Binahian', '3C-CB', 'weekly_cluster', 'Monday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(293, '13-CM', 'Caima', '3C-CB', 'weekly_cluster', 'Tuesday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(294, '06-BGNGS', 'Bagong Sirang', '3C-CB', 'weekly_cluster', 'Wednesday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(295, '16-CRYRY', 'Carayrayan', '3C-CB', 'weekly_cluster', 'Thursday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(296, '21-LPLP', 'Lipilip', '3C-CB', 'weekly_cluster', 'Friday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(297, '23-LBGNS', 'Lubigan Sr.', '3C-CB', 'weekly_cluster', 'Saturday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(298, '22-LBGNJ', 'Lubigan Jr.', '3C-CB', 'weekly_cluster', 'Saturday', '10:00:00', '11:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(299, '26-MNNGL', 'Manangle', '3C-CB', 'weekly_cluster', 'Sunday', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(300, '18-GB', 'Gabi', '3C-CB', 'weekly_cluster', 'Sunday', '10:00:00', '11:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(301, '29-MNLBN', 'Manlubang', '3C-CB', 'weekly_cluster', 'Sunday', '11:00:00', '12:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(302, '11-BLWN', 'Bulawan', '3C-CB', 'weekly_cluster', 'Sunday', '13:00:00', '14:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
-(303, '43-TBL', 'Tible', '4C-CC', 'weekly_cluster', 'Monday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(304, '32-NRTHV', 'North Villazar', '4C-CC', 'weekly_cluster', 'Tuesday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(305, '14-CLGBN', 'Calagbangan', '4C-CC', 'weekly_cluster', 'Wednesday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(306, '08-BLNRT', 'Bolo Norte', '4C-CC', 'weekly_cluster', 'Thursday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(307, '46-YB', 'Yabo', '4C-CC', 'weekly_cluster', 'Friday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(308, '34-SLND', 'Salanda', '4C-CC', 'weekly_cluster', 'Saturday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(309, '09-BLSR', 'Bolo Sur', '4C-CC', 'weekly_cluster', 'Sunday', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(310, '02-ALTZ', 'Alteza', '4C-CC', 'weekly_cluster', 'Sunday', '10:00:00', '11:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(311, '40-STHVL', 'South Villazar', '4C-CC', 'weekly_cluster', 'Sunday', '11:00:00', '12:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
-(312, '30-MNTL', 'Mantila', '5C-CD', 'weekly_cluster', 'Monday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(313, '36-SNSDR', 'San Isidro', '5C-CD', 'weekly_cluster', 'Tuesday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(314, '27-MNGP', 'Mangapo', '5C-CD', 'weekly_cluster', 'Wednesday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(315, '04-AWYN', 'Awayan', '5C-CD', 'weekly_cluster', 'Thursday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(316, '28-MNGG', 'Mangga', '5C-CD', 'weekly_cluster', 'Friday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(317, '15-CLMPN', 'Calampinay', '5C-CD', 'weekly_cluster', 'Saturday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(318, '17-CTM', 'Cotmo', '5C-CD', 'weekly_cluster', 'Saturday', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(319, '03-ANB', 'Anib', '5C-CD', 'weekly_cluster', 'Sunday', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(320, '37-SNVCN', 'San Vicente', '5C-CD', 'weekly_cluster', 'Sunday', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(321, '24-MLGC', 'Malaguico', '5C-CD', 'weekly_cluster', 'Sunday', '11:00:00', '12:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44');
+INSERT INTO `predefined_schedules` (`schedule_template_id`, `barangay_id`, `barangay_name`, `cluster_id`, `schedule_type`, `day_of_week`, `session`, `start_time`, `end_time`, `frequency_per_day`, `week_of_month`, `is_active`, `created_at`, `updated_at`) VALUES
+(11, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Monday', 'AM', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(12, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Wednesday', 'AM', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(13, '20-IMPG', 'Impig', '1C-PB', 'fixed_days', 'Friday', 'AM', '09:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-10-07 12:32:56'),
+(14, '25-MLBG', 'Malubago', '1C-PB', 'fixed_days', 'Tuesday', 'AM', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(15, '25-MLBG', 'Malubago', '1C-PB', 'fixed_days', 'Friday', 'AM', '08:00:00', '10:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(16, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Monday', 'AM', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(17, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Wednesday', 'AM', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(18, '42-TR', 'Tara', '1C-PB', 'fixed_days', 'Friday', 'AM', '10:00:00', '12:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(19, '19-GNGN', 'Gaongan', '1C-PB', 'fixed_days', 'Thursday', 'AM', '08:00:00', '11:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-09-10 03:35:54'),
+(20, '05-AZCN', 'Azucena', '1C-PB', 'fixed_days', 'Friday', 'PM', '13:00:00', '15:00:00', 1, NULL, 1, '2025-09-10 03:35:54', '2025-11-21 16:32:12'),
+(59, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(60, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(61, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(62, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Monday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(63, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(64, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(65, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(66, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Tuesday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(67, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(68, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(69, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(70, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Wednesday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(71, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(72, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(73, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(74, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Thursday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(75, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(76, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(77, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(78, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Friday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(79, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(80, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(81, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(82, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Monday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(83, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(84, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(85, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(86, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Tuesday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(87, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(88, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(89, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(90, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Wednesday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(91, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(92, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(93, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(94, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Thursday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(95, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(96, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-09-10 04:06:35'),
+(97, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(98, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Friday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-09-10 04:06:35', '2025-11-21 16:32:12'),
+(260, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(261, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(262, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(263, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Saturday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(264, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', 'AM', '06:00:00', '07:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(265, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', 'AM', '10:00:00', '11:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(266, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', 'PM', '13:00:00', '14:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(267, '31-NRTHC', 'North Centro', '1C-PB', 'daily_priority', 'Sunday', 'PM', '16:00:00', '17:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(268, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(269, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(270, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(271, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Saturday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(272, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', 'AM', '07:00:00', '08:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(273, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', 'AM', '11:00:00', '12:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-19 09:55:55'),
+(274, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', 'PM', '14:00:00', '15:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(275, '39-STHCN', 'South Centro', '1C-PB', 'daily_priority', 'Sunday', 'PM', '17:00:00', '18:00:00', 4, NULL, 1, '2025-11-19 09:55:55', '2025-11-21 16:32:12'),
+(284, '33-SGRDF', 'Sagrada Familia', '2C-CA', 'weekly_cluster', 'Monday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(285, '12-CBY', 'Cabuyao', '2C-CA', 'weekly_cluster', 'Tuesday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(286, '10-BLN', 'Bulan', '2C-CA', 'weekly_cluster', 'Wednesday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(287, '45-VGN', 'Vigaan', '2C-CA', 'weekly_cluster', 'Thursday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(288, '44-TLTL', 'Tula-tula', '2C-CA', 'weekly_cluster', 'Friday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(289, '35-SLVCN', 'Salvacion', '2C-CA', 'weekly_cluster', 'Saturday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(290, '01-ALDZR', 'Aldezar', '2C-CA', 'weekly_cluster', 'Sunday', 'AM', '09:00:00', '10:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(291, '38-SRRNZ', 'Serranzana', '2C-CA', 'weekly_cluster', 'Sunday', 'AM', '10:00:00', '11:00:00', 1, 1, 1, '2025-11-19 10:05:07', '2025-11-19 10:05:07'),
+(292, '07-BNHN', 'Binahian', '3C-CB', 'weekly_cluster', 'Monday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(293, '13-CM', 'Caima', '3C-CB', 'weekly_cluster', 'Tuesday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(294, '06-BGNGS', 'Bagong Sirang', '3C-CB', 'weekly_cluster', 'Wednesday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(295, '16-CRYRY', 'Carayrayan', '3C-CB', 'weekly_cluster', 'Thursday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(296, '21-LPLP', 'Lipilip', '3C-CB', 'weekly_cluster', 'Friday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(297, '23-LBGNS', 'Lubigan Sr.', '3C-CB', 'weekly_cluster', 'Saturday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(298, '22-LBGNJ', 'Lubigan Jr.', '3C-CB', 'weekly_cluster', 'Saturday', 'AM', '10:00:00', '11:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(299, '26-MNNGL', 'Manangle', '3C-CB', 'weekly_cluster', 'Sunday', 'AM', '09:00:00', '10:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(300, '18-GB', 'Gabi', '3C-CB', 'weekly_cluster', 'Sunday', 'AM', '10:00:00', '11:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(301, '29-MNLBN', 'Manlubang', '3C-CB', 'weekly_cluster', 'Sunday', 'AM', '11:00:00', '12:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-19 10:06:13'),
+(302, '11-BLWN', 'Bulawan', '3C-CB', 'weekly_cluster', 'Sunday', 'PM', '13:00:00', '14:00:00', 1, 2, 1, '2025-11-19 10:06:13', '2025-11-21 16:32:12'),
+(303, '43-TBL', 'Tible', '4C-CC', 'weekly_cluster', 'Monday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(304, '32-NRTHV', 'North Villazar', '4C-CC', 'weekly_cluster', 'Tuesday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(305, '14-CLGBN', 'Calagbangan', '4C-CC', 'weekly_cluster', 'Wednesday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(306, '08-BLNRT', 'Bolo Norte', '4C-CC', 'weekly_cluster', 'Thursday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(307, '46-YB', 'Yabo', '4C-CC', 'weekly_cluster', 'Friday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(308, '34-SLND', 'Salanda', '4C-CC', 'weekly_cluster', 'Saturday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(309, '09-BLSR', 'Bolo Sur', '4C-CC', 'weekly_cluster', 'Sunday', 'AM', '09:00:00', '10:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(310, '02-ALTZ', 'Alteza', '4C-CC', 'weekly_cluster', 'Sunday', 'AM', '10:00:00', '11:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(311, '40-STHVL', 'South Villazar', '4C-CC', 'weekly_cluster', 'Sunday', 'AM', '11:00:00', '12:00:00', 1, 3, 1, '2025-11-19 10:06:58', '2025-11-19 10:06:58'),
+(312, '30-MNTL', 'Mantila', '5C-CD', 'weekly_cluster', 'Monday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(313, '36-SNSDR', 'San Isidro', '5C-CD', 'weekly_cluster', 'Tuesday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(314, '27-MNGP', 'Mangapo', '5C-CD', 'weekly_cluster', 'Wednesday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(315, '04-AWYN', 'Awayan', '5C-CD', 'weekly_cluster', 'Thursday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(316, '28-MNGG', 'Mangga', '5C-CD', 'weekly_cluster', 'Friday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(317, '15-CLMPN', 'Calampinay', '5C-CD', 'weekly_cluster', 'Saturday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(318, '17-CTM', 'Cotmo', '5C-CD', 'weekly_cluster', 'Saturday', 'AM', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(319, '03-ANB', 'Anib', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(320, '37-SNVCN', 'San Vicente', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(321, '24-MLGC', 'Malaguico', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '11:00:00', '12:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44');
 
 -- --------------------------------------------------------
 
@@ -2305,14 +2416,14 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`user_id`, `username`, `email`, `password`, `role_id`, `status`, `online_status`) VALUES
-(1, 'admin', 'admin@gmail.com', '$2y$10$QIeP1OVt6MM.lmNlJorPAOUxNCYmOZStgIZNAOHTZnJDWwxnV2qyq', 1, NULL, 'online'),
+(1, 'admin', 'admin@gmail.com', '$2y$10$QIeP1OVt6MM.lmNlJorPAOUxNCYmOZStgIZNAOHTZnJDWwxnV2qyq', 1, NULL, 'offline'),
 (3, 'admin', 'njy.nnv@gmail.com', '$2y$10$DTWreJ2agwiY.RUuan9DQO4H1uVDFgf.zeDlq9Xsugkbqcq.kyd0G', 1, NULL, 'offline'),
 (10, 'barangayhead', 'bh@gmail.com', '$2y$10$LaI6NqGKAVnyJukvi1.ieeheTHygmoFkjtMImfn71s1enWFcAAfuy', 2, NULL, 'offline'),
-(16, 'Paul123', 'paulbermal@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'online'),
+(16, 'Paul123', 'paulbermal@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'offline'),
 (17, 'Ronald123', 'ronaldfrondozo@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'offline'),
 (28, 'Alvin', 'alvinmonida@gmail.com', '$2y$10$KHLR4xizvKJvTyfQlvnMBelgeTK4pq/sW93Q.JOJUBkCsMF2qlyvS', 4, 'On Duty', 'offline'),
 (29, 'Rico', 'ricomaralit@gmail.com', '$2y$10$BH1dy4njVraysT1ZLinu/uxhJwgAMGmzgt8d7eff1jwWslFH4Z6G2', 4, 'On Duty', 'offline'),
-(30, 'Joseph', 'josephosela@gmail.com', '$2y$10$dGDBkkWBq/ccokX4CLV/Gug92Ld0PMErZ28wItqwUpCalUYzqZaaG', 4, 'On Duty', 'offline'),
+(30, 'Joseph', 'josephosela@gmail.com', '$2y$10$dGDBkkWBq/ccokX4CLV/Gug92Ld0PMErZ28wItqwUpCalUYzqZaaG', 4, 'On Duty', 'online'),
 (31, 'Michael', 'michaelabres@gmail.com', '$2y$10$utMxS8Z/2mIKVrdmFh4wVuPtVlvbItwKVSEGTvTaWKXvw1aw6yyNi', 4, 'Off Duty', 'offline'),
 (32, 'Arnel', 'arnelcada@gmail.com', '$2y$10$utMxS8Z/2mIKVrdmFh4wVuPtVlvbItwKVSEGTvTaWKXvw1aw6yyNi', 4, 'Off Duty', 'offline'),
 (33, 'Joseph1', 'josephcollantes@gmail.com', '$2y$10$uy5j7FSSP7KfThLfoyWKgeahRf7irAsbhFr0wQbXFVnDAoX41cZlK', 4, 'Off Duty', 'offline'),
@@ -2350,7 +2461,7 @@ INSERT INTO `user` (`user_id`, `username`, `email`, `password`, `role_id`, `stat
 (88, 'Benejose', 'nikopalenquez01@gmail.com', '$2y$10$963aa0q3dfXNJGQ8EGhOBeY716S1USqftJRHshQpjleShEODA0XIK', 5, NULL, 'offline'),
 (89, 'BeneJosejr', 'nikopalenquez1@gmail.com', '$2y$10$CBnhagBk6p4EqJv/zymUxOWFObUvJGpJ61D9RnTyo0IF7rxkoIJaq', 5, NULL, 'offline'),
 (90, 'support', 'support@koletrash.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 6, '', 'offline'),
-(91, 'foreman', 'foreman@gmail.com', '$2y$10$zOgVez8hOmb79o4YPfFDZ.len8JnoPGH0avUjcPzXiHT8FNB9SuOm', 7, NULL, 'offline');
+(91, 'foreman', 'foreman@gmail.com', '$2y$10$zOgVez8hOmb79o4YPfFDZ.len8JnoPGH0avUjcPzXiHT8FNB9SuOm', 7, NULL, 'online');
 
 -- --------------------------------------------------------
 
@@ -2448,6 +2559,29 @@ CREATE TABLE `waste_log` (
 --
 ALTER TABLE `admin`
   ADD PRIMARY KEY (`user_id`);
+
+--
+-- Indexes for table `attendance`
+--
+ALTER TABLE `attendance`
+  ADD PRIMARY KEY (`attendance_id`),
+  ADD UNIQUE KEY `unique_attendance` (`user_id`,`attendance_date`,`session`),
+  ADD KEY `idx_user_date` (`user_id`,`attendance_date`),
+  ADD KEY `idx_date` (`attendance_date`),
+  ADD KEY `idx_recorded_by` (`recorded_by`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_session` (`session`),
+  ADD KEY `idx_verification_status` (`verification_status`);
+
+--
+-- Indexes for table `attendance_request`
+--
+ALTER TABLE `attendance_request`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_attendance_schedule` (`schedule_id`),
+  ADD KEY `idx_attendance_status` (`request_status`),
+  ADD KEY `idx_attendance_user` (`user_id`,`submitted_at`),
+  ADD KEY `idx_attendance_foreman` (`foreman_id`,`reviewed_at`);
 
 --
 -- Indexes for table `barangay`
@@ -2706,6 +2840,18 @@ ALTER TABLE `waste_log`
 --
 
 --
+-- AUTO_INCREMENT for table `attendance`
+--
+ALTER TABLE `attendance`
+  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `attendance_request`
+--
+ALTER TABLE `attendance_request`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
 -- AUTO_INCREMENT for table `collection`
 --
 ALTER TABLE `collection`
@@ -2721,19 +2867,19 @@ ALTER TABLE `collection_point`
 -- AUTO_INCREMENT for table `collection_schedule`
 --
 ALTER TABLE `collection_schedule`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1513;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1584;
 
 --
 -- AUTO_INCREMENT for table `collection_team`
 --
 ALTER TABLE `collection_team`
-  MODIFY `team_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1249;
+  MODIFY `team_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1320;
 
 --
 -- AUTO_INCREMENT for table `collection_team_member`
 --
 ALTER TABLE `collection_team_member`
-  MODIFY `team_member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3721;
+  MODIFY `team_member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3920;
 
 --
 -- AUTO_INCREMENT for table `collection_type`
@@ -2799,7 +2945,7 @@ ALTER TABLE `issue_reports`
 -- AUTO_INCREMENT for table `notification`
 --
 ALTER TABLE `notification`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11644;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11719;
 
 --
 -- AUTO_INCREMENT for table `password_resets`
@@ -2876,6 +3022,21 @@ ALTER TABLE `waste_log`
 --
 ALTER TABLE `admin`
   ADD CONSTRAINT `admin_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
+
+--
+-- Constraints for table `attendance`
+--
+ALTER TABLE `attendance`
+  ADD CONSTRAINT `fk_attendance_recorder_ref` FOREIGN KEY (`recorded_by`) REFERENCES `user` (`user_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_attendance_user_ref` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `attendance_request`
+--
+ALTER TABLE `attendance_request`
+  ADD CONSTRAINT `fk_attendance_foreman` FOREIGN KEY (`foreman_id`) REFERENCES `user` (`user_id`),
+  ADD CONSTRAINT `fk_attendance_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `daily_route` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_attendance_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`);
 
 --
 -- Constraints for table `barangay`

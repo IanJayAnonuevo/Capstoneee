@@ -11,11 +11,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once __DIR__ . '/../lib/AttendanceAssignment.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 $start_date = $data['start_date'] ?? null;
 $end_date = $data['end_date'] ?? null;
 $overwrite = isset($data['overwrite']) ? (bool)$data['overwrite'] : false;
+$force_session = isset($data['session']) ? strtoupper($data['session']) : null;
 
 if (!$start_date || !$end_date) {
     echo json_encode(['success' => false, 'message' => 'Missing required fields: start_date and end_date']);
@@ -32,43 +34,17 @@ try {
     $stmt->execute();
     $predefinedSchedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Get available personnel
-    // Truck drivers (role_id = 3)
-    $stmt = $db->prepare("
-        SELECT u.user_id, u.username, 
-               CONCAT(up.firstname, ' ', up.lastname) as full_name,
-               up.status
-        FROM user u 
-        LEFT JOIN user_profile up ON u.user_id = up.user_id 
-        WHERE u.role_id = 3 AND (up.status = 'active' OR up.status = 'online')
-    ");
-    $stmt->execute();
-    $drivers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Garbage collectors (role_id = 4)
-    $stmt = $db->prepare("
-        SELECT u.user_id, u.username, 
-               CONCAT(up.firstname, ' ', up.lastname) as full_name,
-               up.status
-        FROM user u 
-        LEFT JOIN user_profile up ON u.user_id = up.user_id 
-        WHERE u.role_id = 4 AND (up.status = 'active' OR up.status = 'online' OR up.status IS NULL)
-    ");
-    $stmt->execute();
-    $collectors = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     // Get available trucks
     $stmt = $db->prepare("SELECT truck_id, plate_num, truck_type, capacity, status FROM truck WHERE status = 'available' OR status = 'Available'");
     $stmt->execute();
     $trucks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($drivers) || empty($collectors) || empty($trucks)) {
-        throw new Exception("Insufficient personnel or trucks available. Found: " . count($drivers) . " drivers, " . count($collectors) . " collectors, " . count($trucks) . " trucks.");
+    if (empty($trucks)) {
+        throw new Exception("No available trucks found.");
     }
 
-    // Need at least 2 drivers and 2 trucks for fixed assignment
-    if (count($drivers) < 2 || count($trucks) < 2) {
-        throw new Exception("Need at least 2 drivers and 2 trucks for fixed assignment. Found: " . count($drivers) . " drivers, " . count($trucks) . " trucks.");
+    if (count($trucks) < 2) {
+        throw new Exception("Need at least 2 available trucks for fixed assignment. Found: " . count($trucks));
     }
     
     $generatedTasks = [];
@@ -78,66 +54,12 @@ try {
     $currentDate = new DateTime($start_date);
     $endDateTime = new DateTime($end_date);
     
-    // Fixed driver assignment to avoid conflicts
-    $priorityDriver = $drivers[0]; // First driver for priority barangays (1C-PB)
-    $clusteredDriver = $drivers[1]; // Second driver for clustered barangays (2C-CA, 3C-CB, 4C-CC, 5C-CD)
-    
     // Fixed truck assignment
     $priorityTruck = $trucks[0]; // First truck for priority barangays
     $clusteredTruck = $trucks[1]; // Second truck for clustered barangays
     
-    // Create separate collector teams for Priority and Clustered barangays
-    // Need at least 6 collectors (3 for priority, 3 for clustered)
-    if (count($collectors) < 6) {
-        throw new Exception("Need at least 6 collectors for separate priority and clustered teams. Found: " . count($collectors) . " collectors.");
-    }
-    
-    // Split collectors into two groups
-    $midPoint = ceil(count($collectors) / 2);
-    $priorityCollectors = array_slice($collectors, 0, $midPoint);
-    $clusteredCollectors = array_slice($collectors, $midPoint);
-    
-    // Create teams for Priority barangays (3 collectors per team)
-    $priorityCollectorTeams = [];
-    $collectorsPerTeam = 3;
-    $priorityTeamCount = ceil(count($priorityCollectors) / $collectorsPerTeam);
-    
-    for ($i = 0; $i < $priorityTeamCount; $i++) {
-        $team = [];
-        for ($j = 0; $j < $collectorsPerTeam; $j++) {
-            $collectorIndex = ($i * $collectorsPerTeam) + $j;
-            if ($collectorIndex < count($priorityCollectors)) {
-                $team[] = $priorityCollectors[$collectorIndex];
-            }
-        }
-        if (count($team) >= 3) {
-            $priorityCollectorTeams[] = $team;
-        }
-    }
-    
-    // Create teams for Clustered barangays (3 collectors per team)
-    $clusteredCollectorTeams = [];
-    $clusteredTeamCount = ceil(count($clusteredCollectors) / $collectorsPerTeam);
-    
-    for ($i = 0; $i < $clusteredTeamCount; $i++) {
-        $team = [];
-        for ($j = 0; $j < $collectorsPerTeam; $j++) {
-            $collectorIndex = ($i * $collectorsPerTeam) + $j;
-            if ($collectorIndex < count($clusteredCollectors)) {
-                $team[] = $clusteredCollectors[$collectorIndex];
-            }
-        }
-        if (count($team) >= 3) {
-            $clusteredCollectorTeams[] = $team;
-        }
-    }
-    
-    if (empty($priorityCollectorTeams) || empty($clusteredCollectorTeams)) {
-        throw new Exception("Failed to create collector teams. Priority teams: " . count($priorityCollectorTeams) . ", Clustered teams: " . count($clusteredCollectorTeams));
-    }
-    
-    // Track assignments to ensure rotation
-    $assignmentCounter = 0;
+    $sessionSnapshots = [];
+    $sessionIssues = [];
     
     while ($currentDate <= $endDateTime) {
         $date = $currentDate->format('Y-m-d');
@@ -160,6 +82,30 @@ try {
                     }
                 }
                 
+                $scheduleSession = inferScheduleSession($schedule);
+
+                if ($force_session && $scheduleSession !== $force_session) {
+                    continue;
+                }
+
+                $session = $force_session ?? $scheduleSession;
+                
+                // Build/fetch session snapshot
+                try {
+                    if (!isset($sessionSnapshots[$date][$session])) {
+                        $personnel = getApprovedPersonnelBySession($db, $date, $session);
+                        $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors']);
+                    }
+                    $snapshot = $sessionSnapshots[$date][$session];
+                } catch (RuntimeException $sessionError) {
+                    $sessionIssues[] = [
+                        'date' => $date,
+                        'session' => $session,
+                        'message' => $sessionError->getMessage()
+                    ];
+                    continue;
+                }
+                
                 // Check if task already exists
                 $stmt = $db->prepare("SELECT schedule_id FROM collection_schedule WHERE barangay_id = ? AND scheduled_date = ? AND start_time = ?");
                 $stmt->execute([$schedule['barangay_id'], $date, $schedule['start_time']]);
@@ -176,44 +122,26 @@ try {
                 }
 
                 {
-                    // Select personnel for this task based on cluster type
-                    if ($schedule['cluster_id'] === '1C-PB') {
-                        // Priority barangays - use first driver and truck
-                        $driver = $priorityDriver;
-                        $truck = $priorityTruck;
-                    } else {
-                        // Clustered barangays - use second driver and truck
-                        $driver = $clusteredDriver;
-                        $truck = $clusteredTruck;
-                    }
+                    $assignmentKey = $schedule['cluster_id'] === '1C-PB' ? 'priority' : 'clustered';
+                    $driver = $snapshot['drivers'][$assignmentKey];
+                    $selectedCollectors = $snapshot['collectors'][$assignmentKey];
+                    $truck = $assignmentKey === 'priority' ? $priorityTruck : $clusteredTruck;
                     
-                    // Select appropriate collector team based on barangay type
-                    $dayOfYear = $currentDate->format('z');
-                    
-                    if ($schedule['cluster_id'] === '1C-PB') {
-                        // Priority barangays - use priority collector teams
-                        $teamIndex = $dayOfYear % count($priorityCollectorTeams);
-                        $selectedCollectors = $priorityCollectorTeams[$teamIndex];
-                        $teamType = 'Priority Team ' . ($teamIndex + 1);
-                    } else {
-                        // Clustered barangays - use clustered collector teams
-                        $teamIndex = $dayOfYear % count($clusteredCollectorTeams);
-                        $selectedCollectors = $clusteredCollectorTeams[$teamIndex];
-                        $teamType = 'Clustered Team ' . ($teamIndex + 1);
-                    }
+                    $teamLabel = ucfirst($assignmentKey) . ' Team';
                     
                     // Create schedule first
-                    $stmt = $db->prepare("INSERT INTO collection_schedule (barangay_id, scheduled_date, start_time, end_time, status) VALUES (?, ?, ?, ?, 'pending')");
-                    $stmt->execute([$schedule['barangay_id'], $date, $schedule['start_time'], $schedule['end_time']]);
+                    $stmt = $db->prepare("INSERT INTO collection_schedule (barangay_id, scheduled_date, session, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'approved')");
+                    $stmt->execute([$schedule['barangay_id'], $date, $session, $schedule['start_time'], $schedule['end_time']]);
                     $schedule_id = $db->lastInsertId();
                     
                     // Create collection team
-                    $stmt = $db->prepare("INSERT INTO collection_team (schedule_id, truck_id, driver_id, status) VALUES (?, ?, ?, 'pending')");
-                    $stmt->execute([$schedule_id, $truck['truck_id'], $driver['user_id']]);
+                    $attendanceSnapshot = buildAttendanceSnapshotPayload($driver, $selectedCollectors);
+                    $stmt = $db->prepare("INSERT INTO collection_team (schedule_id, truck_id, driver_id, session, attendance_snapshot, status) VALUES (?, ?, ?, ?, ?, 'approved')");
+                    $stmt->execute([$schedule_id, $truck['truck_id'], $driver['user_id'], $session, $attendanceSnapshot]);
                     $team_id = $db->lastInsertId();
                     
                     // Assign collectors
-                    $stmt = $db->prepare("INSERT INTO collection_team_member (team_id, collector_id, response_status) VALUES (?, ?, 'pending')");
+                    $stmt = $db->prepare("INSERT INTO collection_team_member (team_id, collector_id, response_status) VALUES (?, ?, 'approved')");
                     foreach ($selectedCollectors as $collector) {
                         $stmt->execute([$team_id, $collector['user_id']]);
                     }
@@ -244,17 +172,16 @@ try {
                         'barangay_id' => $schedule['barangay_id'],
                         'cluster_id' => $schedule['cluster_id'],
                         'date' => $date,
+                        'session' => $session,
                         'time' => $schedule['start_time'],
                         'type' => $schedule['schedule_type'],
-                        'driver' => $driver['full_name'] ?: $driver['username'],
-                        'collectors' => array_map(function($c) { return $c['full_name'] ?: $c['username']; }, $selectedCollectors),
+                        'driver' => $driver['full_name'],
+                        'collectors' => array_map(fn($c) => $c['full_name'], $selectedCollectors),
                         'truck' => $truck['plate_num'],
                         'team_id' => $team_id,
-                        'assignment_type' => $schedule['cluster_id'] === '1C-PB' ? 'Priority Assignment' : 'Clustered Assignment',
-                        'collector_team' => $teamType
+                        'assignment_type' => $assignmentKey === 'priority' ? 'Priority Assignment' : 'Clustered Assignment',
+                        'collector_team' => $teamLabel
                     ];
-                    
-                    $assignmentCounter++;
                 }
             }
         }
@@ -283,6 +210,7 @@ try {
         'generated_tasks' => $generatedTasks,
         'total_generated' => count($generatedTasks),
         'skipped_duplicates' => $skippedDuplicates,
+        'session_issues' => $sessionIssues,
         'overwrite' => $overwrite
     ]);
     
@@ -292,5 +220,15 @@ try {
         'success' => false,
         'message' => $e->getMessage()
     ]);
+}
+
+function inferScheduleSession(array $schedule): string
+{
+    if (!empty($schedule['session'])) {
+        return strtoupper($schedule['session']) === 'PM' ? 'PM' : 'AM';
+    }
+
+    $startTime = $schedule['start_time'] ?? '08:00:00';
+    return $startTime >= '12:00:00' ? 'PM' : 'AM';
 }
 ?>
