@@ -22,11 +22,19 @@ export default function TruckDriverHome() {
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState({ type: '', text: '' });
   const [showTimeInModal, setShowTimeInModal] = React.useState(false);
+  const [modalIntent, setModalIntent] = React.useState('time_in');
+  const [modalAttendanceDate, setModalAttendanceDate] = React.useState(null);
+  const [modalSession, setModalSession] = React.useState(null);
   const [showAbsentModal, setShowAbsentModal] = React.useState(false);
   const [absentReason, setAbsentReason] = React.useState('');
   const [absentRequirements, setAbsentRequirements] = React.useState('');
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+  const [showTimeInSuccessModal, setShowTimeInSuccessModal] = React.useState(false);
   const [hasSubmittedAbsence, setHasSubmittedAbsence] = React.useState(false);
+  const [hasPendingTimeIn, setHasPendingTimeIn] = React.useState(false);
+  const [hasApprovedAttendance, setHasApprovedAttendance] = React.useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = React.useState(false);
+  const [timedInSession, setTimedInSession] = React.useState(null);
 
   // Attendance time window logic (5:00 AM – 6:00 AM)
   const [now, setNow] = React.useState(new Date());
@@ -37,6 +45,70 @@ export default function TruckDriverHome() {
   React.useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Check for pending/approved time-in requests today
+  React.useEffect(() => {
+    const checkTodayAttendance = async () => {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('access_token');
+        if (!userData?.user_id || !token) return;
+
+        // Build local YYYY-MM-DD date (use local timezone to avoid UTC shift)
+        const d = new Date();
+        const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        // 1) Check attendance table for verified/recorded attendance
+        const attendanceUrl = `http://localhost/Capstoneee/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
+        const attendanceResp = await fetch(attendanceUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+        const attendanceData = await attendanceResp.json();
+        console.log('get_attendance API response:', attendanceData, 'requested_date:', todayLocal);
+
+        let approved = false;
+        let hasRecorded = false;
+        let recordedSession = null;
+        let fetchedAttendanceStatus = null;
+        if (attendanceData.success && Array.isArray(attendanceData.attendance)) {
+          approved = attendanceData.attendance.some(a => String(a.user_id) === String(userData.user_id) && String(a.verification_status) === 'verified');
+          hasRecorded = attendanceData.attendance.some(a => String(a.user_id) === String(userData.user_id) && (a.status === 'present' || !!a.time_in));
+          const rec = attendanceData.attendance.find(a => String(a.user_id) === String(userData.user_id) && !!a.time_in);
+          if (rec) {
+            if (rec.session) recordedSession = rec.session;
+            if (rec.time_in && !rec.time_out) {
+              fetchedAttendanceStatus = 'timed_in';
+            } else if (rec.time_out) {
+              fetchedAttendanceStatus = 'timed_out';
+            }
+          }
+        }
+
+        setHasApprovedAttendance(approved);
+        setTimedInSession(recordedSession);
+        if (fetchedAttendanceStatus) setAttendanceStatus(fetchedAttendanceStatus);
+
+        // 2) Check attendance_request table for pending requests today
+        const reqUrl = `http://localhost/Capstoneee/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
+        const reqResp = await fetch(reqUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+        const reqData = await reqResp.json();
+        console.log('list_attendance_requests API response:', reqData);
+
+        let pendingReq = false;
+        if (reqData.status === 'success' && Array.isArray(reqData.data?.requests)) {
+          pendingReq = reqData.data.requests.some(r => String(r.user_id) === String(userData.user_id) && String(r.request_status) === 'pending');
+        }
+
+        setHasPendingRequest(pendingReq);
+
+        // Decide whether to disable time-in button: disable if already approved OR pending request OR already recorded
+        setHasPendingTimeIn(approved || pendingReq || hasRecorded);
+        console.log('approved / pendingReq / hasRecorded:', approved, pendingReq, hasRecorded);
+      } catch (error) {
+        console.error('Error checking attendance:', error);
+      }
+    };
+
+    checkTodayAttendance();
   }, []);
 
   const isBetween = (date, startHour, endHour) => {
@@ -61,7 +133,9 @@ export default function TruckDriverHome() {
 
   const attendanceState = computeState(now);
   const timeInEnabled = attendanceState === 'open' || attendanceState === 'near_end';
-  const timeOutEnabled = attendanceStatus === 'timed_in'; // enabled only after time in
+  const currentHour = now.getHours();
+  const isTimeOutWindowForAM = currentHour >= 12 && currentHour < 13; // 12:00 - 12:59
+  const timeOutEnabled = attendanceStatus === 'timed_in' && (timedInSession === 'AM' ? isTimeOutWindowForAM : true);
   const otherButtonsEnabled = timeInEnabled || attendanceState === 'closed' || attendanceState === 'pre';
 
   // Handle attendance action
@@ -83,9 +157,11 @@ export default function TruckDriverHome() {
       }
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toISOString().split('T')[0];
+      // Use local date (avoid UTC shift) to match server attendance_date
+      const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const hour = currentDate.getHours();
-      const session = hour < 12 ? 'AM' : 'PM';
+      // If timing out, prefer the recorded session (AM/PM) if available
+      const session = action === 'time_out' && timedInSession ? timedInSession : (hour < 12 ? 'AM' : 'PM');
 
       const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
         method: 'POST',
@@ -97,7 +173,9 @@ export default function TruckDriverHome() {
           user_id: userData.user_id,
           attendance_date: formattedDate,
           session: session,
-          action: action
+          action: action,
+          client_hour: hour,
+          client_minute: currentDate.getMinutes()
         })
       });
 
@@ -321,17 +399,27 @@ export default function TruckDriverHome() {
 
       {/* Time-based notifications */}
       <div className="mb-3">
-        {attendanceState === 'open' && (
+        {hasApprovedAttendance && (
+          <div className="border-l-4 border-green-500 bg-green-50 text-green-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">✅</span><strong>Attendance Approved:</strong> Your attendance for today has been approved by the foreman. You cannot submit another request.</div>
+          </div>
+        )}
+        {!hasApprovedAttendance && hasPendingRequest && (
+          <div className="border-l-4 border-blue-500 bg-blue-50 text-blue-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">⏳</span><strong>Time-In Request Submitted:</strong> You have already submitted your time-in request for today. Please wait for foreman approval.</div>
+          </div>
+        )}
+        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'open' && (
           <div className="border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800 p-3 rounded">
             <div className="text-sm"><span className="mr-1">📢</span><strong>System Notice:</strong> Time-in window is open from 5:00 AM to 6:00 AM. Please complete your attendance.</div>
           </div>
         )}
-        {attendanceState === 'near_end' && (
+        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'near_end' && (
           <div className="border-l-4 border-amber-500 bg-amber-50 text-amber-800 p-3 rounded">
             <div className="text-sm"><span className="mr-1">⏰</span><strong>You haven’t timed in yet!</strong> Please log in immediately to avoid being marked <strong>absent</strong>.</div>
           </div>
         )}
-        {attendanceState === 'closed' && (
+        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'closed' && (
           <div className="border-l-4 border-red-500 bg-red-50 text-red-800 p-3 rounded">
             <div className="text-sm"><span className="mr-1">⛔</span><strong>Time-In Closed:</strong> The time-in period is now over. You can no longer record attendance for today.</div>
           </div>
@@ -346,17 +434,17 @@ export default function TruckDriverHome() {
         <div className="grid grid-cols-2 gap-3">
           <button 
             type="button" 
-            disabled={!timeInEnabled || loading} 
-            onClick={() => setShowTimeInModal(true)}
-            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+            disabled={!timeInEnabled || loading || hasPendingTimeIn} 
+            onClick={() => { setModalIntent('time_in'); setShowTimeInModal(true); }}
+            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled && !loading && !hasPendingTimeIn ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
                 <FiPlay className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-base font-semibold">Time In</div>
-                <div className="text-xs text-emerald-100/80">Tap to record</div>
+                <div className="text-base font-semibold">{hasPendingTimeIn ? 'Submitted' : 'Time In'}</div>
+                <div className="text-xs text-emerald-100/80">{hasApprovedAttendance ? 'Approved' : hasPendingRequest ? 'Request pending' : (hasPendingTimeIn ? 'Recorded' : 'Tap to record')}</div>
               </div>
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
@@ -364,7 +452,15 @@ export default function TruckDriverHome() {
           <button 
             type="button" 
             disabled={!timeOutEnabled || loading} 
-            onClick={() => handleAttendance('time_out')}
+            onClick={() => {
+              const d = new Date();
+              const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const sess = timedInSession || (d.getHours() < 12 ? 'AM' : 'PM');
+              setModalIntent('time_out');
+              setModalAttendanceDate(todayLocal);
+              setModalSession(sess);
+              setShowTimeInModal(true);
+            }}
             className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeOutEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
           >
             <div className="flex items-center gap-3">
@@ -373,7 +469,7 @@ export default function TruckDriverHome() {
               </div>
               <div>
                 <div className="text-base font-semibold">Time Out</div>
-                <div className="text-xs text-emerald-100/80">Tap to record</div>
+                <div className="text-xs text-emerald-100/80">{timedInSession === 'AM' && attendanceStatus === 'timed_in' && !isTimeOutWindowForAM ? 'Available 12:00–12:59 PM' : 'Tap to record'}</div>
               </div>
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
@@ -539,14 +635,55 @@ export default function TruckDriverHome() {
         </div>
       )}
 
+      {/* Time In Success Modal */}
+      {showTimeInSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Time-In Request Submitted!</h3>
+            <p className="text-gray-600 mb-6">
+              Your attendance request has been successfully submitted and is now pending foreman approval.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+              <p className="text-sm text-blue-800">
+                <strong>📋 Next Steps:</strong><br/>
+                • Your request is pending verification<br/>
+                • Wait for foreman approval<br/>
+                • You'll be notified once approved<br/>
+                • Check your attendance status later
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTimeInSuccessModal(false)}
+              className="w-full px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
+            >
+              Got it, thanks!
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Time In Modal */}
       <TimeInModal
         isOpen={showTimeInModal}
         onClose={() => setShowTimeInModal(false)}
         userData={JSON.parse(localStorage.getItem('user') || '{}')}
+        intent={modalIntent}
+        attendanceDate={modalAttendanceDate}
+        session={modalSession}
         onSuccess={() => {
-          setMessage({ type: 'success', text: 'Attendance request submitted! Waiting for foreman approval.' });
-          setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+          if (modalIntent === 'time_in') {
+            setShowTimeInSuccessModal(true);
+            setHasPendingTimeIn(true);
+          } else {
+            setMessage({ type: 'success', text: 'Time-out request submitted. Awaiting foreman review.' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 3500);
+          }
         }}
       />
 

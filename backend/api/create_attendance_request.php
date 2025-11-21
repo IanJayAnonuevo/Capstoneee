@@ -55,6 +55,10 @@ try {
     $scheduleId = isset($_POST['schedule_id']) && $_POST['schedule_id'] !== '' ? (int)$_POST['schedule_id'] : null;
     $remarks = isset($_POST['remarks']) ? trim($_POST['remarks']) : null;
     $remarks = $remarks === '' ? null : $remarks;
+    // Optional intent: 'time_in' (default) or 'time_out'
+    $intent = isset($_POST['intent']) ? trim($_POST['intent']) : null;
+    $attendanceDate = isset($_POST['attendance_date']) ? trim($_POST['attendance_date']) : null;
+    $sessionField = isset($_POST['session']) ? trim($_POST['session']) : null;
     $locationLat = isset($_POST['location_lat']) && $_POST['location_lat'] !== '' ? (float)$_POST['location_lat'] : null;
     $locationLng = isset($_POST['location_lng']) && $_POST['location_lng'] !== '' ? (float)$_POST['location_lng'] : null;
 
@@ -124,16 +128,54 @@ try {
 
     $relativePath = 'uploads/attendance/' . $fileName;
 
-    $insertStmt = $pdo->prepare("
-        INSERT INTO attendance_request (user_id, schedule_id, photo_path, remarks, location_lat, location_lng)
-        VALUES (:user_id, :schedule_id, :photo_path, :remarks, :location_lat, :location_lng)
-    ");
+    // Prevent creating a new attendance request if an attendance record for today
+    // already exists and has been verified (approved) by the foreman. This is
+    // a server-side safeguard to avoid duplicated approved attendance.
+    $today = date('Y-m-d');
+    // Determine session from current time (AM/PM)
+    $hour = (int)date('H');
+    $sessionNow = $hour >= 12 ? 'PM' : 'AM';
+
+    $checkStmt = $pdo->prepare(
+        "SELECT attendance_id FROM attendance WHERE user_id = ? AND attendance_date = ? AND session = ? AND verification_status = 'verified' LIMIT 1"
+    );
+    $checkStmt->execute([$personnel['user_id'], $today, $sessionNow]);
+    $alreadyVerified = (bool)$checkStmt->fetchColumn();
+
+    if ($alreadyVerified) {
+        kolektrash_respond_json(400, [
+            'status' => 'error',
+            'message' => 'Attendance for today has already been approved. You cannot submit another request.'
+        ]);
+    }
+
+    // If intent provided, store it (and provided attendance_date/session) inside remarks as JSON for review-time processing.
+    if ($intent) {
+        $meta = [];
+        if ($remarks) {
+            // try to decode existing remarks if it's JSON
+            $decoded = json_decode($remarks, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $meta = $decoded;
+            } else {
+                $meta['note'] = $remarks;
+            }
+        }
+        $meta['intent'] = $intent;
+        if ($attendanceDate) $meta['attendance_date'] = $attendanceDate;
+        if ($sessionField) $meta['session'] = $sessionField;
+        $remarksToSave = json_encode($meta);
+    } else {
+        $remarksToSave = $remarks;
+    }
+
+    $insertStmt = $pdo->prepare("INSERT INTO attendance_request (user_id, schedule_id, photo_path, remarks, location_lat, location_lng) VALUES (:user_id, :schedule_id, :photo_path, :remarks, :location_lat, :location_lng)");
 
     $insertStmt->execute([
         ':user_id' => $personnel['user_id'],
         ':schedule_id' => $scheduleId,
         ':photo_path' => $relativePath,
-        ':remarks' => $remarks,
+        ':remarks' => $remarksToSave,
         ':location_lat' => $locationLat,
         ':location_lng' => $locationLng
     ]);

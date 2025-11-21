@@ -299,6 +299,42 @@ export default function TruckDriverDashboard() {
     }
   };
 
+  // Check if token is expired on mount - only once
+  useEffect(() => {
+    const checkTokenExpiration = () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const expiresAtRaw = localStorage.getItem('token_expires_at');
+        
+        if (!token) {
+          console.warn('No access token found');
+          navigate('/login', { replace: true });
+          return false;
+        }
+        
+        if (expiresAtRaw) {
+          const expiresAt = Number(expiresAtRaw);
+          if (Number.isFinite(expiresAt) && Date.now() >= expiresAt) {
+            console.warn('Access token has expired');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('token_expires_at');
+            localStorage.removeItem('token_type');
+            navigate('/login', { replace: true });
+            return false;
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error checking token expiration:', error);
+        return true;
+      }
+    };
+    
+    checkTokenExpiration();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch user data from database
   useEffect(() => {
     const fetchUserData = async () => {
@@ -394,6 +430,17 @@ export default function TruckDriverDashboard() {
             headers: buildAuthHeaders(),
           }
         );
+        
+        if (res.status === 401) {
+          // Token expired - redirect to login
+          console.warn('Authentication token expired');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('token_expires_at');
+          localStorage.removeItem('token_type');
+          navigate('/login', { replace: true });
+          return;
+        }
+        
         const data = await res.json();
         if (isActive && data?.success) {
           const notifications = data.notifications || [];
@@ -409,7 +456,7 @@ export default function TruckDriverDashboard() {
     loadUnread();
     const intervalId = setInterval(loadUnread, 60000); // refresh every 60s
     return () => { isActive = false; clearInterval(intervalId); };
-  }, [user]);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (!resolvedUserId) return;

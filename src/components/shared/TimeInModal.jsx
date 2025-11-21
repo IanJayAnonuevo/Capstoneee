@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { API_BASE_URL } from '../../config/api';
 import { FiX, FiCamera, FiUpload, FiCheckCircle } from 'react-icons/fi';
 
-export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
+export default function TimeInModal({ isOpen, onClose, userData, onSuccess, intent = 'time_in', attendanceDate = null, session = null }) {
   const [personnelId, setPersonnelId] = useState(userData?.user_id?.toString() || '');
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -11,7 +11,6 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
   React.useEffect(() => {
@@ -20,7 +19,75 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
     }
   }, [isOpen, userData]);
 
-  const handlePhotoChange = (e) => {
+  const addWatermarkToImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+
+          // Draw original image
+          ctx.drawImage(img, 0, 0);
+
+          // Get current date and time
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          const timeStr = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: true 
+          });
+
+          // Watermark styling
+          const fontSize = Math.max(20, Math.floor(img.width / 30));
+          ctx.font = `bold ${fontSize}px Arial`;
+          
+          // Add semi-transparent background for watermark
+          const padding = 10;
+          const lineHeight = fontSize + 5;
+          const bgHeight = (lineHeight * 2) + (padding * 2);
+          const bgWidth = canvas.width;
+          
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillRect(0, canvas.height - bgHeight, bgWidth, bgHeight);
+
+          // Add text watermark
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          
+          // Draw date
+          ctx.fillText(dateStr, padding, canvas.height - bgHeight + padding);
+          
+          // Draw time
+          ctx.fillText(timeStr, padding, canvas.height - bgHeight + padding + lineHeight);
+
+          // Convert canvas to blob
+          canvas.toBlob((blob) => {
+            const watermarkedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            });
+            resolve(watermarkedFile);
+          }, file.type, 0.95);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -36,35 +103,28 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
       return;
     }
 
-    setPhoto(file);
     setError('');
+
+    // Add watermark to the image
+    const watermarkedFile = await addWatermarkToImage(file);
+    setPhoto(watermarkedFile);
 
     // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPhotoPreview(reader.result);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(watermarkedFile);
   };
 
   const handleCapture = () => {
     cameraInputRef.current?.click();
   };
 
-  const handleUpload = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    if (!personnelId.trim()) {
-      setError('Personnel ID is required');
-      setLoading(false);
-      return;
-    }
 
     if (!photo) {
       setError('Photo proof is required');
@@ -81,13 +141,20 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
       }
 
       const formData = new FormData();
-      formData.append('user_id', personnelId);
+      formData.append('user_id', userData?.user_id || personnelId);
       formData.append('photo', photo);
       if (remarks.trim()) {
         formData.append('remarks', remarks.trim());
       }
-      if (scheduleId.trim()) {
-        formData.append('schedule_id', scheduleId.trim());
+      // If modal opened for time_out, include intent + attendance_date + session so backend can process accordingly
+      if (intent) {
+        formData.append('intent', intent);
+      }
+      if (attendanceDate) {
+        formData.append('attendance_date', attendanceDate);
+      }
+      if (session) {
+        formData.append('session', session);
       }
 
       const response = await fetch(`${API_BASE_URL}/create_attendance_request.php`, {
@@ -101,11 +168,9 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
       const data = await response.json();
 
       if (data.status === 'success') {
-        setSuccess(true);
-        setTimeout(() => {
-          onSuccess?.();
-          handleClose();
-        }, 2000);
+        // Close modal immediately and show success on parent
+        handleClose();
+        onSuccess?.();
       } else {
         setError(data.message || 'Failed to submit attendance request');
       }
@@ -147,21 +212,6 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {/* Personnel ID */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Personnel ID <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={personnelId}
-              onChange={(e) => setPersonnelId(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="Enter your Personnel ID"
-            />
-          </div>
-
           {/* Photo Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -173,7 +223,7 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
                   <img
                     src={photoPreview}
                     alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+                    className="w-full h-64 object-cover rounded-lg border-2 border-gray-300"
                   />
                   <button
                     type="button"
@@ -181,33 +231,23 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
                       setPhoto(null);
                       setPhotoPreview(null);
                     }}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg"
                   >
-                    <FiX className="w-4 h-4" />
+                    <FiX className="w-5 h-5" />
                   </button>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <FiCamera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-3">No photo selected</p>
-                  <div className="flex gap-2 justify-center">
-                    <button
-                      type="button"
-                      onClick={handleCapture}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2"
-                    >
-                      <FiCamera className="w-4 h-4" />
-                      Take Photo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleUpload}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
-                    >
-                      <FiUpload className="w-4 h-4" />
-                      Upload
-                    </button>
-                  </div>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+                  <FiCamera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-sm text-gray-600 mb-4">Take a photo for attendance proof</p>
+                  <button
+                    type="button"
+                    onClick={handleCapture}
+                    className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 mx-auto"
+                  >
+                    <FiCamera className="w-5 h-5" />
+                    Take Photo
+                  </button>
                 </div>
               )}
               <input
@@ -218,15 +258,8 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
                 onChange={handlePhotoChange}
                 className="hidden"
               />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="hidden"
-              />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Maximum file size: 5MB (JPG, PNG, WEBP)</p>
+            <p className="text-xs text-gray-500 mt-2">Photo will include date and time watermark</p>
           </div>
 
           {/* Remarks */}
@@ -243,32 +276,10 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
             />
           </div>
 
-          {/* Schedule ID (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Schedule ID (Optional)
-            </label>
-            <input
-              type="text"
-              value={scheduleId}
-              onChange={(e) => setScheduleId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="Enter schedule ID if applicable"
-            />
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <FiCheckCircle className="w-5 h-5" />
-              <span>Attendance request submitted! Waiting for foreman approval.</span>
             </div>
           )}
 
@@ -284,7 +295,7 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading || !photo || !personnelId.trim()}
+              disabled={loading || !photo}
               className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (

@@ -1,15 +1,14 @@
 <?php
-require_once __DIR__ . '/_bootstrap.php';
-
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Content-Type: application/json');
+// Load CORS headers early
+require_once __DIR__ . '/../includes/cors.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Short-circuit preflight without loading the app bootstrap
     http_response_code(200);
     exit();
 }
+
+require_once __DIR__ . '/_bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     kolektrash_respond_json(405, [
@@ -23,11 +22,18 @@ require_once __DIR__ . '/../config/database.php';
 try {
     $currentUser = kolektrash_require_auth();
     
+    // Debug logging
+    error_log('Current user role: ' . json_encode($currentUser));
+    
     // Only foremen and admins can review requests
     if (!in_array($currentUser['role'], ['foreman', 'admin'], true)) {
         kolektrash_respond_json(403, [
             'status' => 'error',
-            'message' => 'Only foremen and admins can review attendance requests.'
+            'message' => 'Only foremen and admins can review attendance requests.',
+            'debug' => [
+                'your_role' => $currentUser['role'],
+                'allowed_roles' => ['foreman', 'admin']
+            ]
         ]);
     }
 
@@ -125,87 +131,137 @@ try {
     $updatedStmt->execute([$requestId]);
     $updated = $updatedStmt->fetch(PDO::FETCH_ASSOC);
 
-    // Build photo URL
+    // Build photo URL - just return relative path and let frontend resolve it
     if ($updated['photo_path']) {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $baseUrl = $protocol . $host . '/kolektrash/';
-        $updated['photo_url'] = $baseUrl . $updated['photo_path'];
-    }
+        if ($decision === 'approved') {
+            // Determine if this request was filed for time_in (default) or time_out (intent saved in remarks)
+            $attendanceRecorded = false;
+            try {
+                $remarksMeta = null;
+                if (!empty($updated['remarks'])) {
+                    $decoded = json_decode($updated['remarks'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $remarksMeta = $decoded;
+                    }
+                }
 
-    // Create notification for the personnel
-    $notificationPayload = json_encode([
-        'type' => 'attendance_reviewed',
-        'request_id' => $requestId,
-        'decision' => $decision,
-        'reviewed_by' => $currentUser['user_id'],
-        'reviewer_name' => $currentUser['role'] === 'admin' ? 'Admin' : ($updated['foreman_name'] ?? 'Foreman'),
-        'reviewed_at' => $updated['reviewed_at'],
-        'review_note' => $reviewNote
-    ]);
+                $intent = $remarksMeta['intent'] ?? null;
 
-    $notificationStmt = $pdo->prepare("
-        INSERT INTO notification (recipient_id, message, created_at, response_status)
-        VALUES (?, ?, NOW(), 'unread')
-    ");
-    $notificationStmt->execute([$request['user_id'], $notificationPayload]);
+                // Allow determineAttendanceDate/Session to consider remarks metadata if present
+                $attendanceDate = determineAttendanceDate(array_merge($updated, ['remarks_meta' => $remarksMeta]));
+                $session = determineAttendanceSession(array_merge($updated, ['remarks_meta' => $remarksMeta]));
 
-    if ($decision === 'approved') {
-        $attendanceDate = determineAttendanceDate($updated);
-        $session = determineAttendanceSession($updated);
-        $timeIn = determineTimeIn($updated);
+                if ($attendanceDate && $session) {
+                    $existingAttendanceStmt = $pdo->prepare("\
+                        SELECT attendance_id, time_in, time_out, verification_status \\
+                        FROM attendance \\
+                        WHERE user_id = ? AND attendance_date = ? AND session = ?\\
+                        LIMIT 1\\
+                    ");
+                    $existingAttendanceStmt->execute([$request['user_id'], $attendanceDate, $session]);
+                    $attendanceRow = $existingAttendanceStmt->fetch(PDO::FETCH_ASSOC);
+                    $attendanceId = $attendanceRow['attendance_id'] ?? null;
 
-        if (!$attendanceDate || !$session) {
-            throw new RuntimeException('Unable to determine attendance date/session for this request.');
-        }
+                    if ($intent === 'time_out') {
+                        // Approve as time-out: record time_out using submitted_at or current time
+                        $timeOut = determineTimeOut($updated);
 
-        $existingAttendanceStmt = $pdo->prepare("
-            SELECT attendance_id 
-            FROM attendance 
-            WHERE user_id = ? AND attendance_date = ? AND session = ?
-            LIMIT 1
-        ");
-        $existingAttendanceStmt->execute([$request['user_id'], $attendanceDate, $session]);
-        $attendanceId = $existingAttendanceStmt->fetchColumn();
+                        if ($attendanceId) {
+                            $updateAttendanceStmt = $pdo->prepare("\
+                                UPDATE attendance
+                                SET time_out = COALESCE(time_out, ?),
+                                    status = 'present',
+                                    verification_status = 'verified',
+                                    recorded_by = ?,
+                                    notes = COALESCE(?, notes),
+                                    updated_at = NOW()
+                                WHERE attendance_id = ?
+                            ");
+                            $updateAttendanceStmt->execute([
+                                $timeOut,
+                                $currentUser['user_id'],
+                                $reviewNote,
+                                $attendanceId
+                            ]);
+                        } else {
+                            // If no attendance record exists yet, insert with time_out (time_in unknown)
+                            $insertAttendanceStmt = $pdo->prepare("\
+                                INSERT INTO attendance (
+                                    user_id,
+                                    attendance_date,
+                                    session,
+                                    time_out,
+                                    status,
+                                    verification_status,
+                                    recorded_by,
+                                    notes
+                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?)
+                            ");
+                            $insertAttendanceStmt->execute([
+                                $request['user_id'],
+                                $attendanceDate,
+                                $session,
+                                $timeOut,
+                                $currentUser['user_id'],
+                                $reviewNote
+                            ]);
+                        }
+                    } else {
+                        // Default behavior: treat as time_in (existing logic)
+                        $timeIn = determineTimeIn($updated);
 
-        if ($attendanceId) {
-            $updateAttendanceStmt = $pdo->prepare("
-                UPDATE attendance
-                SET time_in = COALESCE(time_in, ?),
-                    status = 'present',
-                    verification_status = 'verified',
-                    recorded_by = ?,
-                    notes = COALESCE(?, notes),
-                    updated_at = NOW()
-                WHERE attendance_id = ?
-            ");
-            $updateAttendanceStmt->execute([
-                $timeIn,
-                $currentUser['user_id'],
-                $reviewNote,
-                $attendanceId
-            ]);
-        } else {
-            $insertAttendanceStmt = $pdo->prepare("
-                INSERT INTO attendance (
-                    user_id,
-                    attendance_date,
-                    session,
-                    time_in,
-                    status,
-                    verification_status,
-                    recorded_by,
-                    notes
-                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?)
-            ");
-            $insertAttendanceStmt->execute([
-                $request['user_id'],
-                $attendanceDate,
-                $session,
-                $timeIn,
-                $currentUser['user_id'],
-                $reviewNote
-            ]);
+                        if ($attendanceId) {
+                            $updateAttendanceStmt = $pdo->prepare("\
+                                UPDATE attendance
+                                SET time_in = COALESCE(time_in, ?),
+                                    status = 'present',
+                                    verification_status = 'verified',
+                                    recorded_by = ?,
+                                    notes = COALESCE(?, notes),
+                                    updated_at = NOW()
+                                WHERE attendance_id = ?
+                            ");
+                            $updateAttendanceStmt->execute([
+                                $timeIn,
+                                $currentUser['user_id'],
+                                $reviewNote,
+                                $attendanceId
+                            ]);
+                        } else {
+                            $insertAttendanceStmt = $pdo->prepare("\
+                                INSERT INTO attendance (
+                                    user_id,
+                                    attendance_date,
+                                    session,
+                                    time_in,
+                                    status,
+                                    verification_status,
+                                    recorded_by,
+                                    notes
+                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?)
+                            ");
+                            $insertAttendanceStmt->execute([
+                                $request['user_id'],
+                                $attendanceDate,
+                                $session,
+                                $timeIn,
+                                $currentUser['user_id'],
+                                $reviewNote
+                            ]);
+                        }
+                    }
+
+                    $attendanceRecorded = true;
+                } else {
+                    // Could not determine attendance date/session — log and continue.
+                    error_log('Attendance review: unable to determine attendance_date/session for request id=' . $requestId . ' user_id=' . $request['user_id']);
+                }
+            } catch (Throwable $e) {
+                // Log but do not abort the review process — mark request as reviewed and notify user.
+                error_log('Attendance recording failed for request id=' . $requestId . ': ' . $e->getMessage());
+            }
+            // If attendance recording failed or skipped, we still proceed and return success for the review.
+            }
         }
     }
 
@@ -232,6 +288,10 @@ try {
 
 function determineAttendanceDate(array $request): ?string
 {
+    // Prefer explicit attendance_date in remarks_meta if present
+    if (!empty($request['remarks_meta']['attendance_date'])) {
+        return $request['remarks_meta']['attendance_date'];
+    }
     if (!empty($request['schedule_date'])) {
         return $request['schedule_date'];
     }
@@ -243,6 +303,10 @@ function determineAttendanceDate(array $request): ?string
 
 function determineAttendanceSession(array $request): string
 {
+    // Prefer explicit session in remarks_meta if present
+    if (!empty($request['remarks_meta']['session'])) {
+        return $request['remarks_meta']['session'];
+    }
     if (!empty($request['start_time'])) {
         return $request['start_time'] >= '12:00:00' ? 'PM' : 'AM';
     }
@@ -260,6 +324,17 @@ function determineTimeIn(array $request): string
     }
     if (!empty($request['start_time'])) {
         return $request['start_time'];
+    }
+    return date('H:i:s');
+}
+
+function determineTimeOut(array $request): string
+{
+    if (!empty($request['submitted_at'])) {
+        return date('H:i:s', strtotime($request['submitted_at']));
+    }
+    if (!empty($request['end_time'])) {
+        return $request['end_time'];
     }
     return date('H:i:s');
 }
