@@ -40,7 +40,7 @@ function createTruckIcon(rotation = 0) {
   })
 }
 
-import { buildApiUrl } from '../../config/api';
+import { buildApiUrl, API_BASE_URL } from '../../config/api';
 
 export default function CollectorRouteRun(){
   const { id } = useParams()
@@ -58,9 +58,16 @@ export default function CollectorRouteRun(){
   const watchIdRef = React.useRef(null)
   const undoTimeoutRef = React.useRef(null)
 
+  const authHeaders = () => {
+    try {
+      const t = localStorage.getItem('access_token');
+      return t ? { Authorization: `Bearer ${t}` } : {};
+    } catch { return {}; }
+  };
+
   const fetchRouteDetails = React.useCallback(async () => {
     try {
-  const res = await fetch(buildApiUrl(`get_route_details.php?id=${id}`))
+  const res = await fetch(buildApiUrl(`get_route_details.php?id=${id}`), { headers: { ...authHeaders() } })
       const data = await res.json()
       if (data?.success && data.route?.stops) {
         const normalizedStops = (data.route.stops || []).map((stop) => ({
@@ -144,7 +151,10 @@ export default function CollectorRouteRun(){
 
     const res = await fetch(`${API_BASE_URL}/update_stop_status.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders()
+      },
       body: JSON.stringify(payload),
     })
     const data = await res.json()
@@ -219,7 +229,10 @@ export default function CollectorRouteRun(){
       const collectorId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
       await fetch(`${API_BASE_URL}/report_truck_full.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        },
         body: JSON.stringify({
           route_id: Number(id),
           collector_id: collectorId ? Number(collectorId) : null,

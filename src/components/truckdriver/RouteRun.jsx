@@ -48,6 +48,13 @@ export default function RouteRun(){
   const navigate = useNavigate()
   const [stops, setStops] = React.useState([])
   const [routeName, setRouteName] = React.useState('')
+  
+  const authHeaders = () => {
+    try {
+      const t = localStorage.getItem('access_token');
+      return t ? { Authorization: `Bearer ${t}` } : {};
+    } catch { return {}; }
+  };
   const [currentPos, setCurrentPos] = React.useState(null)
   const [status, setStatus] = React.useState('requesting')
   const [follow, setFollow] = React.useState(true)
@@ -61,6 +68,9 @@ export default function RouteRun(){
   const [truckRotation, setTruckRotation] = React.useState(0) // truck rotation angle
   const [submitting, setSubmitting] = React.useState(false)
   const [routeMeta, setRouteMeta] = React.useState(null)
+  const [truckFull, setTruckFull] = React.useState(false) // Flag for truck full status
+  const [isAtMantila, setIsAtMantila] = React.useState(false) // Check if near Mantila
+  const [originalTargetStop, setOriginalTargetStop] = React.useState(null) // Store original target before reroute
 
   const MIN_INTERVAL_MS = 5000
 
@@ -140,7 +150,15 @@ export default function RouteRun(){
       accuracy: Number.isFinite(coords.accuracy) ? coords.accuracy : null,
     }
     try {
-      await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify(payload) })
+      await fetch(url, { 
+        method:'POST', 
+        headers:{
+          'Content-Type':'application/json',
+          ...authHeaders()
+        }, 
+        credentials:'include', 
+        body: JSON.stringify(payload) 
+      })
     } catch {}
   }
 
@@ -157,11 +175,24 @@ export default function RouteRun(){
   }
 
   async function fetchSuggestedRoute(here, dest){
+    // Validate coordinates
+    if (!here || !dest || 
+        !Number.isFinite(here.lat) || !Number.isFinite(here.lng) ||
+        !Number.isFinite(dest.lat) || !Number.isFinite(dest.lng) ||
+        here.lat < -90 || here.lat > 90 || here.lng < -180 || here.lng > 180 ||
+        dest.lat < -90 || dest.lat > 90 || dest.lng < -180 || dest.lng > 180) {
+      console.warn('Invalid coordinates for routing:', { here, dest })
+      throw new Error('Invalid coordinates')
+    }
+
     // Prefer Mapbox if token is set; fallback to OSRM demo
     try {
       if (MAPBOX_TOKEN) {
         const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${here.lng},${here.lat};${dest.lng},${dest.lat}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`
         const r = await fetch(url)
+        if (!r.ok) {
+          throw new Error(`Mapbox HTTP ${r.status}`)
+        }
         const j = await r.json()
         if (j?.routes?.length) {
           const route = j.routes[0]
@@ -172,24 +203,85 @@ export default function RouteRun(){
         throw new Error(j?.message || 'No Mapbox route')
       }
     } catch (e) {
+      console.warn('Mapbox routing failed, trying OSRM:', e)
       // fallthrough to OSRM
     }
 
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${here.lng},${here.lat};${dest.lng},${dest.lat}?overview=full&alternatives=false&steps=true&geometries=geojson&continue_straight=false&radiuses=1000;1000`
-    const r = await fetch(osrmUrl)
-    const j = await r.json()
-    if (j?.code === 'Ok' && j?.routes?.length) {
-      const route = j.routes[0]
-      const coordsLine = route.geometry.coordinates || []
-      const latlngs = coordsLine.map(([lng, lat]) => [lat, lng])
-      return { line: latlngs, summary: { distance: route.distance, duration: route.duration } }
+    // Try OSRM with better error handling
+    try {
+      // Use a more reliable OSRM endpoint or fallback
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${here.lng},${here.lat};${dest.lng},${dest.lat}?overview=full&alternatives=false&steps=true&geometries=geojson&continue_straight=false`
+      
+      const r = await fetch(osrmUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      
+      if (!r.ok) {
+        const errorText = await r.text().catch(() => 'Unknown error')
+        console.error('OSRM HTTP error:', r.status, errorText)
+        throw new Error(`OSRM routing failed: HTTP ${r.status}`)
+      }
+      
+      const j = await r.json()
+      
+      if (j?.code === 'Ok' && j?.routes?.length) {
+        const route = j.routes[0]
+        const coordsLine = route.geometry?.coordinates || []
+        if (coordsLine.length === 0) {
+          throw new Error('OSRM returned empty route')
+        }
+        const latlngs = coordsLine.map(([lng, lat]) => [lat, lng])
+        return { line: latlngs, summary: { distance: route.distance, duration: route.duration } }
+      }
+      
+      // If OSRM fails, return a straight line as fallback
+      console.warn('OSRM routing failed, using straight line fallback:', j?.code || j?.message)
+      const fallbackLine = [[here.lat, here.lng], [dest.lat, dest.lng]]
+      // Calculate approximate distance (Haversine)
+      const R = 6371000 // Earth radius in meters
+      const dLat = (dest.lat - here.lat) * Math.PI / 180
+      const dLng = (dest.lng - here.lng) * Math.PI / 180
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      const distance = R * c
+      // Estimate duration (assuming 30 km/h average speed)
+      const duration = (distance / 8.33) // 8.33 m/s = 30 km/h
+      
+      return { 
+        line: fallbackLine, 
+        summary: { distance, duration },
+        isFallback: true 
+      }
+    } catch (e) {
+      console.error('OSRM routing error:', e)
+      // Final fallback: straight line
+      const fallbackLine = [[here.lat, here.lng], [dest.lat, dest.lng]]
+      const R = 6371000
+      const dLat = (dest.lat - here.lat) * Math.PI / 180
+      const dLng = (dest.lng - here.lng) * Math.PI / 180
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      const distance = R * c
+      const duration = (distance / 8.33)
+      
+      return { 
+        line: fallbackLine, 
+        summary: { distance, duration },
+        isFallback: true 
+      }
     }
-    throw new Error(j?.message || j?.code || 'No OSRM route')
   }
 
   async function loadStops(routeId){
     try {
-  const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`))
+  const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } })
       const data = await res.json()
       if (data?.success) {
         const routeInfo = data.route || {}
@@ -197,6 +289,19 @@ export default function RouteRun(){
         setRouteMeta(routeInfo)
         setStops(ordered)
         setRouteName(`${routeInfo.cluster_id || ''} ${routeInfo.barangay_name || ''}`.trim())
+        
+        // Check for truck_full flag in notes
+        let truckFullFlag = false
+        if (routeInfo.notes) {
+          try {
+            const notesData = JSON.parse(routeInfo.notes)
+            truckFullFlag = notesData.truck_full === true
+          } catch (e) {
+            // Notes is not JSON, ignore
+          }
+        }
+        setTruckFull(truckFullFlag)
+        
         return { stops: ordered, route: routeInfo }
       }
     } catch (e) {
@@ -219,11 +324,24 @@ export default function RouteRun(){
         url.searchParams.set('role', 'driver')
         url.searchParams.set('user_id', String(userId))
       }
-      const res = await fetch(url.toString())
+      const res = await fetch(url.toString(), { headers: { ...authHeaders() } })
       const data = await res.json()
-      if (!data?.success) return null
+      if (!data?.success) {
+        console.warn('get_routes.php returned unsuccessful:', data)
+        return null
+      }
       const routes = Array.isArray(data.routes) ? data.routes : []
-      if (!routes.length) return null
+      if (!routes.length) {
+        console.log('No routes found for date:', dateKey, 'userId:', userId)
+        return null
+      }
+      console.log(`[findNextRoute] Found ${routes.length} routes for date ${dateKey}:`, routes.map(r => ({
+        id: r.id,
+        name: r.barangay_name || r.name,
+        status: r.status,
+        start_time: r.start_time
+      })))
+      
       const sortKey = (route) => {
         const keyDate = normalizeDateKey(route.date || route.scheduled_date || dateKey)
         const time = route.start_time ? String(route.start_time).slice(0,5) : '99:99'
@@ -231,26 +349,74 @@ export default function RouteRun(){
       }
       const sorted = [...routes].sort((a,b) => sortKey(a).localeCompare(sortKey(b)))
       const normalizedCurrentId = Number(currentRouteId)
-      const isIncomplete = (route) => {
-        const status = String(route.status || '').toLowerCase()
-        return !['completed','cancelled','done'].includes(status)
+      
+      // Explicit status check - we want routes that are available to work on
+      const isAvailable = (route) => {
+        const status = String(route.status || '').toLowerCase().trim()
+        // Accept: scheduled, in_progress, or any status that's not completed/cancelled/missed
+        const availableStatuses = ['scheduled', 'in_progress', 'in-progress', 'pending', 'active']
+        const unavailableStatuses = ['completed', 'cancelled', 'missed', 'done', 'finished']
+        
+        // If status is explicitly in available list, return true
+        if (availableStatuses.includes(status)) return true
+        // If status is explicitly unavailable, return false
+        if (unavailableStatuses.includes(status)) return false
+        // If status is empty/null, treat as available (might be scheduled)
+        if (!status || status === 'null' || status === 'undefined') return true
+        // Default: if we don't recognize it, assume it's available (safer)
+        return true
       }
+      
+      const availableRoutes = sorted.filter(isAvailable)
+      console.log(`[findNextRoute] Available routes (${availableRoutes.length}/${sorted.length}):`, availableRoutes.map(r => ({
+        id: r.id,
+        name: r.barangay_name || r.name,
+        status: r.status || '(null)'
+      })))
+      
       let candidate = null
       const currentIndex = sorted.findIndex(r => Number(r.id) === normalizedCurrentId)
+      console.log(`[findNextRoute] Current route index: ${currentIndex}, Current ID: ${normalizedCurrentId}`)
+      
       if (currentIndex >= 0) {
+        // Look for next available route after current one
         for (let i = currentIndex + 1; i < sorted.length; i++) {
-          if (isIncomplete(sorted[i])) { candidate = sorted[i]; break }
+          if (isAvailable(sorted[i])) { 
+            candidate = sorted[i]; 
+            console.log(`[findNextRoute] Found next route after current (index ${i}):`, candidate.id, candidate.barangay_name || candidate.name, 'status:', candidate.status)
+            break 
+          }
         }
       }
+      // If no candidate found after current, look for any available route (including before current)
       if (!candidate) {
-        candidate = sorted.find((route) => Number(route.id) !== normalizedCurrentId && isIncomplete(route)) || null
+        candidate = sorted.find((route) => Number(route.id) !== normalizedCurrentId && isAvailable(route)) || null
+        if (candidate) {
+          console.log(`[findNextRoute] Found available route (not after current):`, candidate.id, candidate.barangay_name || candidate.name, 'status:', candidate.status)
+        }
+      }
+      
+      if (candidate) {
+        console.log('[findNextRoute] ✅ Selected next route:', {
+          id: candidate.id,
+          name: candidate.barangay_name || candidate.name,
+          status: candidate.status,
+          start_time: candidate.start_time
+        })
+      } else {
+        console.warn('[findNextRoute] ❌ No next route found.', {
+          currentRouteId: normalizedCurrentId,
+          totalRoutes: sorted.length,
+          availableCount: availableRoutes.length,
+          allStatuses: sorted.map(r => ({ id: r.id, name: r.barangay_name || r.name, status: r.status || '(null)' }))
+        })
       }
       return candidate || null
     } catch (e) {
       console.error('Failed to determine next route', e)
       return null
     }
-  }, [routeMeta, normalizeDateKey, getCurrentUserId])
+  }, [routeMeta, normalizeDateKey, getCurrentUserId, authHeaders])
 
   const activateNextRoute = React.useCallback(async (route, fallbackMeta = null) => {
     if (!route) return
@@ -260,7 +426,10 @@ export default function RouteRun(){
     try {
   await fetch(buildApiUrl('update_route_status.php'), {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          ...authHeaders()
+        },
         body: JSON.stringify({ route_id: routeIdNum, status: 'in_progress', user_id: userId })
       })
     } catch (e) {
@@ -271,7 +440,10 @@ export default function RouteRun(){
     try {
   await fetch(buildApiUrl('set_route_active.php'), {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:{
+          'Content-Type':'application/json',
+          ...authHeaders()
+        },
         body: JSON.stringify({ route_id: routeIdNum, barangay: barangayName, team_id: teamId })
       })
     } catch (e) {
@@ -311,23 +483,8 @@ export default function RouteRun(){
           await postLocation(coords)
         }
         // Fetch suggested road route polyline + steps to the target stop (OSRM demo server)
-        try {
-          setRouteError(null)
-          const dest = (targetStop && targetStop.lat != null && targetStop.lng != null)
-            ? { lat: parseFloat(targetStop.lat), lng: parseFloat(targetStop.lng) }
-            : null
-          if (dest) {
-            setRouteLoading(true)
-            const res = await fetchSuggestedRoute(here, dest)
-            setRouteLine(res.line)
-            setRouteSummary(res.summary)
-          }
-        } catch (e) {
-          setRouteError('routing failed')
-          setRouteSummary(null)
-        } finally {
-          setRouteLoading(false)
-        }
+        // Note: This is handled by the separate useEffect that watches targetStop and currentPos
+        // So we don't need to fetch here to avoid duplicate requests
       },
       () => setStatus('denied'),
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
@@ -355,12 +512,57 @@ export default function RouteRun(){
   }, [])
 
   // Choose target stop: next unvisited (fallback first)
+  // If truck_full is true, temporarily route to Mantila instead
   React.useEffect(() => {
-    if (!stops || stops.length === 0) { setTargetStop(null); return }
-    const next = stops.find(s => (s.status || 'pending') !== 'visited') || stops[0]
-    if (next && next.lat != null && next.lng != null) setTargetStop(next)
-    else setTargetStop(null)
-  }, [stops])
+    if (truckFull) {
+      // Store original target if not already stored
+      if (!originalTargetStop) {
+        const next = stops.find(s => (s.status || 'pending') !== 'visited') || stops[0]
+        if (next && next.lat != null && next.lng != null) {
+          setOriginalTargetStop(next)
+        }
+      }
+      // Set Mantila as temporary destination (not a stop, just coordinates)
+      // Using actual Mantila coordinates from database
+      const mantilaTarget = {
+        lat: 13.7817000,
+        lng: 123.0203000,
+        name: 'Mantila - Disposal Site',
+        isTemporary: true
+      }
+      setTargetStop(mantilaTarget)
+    } else {
+      // Normal flow: find next unvisited stop
+      if (!stops || stops.length === 0) { 
+        setTargetStop(null)
+        setOriginalTargetStop(null)
+        return 
+      }
+      const next = stops.find(s => (s.status || 'pending') !== 'visited') || stops[0]
+      if (next && next.lat != null && next.lng != null) {
+        setTargetStop(next)
+        setOriginalTargetStop(null)
+      } else {
+        setTargetStop(null)
+        setOriginalTargetStop(null)
+      }
+    }
+  }, [stops, truckFull, originalTargetStop])
+  
+  // Check if truck is near Mantila (within ~500 meters)
+  React.useEffect(() => {
+    if (truckFull && currentPos) {
+      const mantilaLat = 13.7817000
+      const mantilaLng = 123.0203000
+      const distance = Math.sqrt(
+        Math.pow(currentPos.lat - mantilaLat, 2) + 
+        Math.pow(currentPos.lng - mantilaLng, 2)
+      ) * 111000 // Convert to meters (rough approximation)
+      setIsAtMantila(distance < 500) // Within 500 meters
+    } else {
+      setIsAtMantila(false)
+    }
+  }, [truckFull, currentPos])
 
   // Recompute suggested route whenever target or current position changes
   React.useEffect(() => {
@@ -388,6 +590,49 @@ export default function RouteRun(){
   const progressPercent = totalStops ? Math.round((visitedCount / totalStops) * 100) : 0
   const allVisited = totalStops > 0 && visitedCount === totalStops
   const nextStop = React.useMemo(() => stops.find(s => (s.status || 'pending') !== 'visited') || null, [stops])
+  
+  // Handler to continue collection after disposal at Mantila
+  const handleContinueCollection = async () => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      // Clear truck_full flag in route notes
+      const currentNotes = routeMeta?.notes || null
+      let notesData = {}
+      if (currentNotes) {
+        try {
+          notesData = JSON.parse(currentNotes)
+        } catch (e) {
+          // Notes is not JSON, ignore
+        }
+      }
+      notesData.truck_full = false
+      notesData.truck_full_cleared_at = new Date().toISOString()
+      
+      await fetch(buildApiUrl('update_route_status.php'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        },
+        body: JSON.stringify({
+          route_id: Number(id),
+          note: JSON.stringify(notesData)
+        })
+      })
+      
+      // Reload route to get updated status
+      await loadStops(id)
+      setTruckFull(false)
+      setIsAtMantila(false)
+      alert('Collection resumed. Returning to original route.')
+    } catch (e) {
+      console.error('Failed to continue collection:', e)
+      alert('Failed to continue collection. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function handleCompleteRoute(){
     if (submitting) return
@@ -405,18 +650,40 @@ export default function RouteRun(){
       setSubmitting(true)
       try {
         const userId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
+        const teamId = nextMeta?.team_id || routeMeta?.team_id || null
+        const assignmentId = teamId ? Number(teamId) : null
+        
   await fetch(buildApiUrl('update_route_status.php'), {
-          method:'POST', headers:{'Content-Type':'application/json'},
+          method:'POST', headers:{
+            'Content-Type':'application/json',
+            ...authHeaders()
+          },
           body: JSON.stringify({ route_id: Number(id), status: 'completed', truck_full: false, note: null, user_id: userId })
         })
 
-  await fetch(buildApiUrl('log_task_event.php'), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ assignment_id: null, event_type: 'route_submitted', after: { route_id: id, total_stops: total, visited } })
-        }).catch(()=>{})
+        // Only log task event if we have a valid assignment_id (team_id)
+        if (assignmentId && assignmentId > 0) {
+          await fetch(buildApiUrl('log_task_event.php'), {
+            method: 'POST', headers: { 
+              'Content-Type': 'application/json',
+              ...authHeaders()
+            },
+            body: JSON.stringify({ 
+              assignment_id: assignmentId, 
+              event_type: 'route_submitted', 
+              user_id: userId,
+              after: { route_id: id, total_stops: total, visited } 
+            })
+          }).catch((e) => {
+            console.warn('Failed to log task event (non-critical):', e)
+          })
+        }
 
   await fetch(buildApiUrl('clear_route_active.php'), {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 
+            'Content-Type': 'application/json',
+            ...authHeaders()
+          },
           body: JSON.stringify({ route_id: Number(id) })
         }).catch(()=>{})
 
@@ -466,6 +733,16 @@ export default function RouteRun(){
             </Popup>
           </Marker>
         ))}
+        {truckFull && (
+          <Marker position={[13.7817000, 123.0203000]}>
+            <Popup>
+              <div className="text-sm">
+                <div className="font-medium">🗑️ Mantila - Disposal Site</div>
+                <div className="text-gray-600">Temporary destination for waste disposal</div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
         {currentPos && (
           <Marker 
             position={[currentPos.lat, currentPos.lng]}
@@ -523,11 +800,15 @@ export default function RouteRun(){
           {status === 'requesting' && 'Requesting location…'}
           {status === 'tracking' && currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
           {status === 'denied' && 'Location permission denied'}
-          {routeLoading && ' • Routing…'}
-          {routeError && ` • Route error: ${routeError}`}
+          {routeLoading && ' • Calculating route…'}
+          {routeError && routeError !== 'routing failed' && ` • ${routeError}`}
+          {truckFull && ' • Rerouting to Mantila disposal site'}
         </div>
         {routeSummary && (
-          <div className="text-xs text-gray-800 mb-2">{formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}</div>
+          <div className="text-xs text-gray-800 mb-2">
+            {formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}
+            {truckFull && ' (to Mantila)'}
+          </div>
         )}
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
@@ -540,19 +821,43 @@ export default function RouteRun(){
         </div>
 
         <div className="space-y-3 text-sm">
-          <div className="p-3 bg-white/60 rounded-lg border border-white/30 shadow-inner">
-            <div className="font-medium text-gray-800">Next stop</div>
-            {nextStop ? (
-              <div className="text-xs text-gray-600">
-                Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
+          {truckFull ? (
+            <div className="p-3 bg-amber-100/80 rounded-lg border border-amber-300 shadow-inner">
+              <div className="font-medium text-amber-900 mb-2">⚠️ Truck Full - Disposal Required</div>
+              <div className="text-xs text-amber-800 mb-3">
+                Route has been rerouted to Mantila disposal site. Please dispose collected waste before continuing.
+                {isAtMantila && <span className="block mt-1 text-emerald-700 font-semibold">✓ You are at Mantila disposal site</span>}
               </div>
-            ) : (
-              <div className="text-xs text-gray-600">All stops have been marked as visited by the collectors.</div>
-            )}
-          </div>
-          <div className="p-3 bg-white/50 rounded-lg border border-white/20 text-xs text-gray-600 leading-relaxed">
-            Collectors handle stop completion. This screen refreshes automatically as they record each pickup.
-          </div>
+              <button
+                onClick={handleContinueCollection}
+                disabled={submitting}
+                className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+              >
+                {submitting ? 'Resuming...' : 'Continue Collection'}
+              </button>
+              {!isAtMantila && (
+                <div className="text-xs text-amber-700 mt-2 text-center">
+                  Proceeding to Mantila disposal site...
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="p-3 bg-white/60 rounded-lg border border-white/30 shadow-inner">
+                <div className="font-medium text-gray-800">Next stop</div>
+                {nextStop ? (
+                  <div className="text-xs text-gray-600">
+                    Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-600">All stops have been marked as visited by the collectors.</div>
+                )}
+              </div>
+              <div className="p-3 bg-white/50 rounded-lg border border-white/20 text-xs text-gray-600 leading-relaxed">
+                Collectors handle stop completion. This screen refreshes automatically as they record each pickup.
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-4">

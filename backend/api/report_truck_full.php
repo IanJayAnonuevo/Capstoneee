@@ -23,7 +23,7 @@ try {
 
   $db = (new Database())->connect();
 
-  $routeStmt = $db->prepare('SELECT id, team_id, barangay_id, barangay_name FROM daily_route WHERE id = ?');
+  $routeStmt = $db->prepare('SELECT id, team_id, barangay_id, barangay_name, notes FROM daily_route WHERE id = ?');
   $routeStmt->execute([$routeId]);
   $route = $routeStmt->fetch(PDO::FETCH_ASSOC);
   if (!$route) {
@@ -103,7 +103,24 @@ try {
     ])
   ]);
 
-  echo json_encode(['success' => true]);
+  // Set truck_full flag in route notes to trigger reroute to Mantila
+  // This will cause the truck driver to reroute to Mantila without adding a stop
+  $currentNotes = $route['notes'] ?? null;
+  $notesData = [];
+  if ($currentNotes) {
+    $decoded = json_decode($currentNotes, true);
+    if (is_array($decoded)) {
+      $notesData = $decoded;
+    }
+  }
+  $notesData['truck_full'] = true;
+  $notesData['truck_full_timestamp'] = date('c');
+  $notesData['truck_full_collector_id'] = $collectorId;
+  
+  $updateNotesStmt = $db->prepare('UPDATE daily_route SET notes = ? WHERE id = ?');
+  $updateNotesStmt->execute([json_encode($notesData), $routeId]);
+
+  echo json_encode(['success' => true, 'truck_full_flag_set' => true, 'message' => 'Truck full flag set. Route will reroute to Mantila.']);
 } catch (Throwable $e) {
   http_response_code(400);
   echo json_encode(['success' => false, 'message' => $e->getMessage()]);

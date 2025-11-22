@@ -40,6 +40,12 @@ try {
     $upd = $db->prepare('UPDATE daily_route SET status = ?, updated_at = NOW() WHERE id = ?');
     $upd->execute([$status, $routeId]);
   }
+  
+  // Update notes if provided (can be JSON string or regular text)
+  if ($note !== null && $note !== '') {
+    $updNotes = $db->prepare('UPDATE daily_route SET notes = ?, updated_at = NOW() WHERE id = ?');
+    $updNotes->execute([$note, $routeId]);
+  }
 
   // Ensure task_events table exists
   $db->exec("CREATE TABLE IF NOT EXISTS task_events (

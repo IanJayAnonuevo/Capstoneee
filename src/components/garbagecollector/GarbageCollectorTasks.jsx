@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCalendar, FiMap, FiCheckCircle } from 'react-icons/fi';
+import { FiCalendar, FiMap, FiCheckCircle, FiFilter, FiX, FiSearch } from 'react-icons/fi';
 import { buildApiUrl } from '../../config/api';
 
 function normalizeId(value) {
@@ -53,8 +53,27 @@ function findRouteFromList(list, { teamId, barangayName, scheduleId }) {
   return null;
 }
 
+// Helper to format date like "May 05, 2025" (avoid timezone issues)
 function formatPrettyDate(dateStr) {
-  try { const d = new Date(dateStr); return d.toLocaleDateString(undefined, { month: 'long', day: '2-digit', year: 'numeric' }); } catch (_) { return dateStr; }
+  try {
+    if (!dateStr) return '';
+    const str = String(dateStr).trim();
+    // If it's already in YYYY-MM-DD format, parse it directly without timezone conversion
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1; // Month is 0-indexed
+      const day = parseInt(match[3], 10);
+      const d = new Date(year, month, day);
+      return d.toLocaleDateString(undefined, { month: 'long', day: '2-digit', year: 'numeric' });
+    }
+    // For other formats, try parsing
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, { month: 'long', day: '2-digit', year: 'numeric' });
+  } catch (_) {
+    return dateStr;
+  }
 }
 
 export default function GarbageCollectorTasks() {
@@ -65,6 +84,12 @@ export default function GarbageCollectorTasks() {
   const [filterTab, setFilterTab] = useState('today'); // 'today' | 'upcoming' | 'all'
   const [dailyByDate, setDailyByDate] = useState({});
   const [startLoadingKey, setStartLoadingKey] = useState(null);
+  
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'in-progress' | 'completed' | 'cancelled'
+  const [dateFilter, setDateFilter] = useState(''); // YYYY-MM-DD format
+  const [searchFilter, setSearchFilter] = useState(''); // Search by barangay or truck number
 
   const userId = useMemo(() => {
     try { return localStorage.getItem('user_id') || localStorage.getItem('userId') || ''; } catch (_) { return ''; }
@@ -206,22 +231,186 @@ export default function GarbageCollectorTasks() {
   };
 
   const filteredTasks = useMemo(() => {
-    const todayStr = (() => { try { return new Date().toLocaleDateString('en-CA'); } catch(_) { return new Date().toISOString().slice(0,10); } })();
-    const isToday = (d) => (d || '').slice(0,10) === todayStr;
-    if (filterTab === 'today') return tasks.filter(t => isToday(t.rawDate));
-    return tasks.filter(t => !isToday(t.rawDate));
-  }, [tasks, filterTab]);
+    // Helper to normalize date to YYYY-MM-DD format (avoid timezone issues)
+    const normalizeDate = (dateStr) => {
+      if (!dateStr) return '';
+      const str = String(dateStr).trim();
+      // If already in YYYY-MM-DD format, return as is (no timezone conversion)
+      if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return str.slice(0, 10);
+      }
+      // Try to parse - but be careful with timezone
+      try {
+        // If it's a date string that might have time, parse it carefully
+        // For YYYY-MM-DD format, don't use Date constructor as it causes UTC conversion
+        const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          return `${match[1]}-${match[2]}-${match[3]}`;
+        }
+        // For other formats, try parsing but use local date components
+        const d = new Date(str);
+        if (isNaN(d.getTime())) return '';
+        // Use local date components to avoid timezone issues
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch {
+        return '';
+      }
+    };
+
+    // Get today's date in YYYY-MM-DD format using local timezone
+    const todayStr = (() => {
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch(_) { 
+        return new Date().toISOString().slice(0,10); 
+      }
+    })();
+    
+    const isToday = (d) => {
+      const dateStr = normalizeDate(d);
+      return dateStr === todayStr;
+    };
+    const isFuture = (d) => {
+      const dateStr = normalizeDate(d);
+      return dateStr > todayStr;
+    };
+    const isPast = (d) => {
+      const dateStr = normalizeDate(d);
+      return dateStr < todayStr;
+    };
+    
+    // If date filter is set, it takes priority - filter by exact date match only
+    if (dateFilter) {
+      // HTML date input returns YYYY-MM-DD format directly - use it as-is
+      // Extract just the date part (first 10 characters) to avoid any time/timezone issues
+      const filterDateStr = String(dateFilter).trim().slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(filterDateStr)) {
+        // Invalid date filter format, return empty
+        return [];
+      }
+      
+      let validTasks = tasks.filter(t => {
+        // Normalize task date to YYYY-MM-DD format
+        const taskDate = normalizeDate(t.rawDate);
+        // Strict string comparison - must match exactly
+        return taskDate === filterDateStr;
+      });
+      
+      // Apply status filter
+      if (statusFilter !== 'all') {
+        validTasks = validTasks.filter(t => {
+          const taskStatus = String(t.status || '').toLowerCase();
+          return taskStatus === statusFilter;
+        });
+      }
+      
+      // Apply search filter
+      if (searchFilter.trim()) {
+        const searchLower = searchFilter.toLowerCase().trim();
+        validTasks = validTasks.filter(t => {
+          const barangayMatch = String(t.location || '').toLowerCase().includes(searchLower);
+          const truckMatch = String(t.truckPlate || '').toLowerCase().includes(searchLower);
+          const titleMatch = String(t.title || '').toLowerCase().includes(searchLower);
+          return barangayMatch || truckMatch || titleMatch;
+        });
+      }
+      
+      return validTasks;
+    }
+    
+    // No date filter - apply tab-based filtering
+    let validTasks = tasks.filter(t => !isPast(t.rawDate));
+    
+    if (filterTab === 'today') {
+      const todayTasks = validTasks.filter(t => isToday(t.rawDate));
+      // If no tasks for today, show the earliest future date that has tasks
+      if (todayTasks.length === 0 && validTasks.length > 0) {
+        const futureTasks = validTasks.filter(t => isFuture(t.rawDate));
+        if (futureTasks.length > 0) {
+          const sorted = [...futureTasks].sort((a, b) => normalizeDate(a.rawDate).localeCompare(normalizeDate(b.rawDate)));
+          const earliestDate = normalizeDate(sorted[0]?.rawDate);
+          if (earliestDate) {
+            validTasks = validTasks.filter(t => normalizeDate(t.rawDate) === earliestDate);
+          }
+        } else {
+          // If no future tasks, show earliest available (shouldn't happen but fallback)
+          const sorted = [...validTasks].sort((a, b) => normalizeDate(a.rawDate).localeCompare(normalizeDate(b.rawDate)));
+          const earliestDate = normalizeDate(sorted[0]?.rawDate);
+          if (earliestDate) {
+            validTasks = validTasks.filter(t => normalizeDate(t.rawDate) === earliestDate);
+          }
+        }
+      } else {
+        validTasks = todayTasks;
+      }
+    } else if (filterTab === 'upcoming') {
+      validTasks = validTasks.filter(t => !isToday(t.rawDate));
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      validTasks = validTasks.filter(t => {
+        const taskStatus = String(t.status || '').toLowerCase();
+        return taskStatus === statusFilter;
+      });
+    }
+    
+    // Apply search filter (barangay or truck number)
+    if (searchFilter.trim()) {
+      const searchLower = searchFilter.toLowerCase().trim();
+      validTasks = validTasks.filter(t => {
+        const barangayMatch = String(t.location || '').toLowerCase().includes(searchLower);
+        const truckMatch = String(t.truckPlate || '').toLowerCase().includes(searchLower);
+        const titleMatch = String(t.title || '').toLowerCase().includes(searchLower);
+        return barangayMatch || truckMatch || titleMatch;
+      });
+    }
+    
+    return validTasks;
+  }, [tasks, filterTab, statusFilter, dateFilter, searchFilter]);
 
   // Group and enrich by date similar to TruckDriverTask
   const dailyCards = useMemo(() => {
     const map = {};
     for (const t of filteredTasks) {
-      const key = String(t.rawDate || '').slice(0,10);
-      if (!key) continue;
-      if (!map[key]) {
-        map[key] = {
-          key,
-          dateLabel: t.date,
+      // Normalize the date to ensure consistent format
+      const normalizeDate = (dateStr) => {
+        if (!dateStr) return '';
+        const str = String(dateStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+          return str.slice(0, 10);
+        }
+        try {
+          const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            return `${match[1]}-${match[2]}-${match[3]}`;
+          }
+          const d = new Date(str);
+          if (isNaN(d.getTime())) return '';
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch {
+          return '';
+        }
+      };
+      
+      const dateKey = normalizeDate(t.rawDate);
+      if (!dateKey) continue;
+      if (!map[dateKey]) {
+        // Format the dateKey properly for display
+        const formattedDate = formatPrettyDate(dateKey);
+        map[dateKey] = {
+          key: dateKey,
+          dateLabel: formattedDate,
           startTimes: [],
           endTimes: [],
           vehicle: t.truckPlate,
@@ -232,7 +421,7 @@ export default function GarbageCollectorTasks() {
           fallbackCollectorName: t.fallbackCollectorName,
         };
       }
-      const bucket = map[key];
+      const bucket = map[dateKey];
       const [start, end] = String(t.dueTime || '').split(' - ');
       if (start) bucket.startTimes.push(start);
       if (end) bucket.endTimes.push(end);
@@ -248,7 +437,7 @@ export default function GarbageCollectorTasks() {
         team_id: t.teamId,
       });
     }
-    return Object.values(map).map((d) => ({
+    let cards = Object.values(map).map((d) => ({
       ...d,
       time: (d.startTimes.sort()[0] || '') && (d.endTimes.sort().slice(-1)[0] || '') ? `${d.startTimes.sort()[0]} - ${d.endTimes.sort().slice(-1)[0]}` : (d.startTimes.sort()[0] || d.endTimes.sort().slice(-1)[0] || '-'),
       barangayList: (dailyByDate[d.key]?.barangayList?.length ? dailyByDate[d.key].barangayList : d.barangayList),
@@ -259,7 +448,52 @@ export default function GarbageCollectorTasks() {
       driverName: d.driverName,
       fallbackCollectorName: d.fallbackCollectorName,
     })).sort((a,b)=>a.key.localeCompare(b.key));
-  }, [filteredTasks, dailyByDate]);
+    
+    // If dateFilter is set, ensure we only show cards matching that exact date
+    // AND use the dateFilter value for the label (not the task's date)
+    if (dateFilter) {
+      // Use the dateFilter value directly (HTML date input format: YYYY-MM-DD)
+      const filterDateStr = String(dateFilter).trim().slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(filterDateStr)) {
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return '';
+          const str = String(dateStr).trim();
+          if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+            return str.slice(0, 10);
+          }
+          try {
+            const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+              return `${match[1]}-${match[2]}-${match[3]}`;
+            }
+            const d = new Date(str);
+            if (isNaN(d.getTime())) return '';
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          } catch {
+            return '';
+          }
+        };
+        
+        // Filter cards to only show the selected date
+        cards = cards.filter(card => {
+          const cardDate = normalizeDate(card.key);
+          return cardDate === filterDateStr;
+        });
+        
+        // Update ALL cards to use the filter date for the label
+        // This ensures the label ALWAYS matches what the user selected in the filter
+        cards = cards.map(card => ({
+          ...card,
+          dateLabel: formatPrettyDate(filterDateStr)
+        }));
+      }
+    }
+    
+    return cards;
+  }, [filteredTasks, dailyByDate, dateFilter]);
 
   // Fetch daily routes for date cards (collector perspective)
   useEffect(() => {
@@ -368,21 +602,131 @@ export default function GarbageCollectorTasks() {
     return findRouteFromList(fallbackList, { teamId, barangayName, scheduleId });
   }, [dailyByDate, userId]);
 
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setDateFilter('');
+    setSearchFilter('');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || dateFilter !== '' || searchFilter.trim() !== '';
+
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col items-center py-5 px-3">
       <div className="w-full max-w-lg">
         <h1 className="text-[18px] font-semibold text-gray-900 mb-1 pl-1 tracking-tight">ASSIGNED TASK</h1>
         <p className="text-[13px] text-gray-600 mb-4 pl-1">You're all set for today's task</p>
-        <div className="flex gap-2 mb-4 pl-1">
-          {['today','upcoming'].map(tab => (
-            <button key={tab} onClick={() => setFilterTab(tab)} className={`px-3 py-1 rounded text-xs font-semibold border ${filterTab===tab?'bg-green-600 text-white border-green-600':'bg-white text-green-700 border-green-200'}`}>
-              {tab === 'today' ? 'Today' : tab === 'upcoming' ? 'Upcoming' : 'All'}
-            </button>
-          ))}
+        
+        {/* Search Bar */}
+        <div className="mb-3 pl-1">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="Search by barangay or truck number..."
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+            {searchFilter && (
+              <button
+                onClick={() => setSearchFilter('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={16} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Tabs and Filter Toggle */}
+        <div className="flex gap-2 mb-3 pl-1 items-center">
+          <div className="flex gap-2 flex-1">
+            {['today','upcoming'].map(tab => (
+              <button key={tab} onClick={() => setFilterTab(tab)} className={`px-3 py-1 rounded text-xs font-semibold border ${filterTab===tab?'bg-green-600 text-white border-green-600':'bg-white text-green-700 border-green-200'}`}>
+                {tab === 'today' ? 'Today' : tab === 'upcoming' ? 'Upcoming' : 'All'}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-3 py-1 rounded text-xs font-semibold border flex items-center gap-1 ${
+              showFilters || hasActiveFilters
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white text-green-700 border-green-200'
+            }`}
+          >
+            <FiFilter size={14} />
+            Filters
+            {hasActiveFilters && <span className="ml-1 bg-white text-green-600 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">!</span>}
+          </button>
+        </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="mb-4 pl-1 pr-1 bg-white border border-green-200 rounded-lg p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-gray-700">Filter Options</span>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-green-600 hover:text-green-700 font-medium"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Date Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                {dateFilter && (
+                  <button
+                    onClick={() => setDateFilter('')}
+                    className="mt-1 text-xs text-green-600 hover:text-green-700"
+                  >
+                    Clear date filter
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {loading && <div className="text-sm text-gray-600 pl-1">Loading tasks...</div>}
         {error && !loading && <div className="text-sm text-red-600 pl-1">{error}</div>}
         {!loading && !error && tasks.length === 0 && <div className="text-sm text-gray-500 pl-1">No tasks found.</div>}
+        {!loading && !error && dateFilter && dailyCards.length === 0 && (
+          <div className="text-sm text-gray-500 pl-1 bg-yellow-50 border border-yellow-200 rounded p-2">
+            No tasks found for {formatPrettyDate(dateFilter)}. Try selecting a different date.
+          </div>
+        )}
+        {!loading && !error && dateFilter && dailyCards.length > 0 && (
+          <div className="text-xs text-green-700 pl-1 mb-2 bg-green-50 border border-green-200 rounded p-2">
+            Showing tasks for: <strong>{formatPrettyDate(dateFilter)}</strong>
+          </div>
+        )}
       <div className="grid gap-4">
           {dailyCards.map((task) => (
             <div key={task.key} className="rounded-md border border-green-100 bg-green-50 shadow-sm overflow-hidden">

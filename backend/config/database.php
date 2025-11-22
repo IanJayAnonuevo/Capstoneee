@@ -37,6 +37,8 @@ class Database {
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     ]
                 );
+                // Set connection collation to avoid collation mismatch errors
+                $this->conn->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
                 return $this->conn;
             } catch(PDOException $e) {
                 // Log the failed attempt and try the next candidate host

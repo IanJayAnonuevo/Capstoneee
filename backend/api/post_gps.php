@@ -1,14 +1,51 @@
 <?php
-require_once __DIR__ . '/_bootstrap.php';
-// CORS for frontend at Vite dev server (allow credentials)
+// CORS headers MUST be set BEFORE _bootstrap.php to override any wildcard headers from cors.php
+// Must use specific origin, not wildcard, when credentials are included
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-$allowedOrigin = 'http://localhost:5173';
-header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+$allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+// Handle preflight OPTIONS request first
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+  // Remove any existing CORS headers that might be set
+  if (function_exists('header_remove')) {
+    @header_remove('Access-Control-Allow-Origin');
+    @header_remove('Access-Control-Allow-Credentials');
+  }
+  
+  if (in_array($origin, $allowedOrigins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+  } else {
+    header('Access-Control-Allow-Origin: http://localhost:5173');
+  }
+  header('Vary: Origin');
+  header('Access-Control-Allow-Credentials: true');
+  header('Access-Control-Allow-Methods: POST, OPTIONS');
+  header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+  http_response_code(204);
+  exit;
+}
+
+// Set CORS headers for actual request - BEFORE bootstrap to prevent wildcard override
+if (function_exists('header_remove')) {
+  @header_remove('Access-Control-Allow-Origin');
+  @header_remove('Access-Control-Allow-Credentials');
+}
+
+if (in_array($origin, $allowedOrigins)) {
+  header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+  header('Access-Control-Allow-Origin: http://localhost:5173');
+}
 header('Vary: Origin');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+
+// Mark that we've set CORS headers so cors.php doesn't override
+$_SERVER['HTTP_ACCESS_CONTROL_ALLOW_ORIGIN_SET'] = true;
+
+// Now include bootstrap (cors.php will check the flag and skip setting wildcard)
+require_once __DIR__ . '/_bootstrap.php';
 header('Content-Type: application/json');
 
 require_once '../config/database.php';

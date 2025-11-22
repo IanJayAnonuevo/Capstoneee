@@ -24,6 +24,7 @@ try {
   if (in_array('date', $columns)) $selectFields[] = 'dr.date';
   if (in_array('start_time', $columns)) $selectFields[] = 'dr.start_time';
   if (in_array('end_time', $columns)) $selectFields[] = 'dr.end_time';
+  if (in_array('barangay_id', $columns)) $selectFields[] = 'dr.barangay_id';
   if (in_array('barangay_name', $columns)) $selectFields[] = 'dr.barangay_name';
   if (in_array('cluster_id', $columns)) $selectFields[] = 'dr.cluster_id';
   if (in_array('truck_id', $columns)) $selectFields[] = 'dr.truck_id';
@@ -49,19 +50,19 @@ try {
   $params = [ ':d' => $date ];
 
   // Apply optional acceptance filtering for personnel 'My Routes'
-  // Rule: a personnel does NOT see a generated route until THEY have accepted it.
+  // Modified: Show routes assigned to driver even if status is pending (so they can see and accept)
   if ($userId && ($role === 'driver' || $role === 'collector')) {
     if ($role === 'driver') {
-      // Only routes for this driver AND where the driver has accepted/confirmed
-      $sql .= " AND ct.driver_id = :uid AND ct.status IN ('accepted','confirmed')";
+      // Show routes for this driver (regardless of acceptance status, so they can see pending assignments)
+      // This allows drivers to see routes assigned to them even if not yet accepted
+      $sql .= " AND ct.driver_id = :uid";
       $params[':uid'] = $userId;
     } else if ($role === 'collector') {
-      // Only routes for teams where this collector is a member AND they accepted/confirmed
+      // Show routes for teams where this collector is a member (regardless of acceptance status)
       $sql .= " AND EXISTS (
                   SELECT 1 FROM collection_team_member ctm
                   WHERE ctm.team_id = dr.team_id
                     AND ctm.collector_id = :uid
-                    AND ctm.response_status IN ('accepted','confirmed')
                 )";
       $params[':uid'] = $userId;
     }
@@ -73,9 +74,16 @@ try {
   $groupByFields = array_values(array_unique($groupByFields));
   $sql .= " GROUP BY " . implode(', ', $groupByFields) . " ORDER BY dr.start_time";
 
+  // Debug logging (can be removed in production)
+  error_log("get_routes.php - Date: $date, Role: $role, UserId: $userId");
+  error_log("get_routes.php - SQL: " . $sql);
+  error_log("get_routes.php - Params: " . json_encode($params));
+  
   $stmt = $db->prepare($sql);
   $stmt->execute($params);
   $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  
+  error_log("get_routes.php - Found " . count($routes) . " routes");
 
   echo json_encode([ 'success' => true, 'date' => $date, 'routes' => $routes ]);
 } catch (Throwable $e) {

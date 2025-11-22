@@ -264,7 +264,7 @@ const BARANGAY_COORDINATES = {
   "Mangapo": [13.6700, 122.7950],
   "Mangga": [13.6650, 122.7850],
   "Manlubang": [13.6600, 122.7750],
-  "Mantila": [13.6550, 122.7650],
+  "Mantila": [13.7894000, 122.9863000],
   "North Centro (Poblacion)": [13.7760, 122.9830],
   "North Villazar": [13.6500, 122.7550],
   "Salanda": [13.6400, 122.7350],

@@ -9,3 +9,7 @@ ALTER TABLE collection_team
 ALTER TABLE predefined_schedules
     ADD COLUMN session ENUM('AM','PM') NOT NULL DEFAULT 'AM' AFTER day_of_week;
 
+
+
+
+

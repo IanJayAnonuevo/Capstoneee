@@ -23,6 +23,14 @@ try {
         throw new Exception('Database connection failed.');
     }
 
+    // Set collation to avoid collation mismatch errors
+    try {
+        $db->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+        $db->exec("SET collation_connection = 'utf8mb4_unicode_ci'");
+    } catch (Exception $e) {
+        // Continue even if collation setting fails
+    }
+
     // Get user ID from query parameter
     $user_id = isset($_GET['id']) ? $_GET['id'] : null;
 

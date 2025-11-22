@@ -27,10 +27,22 @@ if (!$user_id || !$role) {
 }
 
 try {
+    // Force collation at connection level - try multiple methods
+    try {
+        $db->exec("SET character_set_client = 'utf8mb4'");
+        $db->exec("SET character_set_connection = 'utf8mb4'");
+        $db->exec("SET character_set_results = 'utf8mb4'");
+        $db->exec("SET collation_connection = 'utf8mb4_unicode_ci'");
+        $db->exec("SET collation_database = 'utf8mb4_unicode_ci'");
+    } catch (Exception $e) {
+        // Continue even if some fail
+    }
+    
     $schedules = [];
     
     if ($role === 'driver') {
         // Get schedules for driver where team status is 'accepted' or 'confirmed'
+        // Try to find route_id from daily_route, matching by team_id, date, and barangay_id
         $query = "SELECT 
                     cs.schedule_id,
                     cs.scheduled_date,
@@ -38,17 +50,20 @@ try {
                     cs.end_time,
                     cs.status as schedule_status,
                     b.barangay_name,
+                    b.barangay_id,
                     ct.team_id,
                     ct.status as team_status,
                     t.plate_num,
                     t.truck_type,
                     t.capacity,
-                    dr.id as route_id
+                    COALESCE(dr.id, NULL) as route_id
                   FROM collection_team ct
                   JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
                   JOIN barangay b ON cs.barangay_id = b.barangay_id
                   LEFT JOIN truck t ON ct.truck_id = t.truck_id
-                  LEFT JOIN daily_route dr ON dr.team_id = ct.team_id
+                  LEFT JOIN daily_route dr ON dr.team_id = ct.team_id 
+                    AND dr.date = cs.scheduled_date
+                    AND dr.barangay_id = cs.barangay_id
                   WHERE ct.driver_id = ? 
                     AND ct.status IN ('accepted', 'confirmed', 'approved')
                     AND cs.status IN ('scheduled', 'pending', 'approved')
@@ -74,17 +89,15 @@ try {
                                         t.truck_type,
                                         t.capacity,
                                         u.username AS driver_username,
-                                        dr_map.route_id
+                                        dr_map.id as route_id
                                     FROM collection_team ct
                                     JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
                                     JOIN barangay b ON cs.barangay_id = b.barangay_id
                                     LEFT JOIN truck t ON ct.truck_id = t.truck_id
                                     LEFT JOIN user u ON ct.driver_id = u.user_id
-                                    LEFT JOIN (
-                                        SELECT dr_inner.team_id, DATE(dr_inner.date) AS route_date, MIN(dr_inner.id) AS route_id
-                                        FROM daily_route dr_inner
-                                        GROUP BY dr_inner.team_id, DATE(dr_inner.date)
-                                    ) dr_map ON dr_map.team_id = ct.team_id AND dr_map.route_date = DATE(cs.scheduled_date)
+                                    LEFT JOIN daily_route dr_map ON dr_map.team_id = ct.team_id 
+                                        AND dr_map.date = cs.scheduled_date
+                                        AND dr_map.barangay_id = cs.barangay_id
                                     JOIN (
                                         SELECT DISTINCT ctm.team_id, ctm.response_status
                                         FROM collection_team_member ctm
@@ -117,14 +130,63 @@ try {
             $collectors = $stmtC->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         
+        // Get barangay_id from the schedule
+        $barangayId = null;
+        if (!empty($schedule['schedule_id'])) {
+            $stmtB = $db->prepare("SELECT barangay_id FROM collection_schedule WHERE schedule_id = ?");
+            $stmtB->execute([$schedule['schedule_id']]);
+            $barangayRow = $stmtB->fetch(PDO::FETCH_ASSOC);
+            $barangayId = $barangayRow['barangay_id'] ?? null;
+        }
+        
+        // Try to find route_id if it's null - query daily_route directly with multiple fallbacks
+        $routeId = $schedule['route_id'];
+        if (empty($routeId) && !empty($schedule['team_id']) && !empty($schedule['scheduled_date'])) {
+            try {
+                // First try: match by team_id, date, and barangay_id
+                if (!empty($barangayId)) {
+                    $routeStmt = $db->prepare("SELECT id FROM daily_route WHERE team_id = ? AND date = ? AND barangay_id = ? LIMIT 1");
+                    $routeStmt->execute([$schedule['team_id'], $schedule['scheduled_date'], $barangayId]);
+                    $routeRow = $routeStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($routeRow && !empty($routeRow['id'])) {
+                        $routeId = $routeRow['id'];
+                    }
+                }
+                
+                // Second try: match by team_id, date, and barangay_name (if barangay_id didn't work)
+                if (empty($routeId) && !empty($schedule['barangay_name'])) {
+                    $routeStmt = $db->prepare("SELECT id FROM daily_route WHERE team_id = ? AND date = ? AND barangay_name = ? LIMIT 1");
+                    $routeStmt->execute([$schedule['team_id'], $schedule['scheduled_date'], $schedule['barangay_name']]);
+                    $routeRow = $routeStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($routeRow && !empty($routeRow['id'])) {
+                        $routeId = $routeRow['id'];
+                    }
+                }
+                
+                // Third try: match by team_id and date only (last resort)
+                if (empty($routeId)) {
+                    $routeStmt = $db->prepare("SELECT id FROM daily_route WHERE team_id = ? AND date = ? ORDER BY id LIMIT 1");
+                    $routeStmt->execute([$schedule['team_id'], $schedule['scheduled_date']]);
+                    $routeRow = $routeStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($routeRow && !empty($routeRow['id'])) {
+                        $routeId = $routeRow['id'];
+                    }
+                }
+            } catch (Exception $e) {
+                // Ignore errors, keep routeId as null
+            }
+        }
+        
         $formattedSchedules[] = [
             'schedule_id' => $schedule['schedule_id'],
-            'route_id' => $schedule['route_id'], // This is the daily_route ID
+            'route_id' => $routeId, // This is the daily_route ID
             'team_id' => $schedule['team_id'],
+            'barangay_id' => $barangayId,
             'date' => $schedule['scheduled_date'],
             'time' => $schedule['start_time'],
             'end_time' => $schedule['end_time'],
             'barangay' => $schedule['barangay_name'],
+            'barangay_name' => $schedule['barangay_name'],
             'status' => $schedule['schedule_status'],
             'team_status' => $schedule['team_status'],
             'truck_number' => $schedule['plate_num'] ?? 'N/A',

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiX, FiMap } from 'react-icons/fi';
+import { FiX, FiMap, FiRefreshCw } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -22,6 +22,14 @@ export default function TruckDriverRoutes() {
   const [filterTab, setFilterTab] = useState('today');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('🔵 TruckDriverRoutes component mounted!');
+    return () => {
+      console.log('🔴 TruckDriverRoutes component unmounting');
+    };
+  }, []);
   const [stopsByRoute, setStopsByRoute] = useState({});
   const [tracking, setTracking] = useState(false);
   const [permission, setPermission] = useState('idle'); // idle | requesting | granted | denied
@@ -49,8 +57,8 @@ export default function TruckDriverRoutes() {
     return `${year}-${month}-${day}`;
   }, []);
 
-  const todayKey = computeDateKey(0);
-  const yesterdayKey = computeDateKey(-1);
+  const todayKey = useMemo(() => computeDateKey(0), [computeDateKey]);
+  const yesterdayKey = useMemo(() => computeDateKey(-1), [computeDateKey]);
   const selectedDateKey = filterTab === 'yesterday' ? yesterdayKey : todayKey;
 
   const selectedDateLabel = useMemo(() => {
@@ -191,50 +199,136 @@ export default function TruckDriverRoutes() {
   }
 
   const fetchRoutesForDate = useCallback(async (dateKey) => {
-    const userId = getCurrentUserId();
-    const url = new URL(buildApiUrl('get_routes.php'));
-    url.searchParams.set('date', dateKey);
-    if (userId) {
-      url.searchParams.set('role', 'driver');
-      url.searchParams.set('user_id', String(userId));
+    try {
+      const userId = getCurrentUserId();
+      const url = new URL(buildApiUrl('get_routes.php'));
+      url.searchParams.set('date', dateKey);
+      if (userId) {
+        url.searchParams.set('role', 'driver');
+        url.searchParams.set('user_id', String(userId));
+      }
+      
+      console.log('🔍 Fetching routes:', {
+        date: dateKey,
+        userId: userId,
+        url: url.toString()
+      });
+      
+      const res = await fetch(url.toString(), { headers: { ...authHeaders() } });
+      console.log('📡 Fetch response status:', res.status, res.statusText);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('❌ HTTP Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      const data = await res.json();
+      
+      console.log('📦 API Response:', {
+        success: data.success,
+        routesCount: data.routes?.length || 0,
+        routes: data.routes,
+        message: data.message,
+        fullResponse: data
+      });
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to load routes');
+      }
+      return data.routes || [];
+    } catch (error) {
+      console.error('❌ Error fetching routes for date:', dateKey, error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      throw error;
     }
-    const res = await fetch(url.toString(), { headers: { ...authHeaders() } });
-    const data = await res.json();
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to load routes');
-    }
-    return data.routes || [];
   }, [getCurrentUserId]);
 
-  useEffect(() => {
-    let active = true;
+  // Manual refresh function
+  const handleRefresh = useCallback(async () => {
+    console.log('🔄 Manual refresh triggered');
     setLoading(true);
     setError('');
-    const dateKeys = [todayKey, yesterdayKey];
-    (async () => {
-      const results = await Promise.allSettled(dateKeys.map(fetchRoutesForDate));
-      if (!active) return;
+    try {
+      const dateKeys = [todayKey, yesterdayKey];
+      const results = await Promise.allSettled(dateKeys.map(key => fetchRoutesForDate(key)));
       const next = {};
       const errors = [];
       results.forEach((result, idx) => {
         const key = dateKeys[idx];
         if (result.status === 'fulfilled') {
-          next[key] = result.value;
+          const routes = result.value;
+          console.log(`✅ Refreshed ${routes.length} routes for ${key}`);
+          next[key] = routes;
         } else {
+          console.error(`❌ Failed to refresh routes for ${key}:`, result.reason);
           errors.push(result.reason?.message || `Failed to load routes for ${key}`);
         }
       });
       setRoutesByDate((prev) => ({ ...prev, ...next }));
       setError(errors.length ? errors.join(' | ') : '');
+    } catch (error) {
+      console.error('❌ Error in manual refresh:', error);
+      setError(error instanceof Error ? error.message : 'Failed to refresh routes');
+    } finally {
       setLoading(false);
+    }
+  }, [todayKey, yesterdayKey, fetchRoutesForDate]);
+
+  // Fetch routes for today and yesterday on mount
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    const dateKeys = [todayKey, yesterdayKey];
+    
+    console.log('🚀 Initial fetch - Date keys:', dateKeys);
+    console.log('👤 Current User ID:', getCurrentUserId());
+    
+    (async () => {
+      try {
+        const results = await Promise.allSettled(dateKeys.map(fetchRoutesForDate));
+        if (!active) return;
+        const next = {};
+        const errors = [];
+        results.forEach((result, idx) => {
+          const key = dateKeys[idx];
+          if (result.status === 'fulfilled') {
+            const routes = result.value;
+            console.log(`✅ Fetched ${routes.length} routes for ${key}:`, routes);
+            next[key] = routes;
+          } else {
+            console.error(`❌ Failed to fetch routes for ${key}:`, result.reason);
+            errors.push(result.reason?.message || `Failed to load routes for ${key}`);
+          }
+        });
+        console.log('📊 Final routesByDate:', next);
+        setRoutesByDate((prev) => ({ ...prev, ...next }));
+        setError(errors.length ? errors.join(' | ') : '');
+      } catch (error) {
+        if (active) {
+          console.error('❌ Error in route fetching:', error);
+          setError(error instanceof Error ? error.message : 'Failed to load routes');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
     })();
     return () => {
       active = false;
     };
-  }, [fetchRoutesForDate, todayKey, yesterdayKey]);
+  }, [fetchRoutesForDate, todayKey, yesterdayKey, getCurrentUserId]);
 
+  // Fetch routes when switching tabs if not already loaded
   useEffect(() => {
-    if (routesByDate[selectedDateKey] || loading) return;
+    // If routes are already loaded for this date, skip
+    if (routesByDate[selectedDateKey]) return;
+    
     let active = true;
     setLoading(true);
     setError('');
@@ -245,15 +339,20 @@ export default function TruckDriverRoutes() {
         setRoutesByDate((prev) => ({ ...prev, [selectedDateKey]: routes }));
         setError('');
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : 'Failed to load routes');
+        if (active) {
+          console.error('Error fetching routes for selected date:', selectedDateKey, e);
+          setError(e instanceof Error ? e.message : 'Failed to load routes');
+        }
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
       active = false;
     };
-  }, [selectedDateKey, routesByDate, loading, fetchRoutesForDate]);
+  }, [selectedDateKey, routesByDate, fetchRoutesForDate]);
 
   useEffect(() => {
     setSelectedRoute(null);
@@ -275,7 +374,11 @@ export default function TruckDriverRoutes() {
 
   const displayRoutes = useMemo(() => {
     const source = routesByDate[selectedDateKey] || [];
-    return source
+    console.log('🎨 Display Routes - selectedDateKey:', selectedDateKey);
+    console.log('🎨 Display Routes - source:', source);
+    console.log('🎨 Display Routes - routesByDate:', routesByDate);
+    
+    const processed = source
       .map((r) => {
         const start = r.start_time ? String(r.start_time).slice(0, 5) : '';
         const end = r.end_time ? String(r.end_time).slice(0, 5) : '';
@@ -301,6 +404,9 @@ export default function TruckDriverRoutes() {
         };
       })
     .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    
+    console.log('🎨 Display Routes - processed:', processed);
+    return processed;
   }, [routesByDate, selectedDateKey, formatPrettyDate]);
 
   // Get status color
@@ -359,6 +465,15 @@ export default function TruckDriverRoutes() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">My Routes</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="px-3 py-2 text-sm font-semibold rounded border border-green-200 bg-white text-green-700 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            title="Refresh routes"
+          >
+            <FiRefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
           {['today', 'yesterday'].map((tab) => (
             <button
               key={tab}

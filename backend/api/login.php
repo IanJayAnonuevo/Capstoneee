@@ -11,6 +11,16 @@ try {
         throw new RuntimeException('Database connection failed.');
     }
 
+    // Check if required tables exist
+    try {
+        $checkTable = $db->query("SHOW TABLES LIKE 'user'");
+        if ($checkTable->rowCount() === 0) {
+            throw new RuntimeException('Database table "user" does not exist. Please import the kolektrash_db.sql file into your database.');
+        }
+    } catch (PDOException $e) {
+        // If we can't check tables, continue and let the actual query fail with a better error
+    }
+
     $payload = json_decode(file_get_contents('php://input'), true);
 
     if (!is_array($payload)) {
@@ -101,9 +111,27 @@ try {
         $e->getTraceAsString()
     );
     @file_put_contents($logFile, $logEntry, FILE_APPEND);
+    
+    // Provide more helpful error messages for common issues
+    $errorMessage = 'Internal server error. Please try again later.';
+    $errorCode = $e->getCode();
+    $errorMsg = $e->getMessage();
+    
+    // Check for specific database errors
+    if (strpos($errorMsg, "doesn't exist") !== false || strpos($errorMsg, "Base table or view not found") !== false) {
+        $errorMessage = 'Database setup incomplete. Please import the kolektrash_db.sql file into your MySQL database.';
+    } elseif (strpos($errorMsg, 'Database connection failed') !== false) {
+        $errorMessage = 'Cannot connect to database. Please check your database configuration and ensure MySQL is running.';
+    } elseif ($e instanceof PDOException) {
+        // For PDO exceptions, provide more context
+        if (strpos($errorMsg, 'user') !== false && strpos($errorMsg, "doesn't exist") !== false) {
+            $errorMessage = 'Database table "user" is missing. Please import kolektrash_db.sql into your database.';
+        }
+    }
+    
     http_response_code(500);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Internal server error. Please try again later.'
+        'message' => $errorMessage
     ]);
 }
