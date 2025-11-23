@@ -1,0 +1,433 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login Success with Valid Credentials",
+    "description": "Verify that users can log in successfully using valid credentials corresponding to their roles.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username/email and password for each role: admin, truck driver, garbage collector, barangay head, resident, foreman."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify successful login by checking redirection to the specific dashboard based on the user role."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login Failure with Invalid Credentials",
+    "description": "Ensure that users cannot log in with invalid username/email or password and receive appropriate error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid or incorrect username/email and password combinations."
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that login fails and an error message is displayed indicating invalid credentials."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Password Reset via Forgot Password Flow",
+    "description": "Validate that users can request password reset and successfully update their password via the forgot password feature.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Click on the 'Forgot Password' link."
+      },
+      {
+        "type": "action",
+        "description": "Submit registered email address to receive password reset instructions."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an email is sent with reset instructions."
+      },
+      {
+        "type": "action",
+        "description": "Follow the password reset link and enter a new password."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the password is updated successfully and the user can log in with the new password."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Role-Based Route Protection",
+    "description": "Ensure that routes and pages are accessible only to authorized user roles according to their permissions.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as each user role."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access routes/pages restricted to other roles directly via URL manipulation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied and the user is redirected or shown a permission error."
+      },
+      {
+        "type": "action",
+        "description": "Access permitted routes and verify pages load correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Admin User Management CRUD Operations",
+    "description": "Verify that the admin can create, update, and delete users with appropriate roles and that changes reflect in the system.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as admin and navigate to user management."
+      },
+      {
+        "type": "action",
+        "description": "Create new users with different roles (truck driver, garbage collector, barangay head, resident, foreman)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new users are listed and can log in."
+      },
+      {
+        "type": "action",
+        "description": "Update user details and roles."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm updates persist and reflect in the system."
+      },
+      {
+        "type": "action",
+        "description": "Delete users from the system."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure deleted users cannot log in and are removed from lists."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Route and Schedule Management by Admin",
+    "description": "Test that the admin can create, view, update, and delete routes and schedules, and changes are reflected in dependent components.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as admin and navigate to route and schedule management."
+      },
+      {
+        "type": "action",
+        "description": "Create daily routes with integrated map visualization using Leaflet."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that created routes display on the map and schedules are generated correctly."
+      },
+      {
+        "type": "action",
+        "description": "Update existing routes and schedules."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates are saved and reflected throughout user dashboards."
+      },
+      {
+        "type": "action",
+        "description": "Delete routes and schedules."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure deleted routes are removed from all views and relevant users' dashboards."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Task Assignment and Real-Time Updates",
+    "description": "Validate that admins and foremen can assign tasks to drivers and collectors and that real-time status updates and notifications are propagated correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Assign tasks to truck drivers and garbage collectors via admin or foreman dashboards."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify tasks appear correctly on assignees' dashboards."
+      },
+      {
+        "type": "action",
+        "description": "Update task status (e.g., in-progress, completed) from the assignee dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that the task status updates are reflected in the admin and foreman dashboards in real time."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that notifications about task assignments and status changes are received by the appropriate users."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Special Pickup Request Workflow",
+    "description": "Ensure barangay heads and foremen can submit, approve, track special pickup requests with notifications sent on status changes.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as barangay head, submit a special pickup request."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the request is stored and visible in the system."
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin or foreman and approve or reject the request."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the status update is visible to the barangay head."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that notifications are sent to involved parties on request submission and status changes."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Issue Reporting and Tracking",
+    "description": "Verify that residents and barangay heads can submit, view, and track reported issues and that status updates propagate correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as resident or barangay head and submit an issue report with all required details."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the issue is saved and listed in the user's issue status page."
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin or foreman and update the issue status."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the updated status is reflected for the reporter and relevant stakeholders."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify notifications of issue status updates are sent to the reporter."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Feedback Submission and Admin Review",
+    "description": "Test that residents, barangay heads, and other users can submit feedback and that admins can review feedback submissions.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as resident, barangay head, or other role that supports feedback, and submit feedback."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify feedback submissions are stored in the database."
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin and navigate to feedback management dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm feedback entries are displayed correctly with all submitted details."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Notification Delivery and Accuracy",
+    "description": "Ensure notifications are sent timely and accurately for task updates, schedule changes, special pickup status, and issue changes to the correct users.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger events such as task assignment, task status update, schedule changes, special pickup approval, and issue status changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that involved users receive appropriate notifications matching the event."
+      },
+      {
+        "type": "action",
+        "description": "Open the notification panel for roles like truck driver, garbage collector, barangay head, resident, foreman."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm notifications are displayed in a clear, timely, and organized manner."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Real-Time Route Tracking and Map Visualization",
+    "description": "Validate that truck drivers and garbage collectors can view live routes on maps and task progress updates update the map display in real time.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as truck driver or garbage collector and navigate to the route run page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the assigned routes display on the Leaflet map with proper markers and paths."
+      },
+      {
+        "type": "action",
+        "description": "Update task progress status during the route."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure map updates reflect the progress changes in real time."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Attendance Monitoring for Foremen and Personnel",
+    "description": "Test that foremen can record and retrieve attendance records of personnel such as truck drivers and garbage collectors accurately.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as foreman and navigate to attendance monitoring."
+      },
+      {
+        "type": "action",
+        "description": "Record attendance for different personnel."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify attendance records are stored and can be retrieved correctly."
+      },
+      {
+        "type": "action",
+        "description": "Search personnel attendance records using provided search feature."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm search results are accurate and relevant."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "IEC Materials Access and Download",
+    "description": "Verify that residents and barangay heads can view and download IEC materials from their portals.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as resident or barangay head and navigate to the IEC materials page."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that IEC materials are displayed correctly."
+      },
+      {
+        "type": "action",
+        "description": "Select IEC materials and download them."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that downloads complete successfully and the file integrity is maintained."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "User Profile and Settings Management",
+    "description": "Validate that users can view and update their profiles and account settings across all user roles.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as any user role."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to profile or settings page."
+      },
+      {
+        "type": "action",
+        "description": "Edit profile information such as name, contact info, and preferences."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are saved and displayed correctly on next page refresh or revisit."
+      },
+      {
+        "type": "action",
+        "description": "Test updating password within settings."
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the password change is effective and user can log in with the new password."
+      }
+    ]
+  }
+]

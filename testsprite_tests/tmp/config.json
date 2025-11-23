@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173",
+  "loginUser": "admin",
+  "loginPassword": "admin123",
+  "executionArgs": {
+    "projectName": "kolektrash",
+    "projectPath": "C:\\xampp\\htdocs\\kolektrash",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-Jbqk2HwUW9rw8suV7WiGdsrcSGIzKNAkAKZCIc9sM6YgphX3pWTmw9ng5gRk-1tnSlr5bO5Pt_BV8U4T7EL3pwg_lbaERKhmT9RDuT6vmyone7-cOAUmkLUA8vTMeeKdSSA"
+    }
+  },
+  "proxy": "http://2225e53f-d536-4dfc-ae6c-f03488b15d28:qa8Eoki7I4ravVpj67MjvJLeCpz5acG8@tun.testsprite.com:8080"
+}
