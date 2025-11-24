@@ -52,7 +52,6 @@ export default function ManageSchedule() {
       return null;
     }
   };
-
   // Helper function to get auth headers
   const getAuthHeaders = () => {
     const token = getAuthToken();
@@ -134,7 +133,7 @@ export default function ManageSchedule() {
     const days = [];
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     
-    for (let i = 0; i < 7; i++) { // Monday to Sunday
+    for (let i = 0; i < 7; i++) {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + i);
       days.push({
@@ -180,6 +179,7 @@ export default function ManageSchedule() {
     ];
     return `${months[date.getMonth()]}, ${date.getFullYear()}`;
   };
+
 
 
   // Fetch predefined schedules from backend (filtered)

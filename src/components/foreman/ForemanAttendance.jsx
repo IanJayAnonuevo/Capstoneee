@@ -3,10 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import { MdPrint, MdFileDownload, MdCheckCircle, MdCancel, MdPending, MdAccessTime, MdImage, MdRefresh } from 'react-icons/md';
 import { API_BASE_URL } from '../../config/api';
+import { authService } from '../../services/authService';
 
 export default function ForemanAttendance() {
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Force today's date - calculate fresh every render
+  const getTodayDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [attendanceData, setAttendanceData] = useState([]);
   const [filterStatus, setFilterStatus] = useState('pending'); // 'all', 'pending', 'verified', 'rejected'
   const [summary, setSummary] = useState({
@@ -18,6 +29,16 @@ export default function ForemanAttendance() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  const resolvePhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    if (typeof photoPath !== 'string') return null;
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://') || 
+        photoPath.startsWith('blob:') || photoPath.startsWith('data:')) {
+      return photoPath;
+    }
+    return authService.resolveAssetUrl(photoPath);
+  };
 
   useEffect(() => {
     fetchAttendance();
@@ -38,10 +59,31 @@ export default function ForemanAttendance() {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const statusParam = filterStatus === 'all' ? '' : `&status=${filterStatus}`;
       const dateFrom = selectedDate;
       const dateTo = selectedDate;
       
+      // First, fetch ALL requests to get accurate summary counts
+      const summaryUrl = `${API_BASE_URL}/list_attendance_requests.php?date_from=${dateFrom}&date_to=${dateTo}`;
+      const summaryResponse = await fetch(summaryUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        if (summaryData.status === 'success') {
+          const allRequests = summaryData.data.requests || [];
+          setSummary({
+            pending: allRequests.filter(r => r.request_status === 'pending').length,
+            approved: allRequests.filter(r => r.request_status === 'approved').length,
+            declined: allRequests.filter(r => r.request_status === 'declined').length
+          });
+        }
+      }
+      
+      // Then fetch filtered data for the table
+      const statusParam = filterStatus === 'all' ? '' : `&status=${filterStatus}`;
       const url = `${API_BASE_URL}/list_attendance_requests.php?date_from=${dateFrom}&date_to=${dateTo}${statusParam}`;
       
       const response = await fetch(url, {
@@ -49,6 +91,7 @@ export default function ForemanAttendance() {
           'Authorization': `Bearer ${token}`
         }
       });
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Server error' }));
         if (response.status === 401) {
@@ -64,19 +107,10 @@ export default function ForemanAttendance() {
       
       if (data.status === 'success') {
         setAttendanceData(data.data.requests || []);
-        
-        // Calculate summary
-        const requests = data.data.requests || [];
-        setSummary({
-          pending: requests.filter(r => r.request_status === 'pending').length,
-          approved: requests.filter(r => r.request_status === 'approved').length,
-          declined: requests.filter(r => r.request_status === 'declined').length
-        });
         setMessage({ type: '', text: '' }); // Clear any previous errors
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to fetch attendance requests' });
         setAttendanceData([]);
-        setSummary({ pending: 0, approved: 0, declined: 0 });
       }
     } catch (error) {
       console.error('Error fetching attendance:', error);
@@ -247,11 +281,12 @@ export default function ForemanAttendance() {
           <div className="flex items-center gap-2 mb-1">
             <label className="block text-xs font-medium text-gray-700 flex-1">Date</label>
             <button
+              type="button"
               onClick={() => {
                 const today = new Date().toISOString().split('T')[0];
                 setSelectedDate(today);
               }}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
               title="Set to today"
             >
               Today
@@ -523,9 +558,13 @@ export default function ForemanAttendance() {
             <div className="p-6">
               {selectedRequest.photo_url ? (
                 <img
-                  src={selectedRequest.photo_url}
+                  src={resolvePhotoUrl(selectedRequest.photo_url)}
                   alt="Attendance proof"
-                  className="w-full h-auto rounded-lg border border-gray-300"
+                  className="w-full h-auto rounded-lg border border-gray-300 shadow-lg"
+                  onError={(e) => {
+                    e.target.onerror = null; // Prevent infinite loop
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="14"%3EImage not found%3C/text%3E%3C/svg%3E';
+                  }}
                 />
               ) : (
                 <div className="text-center py-8 text-gray-500">No photo available</div>

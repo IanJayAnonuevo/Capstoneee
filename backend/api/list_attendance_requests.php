@@ -69,26 +69,32 @@ try {
         $params[] = $status;
     }
 
-    // Date range filters
+    // Date range filters (use submitted_at only)
     if ($dateFrom !== null && $dateFrom !== '' && $dateTo !== null && $dateTo !== '') {
-        // If both dates are the same, use exact date match
+        // If both dates are the same, try to match either the request submitted_at
+        // OR the scheduled route date (dr.date). This helps when submitted_at
+        // timestamps may be in a different day due to timezone/processing.
         if ($dateFrom === $dateTo) {
-            $whereConditions[] = 'DATE(ar.submitted_at) = ?';
+            $whereConditions[] = '(DATE(ar.submitted_at) = ? OR DATE(dr.date) = ?)';
+            $params[] = $dateFrom;
             $params[] = $dateFrom;
         } else {
-            // Date range
-            $whereConditions[] = 'DATE(ar.submitted_at) >= ?';
+            // Date range - match either submitted_at OR schedule date falling within range
+            $whereConditions[] = '((DATE(ar.submitted_at) >= ? AND DATE(ar.submitted_at) <= ?) OR (DATE(dr.date) >= ? AND DATE(dr.date) <= ?))';
             $params[] = $dateFrom;
-            $whereConditions[] = 'DATE(ar.submitted_at) <= ?';
+            $params[] = $dateTo;
+            $params[] = $dateFrom;
             $params[] = $dateTo;
         }
     } elseif ($dateFrom !== null && $dateFrom !== '') {
-        // Only from date
-        $whereConditions[] = 'DATE(ar.submitted_at) >= ?';
+        // Only from date - match either submitted_at or schedule date
+        $whereConditions[] = '(DATE(ar.submitted_at) >= ? OR DATE(dr.date) >= ?)';
+        $params[] = $dateFrom;
         $params[] = $dateFrom;
     } elseif ($dateTo !== null && $dateTo !== '') {
-        // Only to date
-        $whereConditions[] = 'DATE(ar.submitted_at) <= ?';
+        // Only to date - match either submitted_at or schedule date
+        $whereConditions[] = '(DATE(ar.submitted_at) <= ? OR DATE(dr.date) <= ?)';
+        $params[] = $dateTo;
         $params[] = $dateTo;
     }
 
@@ -156,14 +162,14 @@ try {
     $countStmt->execute($params);
     $total = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // Build photo URLs
-    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $baseUrl = $protocol . $host . '/kolektrash/';
-
+    // Build photo URLs - resolve to proper path
     foreach ($requests as &$request) {
         if ($request['photo_path']) {
-            $request['photo_url'] = $baseUrl . $request['photo_path'];
+            // The photo_path should be relative from the project root
+            // Just pass the relative path and let the frontend resolve it
+            $request['photo_url'] = $request['photo_path'];
+        } else {
+            $request['photo_url'] = null;
         }
     }
 

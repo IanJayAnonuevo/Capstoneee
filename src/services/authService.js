@@ -23,9 +23,27 @@ const withAuthHeaders = (headers = {}) => {
   return { ...headers };
 };
 
+const handleAuthError = (response) => {
+  if (response.status === 401) {
+    // Clear expired token
+    try {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token_expires_at');
+      localStorage.removeItem('token_type');
+    } catch (e) {
+      console.error('Failed to clear tokens:', e);
+    }
+    
+    // Redirect to login
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      window.location.href = '/login';
+    }
+  }
+};
+
 const ASSET_ROOT_URL = (() => {
   try {
-  const normalized = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
+    const normalized = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
     // Navigate two levels up (remove /backend/api)
     const backendUrl = new URL('../', normalized);
     const rootUrl = new URL('../', backendUrl);
@@ -106,12 +124,13 @@ export const authService = {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        handleAuthError(response);
+        const data = await response.json();
         throw new Error(data.message || 'Failed to fetch user data');
       }
 
+      const data = await response.json();
       return data;
     } catch (error) {
       throw error;

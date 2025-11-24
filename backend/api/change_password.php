@@ -1,12 +1,9 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Credentials: true');
-header('Content-Type: application/json');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Access-Control-Allow-Headers,Content-Type,Access-Control-Allow-Methods,Authorization,X-Requested-With');
+// CORS headers are provided by includes/cors.php (via _bootstrap.php)
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Preflight handled by centralized CORS; exit early to keep behavior consistent
     http_response_code(200);
     exit();
 }

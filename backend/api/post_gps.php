@@ -2,7 +2,8 @@
 // CORS headers MUST be set BEFORE _bootstrap.php to override any wildcard headers from cors.php
 // Must use specific origin, not wildcard, when credentials are included
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-$allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+// Allow any localhost / 127.0.0.1 origins regardless of port (used by Vite/dev servers)
+$allowedIsLocal = ($origin !== '' && preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin) === 1);
 
 // Handle preflight OPTIONS request first
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -12,10 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     @header_remove('Access-Control-Allow-Credentials');
   }
   
-  if (in_array($origin, $allowedOrigins)) {
+  if ($allowedIsLocal) {
     header('Access-Control-Allow-Origin: ' . $origin);
   } else {
-    header('Access-Control-Allow-Origin: http://localhost:5173');
+    header('Access-Control-Allow-Origin: *');
   }
   header('Vary: Origin');
   header('Access-Control-Allow-Credentials: true');
@@ -31,10 +32,10 @@ if (function_exists('header_remove')) {
   @header_remove('Access-Control-Allow-Credentials');
 }
 
-if (in_array($origin, $allowedOrigins)) {
+if ($allowedIsLocal) {
   header('Access-Control-Allow-Origin: ' . $origin);
 } else {
-  header('Access-Control-Allow-Origin: http://localhost:5173');
+  header('Access-Control-Allow-Origin: *');
 }
 header('Vary: Origin');
 header('Access-Control-Allow-Credentials: true');

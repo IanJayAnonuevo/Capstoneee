@@ -67,8 +67,11 @@ export default function RequireAuth({ children, allowedRoles }) {
 }
 
 export function GuestOnly({ children }) {
-  const role = getUserRole()
-  if (role) {
+  // Only redirect guests if they are actually authenticated (valid token).
+  // This prevents a redirect loop when a user object is present in localStorage
+  // but the access token is missing or expired.
+  if (isAuthenticated()) {
+    const role = getUserRole()
     return <Navigate to={getDefaultRouteForRole(role)} replace />
   }
   return children

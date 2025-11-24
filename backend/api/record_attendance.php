@@ -55,6 +55,9 @@ try {
     }
 
     $current_time = date('H:i:s');
+    // Prefer client-provided hour/minute when available to respect user's local clock
+    $client_hour = isset($input['client_hour']) ? (int)$input['client_hour'] : null;
+    $client_minute = isset($input['client_minute']) ? (int)$input['client_minute'] : null;
 
     // Check if attendance record exists
     $stmtCheck = $pdo->prepare("
@@ -106,6 +109,18 @@ try {
                 'attendance' => $existing
             ]);
             exit;
+        }
+
+        // Enforce Time Out window for AM session: only allow between 12:00 and 12:59 (12:00 PM - 12:59 PM)
+        if ($session === 'AM') {
+            $hourNow = is_int($client_hour) ? $client_hour : (int)date('H');
+            if ($hourNow < 12 || $hourNow >= 13) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Time Out for AM session is allowed only between 12:00 PM and 1:00 PM.'
+                ]);
+                exit;
+            }
         }
 
         $stmtUpdate = $pdo->prepare("
