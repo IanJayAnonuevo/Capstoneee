@@ -1,12 +1,22 @@
 <?php
-// Load CORS headers early
-require_once __DIR__ . '/../includes/cors.php';
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    // Short-circuit preflight without loading the app bootstrap
-    http_response_code(200);
-    exit();
+// Explicit CORS Headers
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Max-Age: 86400');
 }
+
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");         
+
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+
+    exit(0);
+}
+
+require_once __DIR__ . '/../includes/cors.php';
 
 require_once __DIR__ . '/_bootstrap.php';
 
@@ -152,11 +162,11 @@ try {
                 $session = determineAttendanceSession(array_merge($updated, ['remarks_meta' => $remarksMeta]));
 
                 if ($attendanceDate && $session) {
-                    $existingAttendanceStmt = $pdo->prepare("\
-                        SELECT attendance_id, time_in, time_out, verification_status \\
-                        FROM attendance \\
-                        WHERE user_id = ? AND attendance_date = ? AND session = ?\\
-                        LIMIT 1\\
+                    $existingAttendanceStmt = $pdo->prepare("
+                        SELECT attendance_id, time_in, time_out, verification_status 
+                        FROM attendance 
+                        WHERE user_id = ? AND attendance_date = ? AND session = ?
+                        LIMIT 1
                     ");
                     $existingAttendanceStmt->execute([$request['user_id'], $attendanceDate, $session]);
                     $attendanceRow = $existingAttendanceStmt->fetch(PDO::FETCH_ASSOC);
@@ -167,7 +177,7 @@ try {
                         $timeOut = determineTimeOut($updated);
 
                         if ($attendanceId) {
-                            $updateAttendanceStmt = $pdo->prepare("\
+                            $updateAttendanceStmt = $pdo->prepare("
                                 UPDATE attendance
                                 SET time_out = COALESCE(time_out, ?),
                                     status = 'present',
@@ -185,7 +195,7 @@ try {
                             ]);
                         } else {
                             // If no attendance record exists yet, insert with time_out (time_in unknown)
-                            $insertAttendanceStmt = $pdo->prepare("\
+                            $insertAttendanceStmt = $pdo->prepare("
                                 INSERT INTO attendance (
                                     user_id,
                                     attendance_date,
@@ -211,7 +221,7 @@ try {
                         $timeIn = determineTimeIn($updated);
 
                         if ($attendanceId) {
-                            $updateAttendanceStmt = $pdo->prepare("\
+                            $updateAttendanceStmt = $pdo->prepare("
                                 UPDATE attendance
                                 SET time_in = COALESCE(time_in, ?),
                                     status = 'present',
@@ -228,7 +238,7 @@ try {
                                 $attendanceId
                             ]);
                         } else {
-                            $insertAttendanceStmt = $pdo->prepare("\
+                            $insertAttendanceStmt = $pdo->prepare("
                                 INSERT INTO attendance (
                                     user_id,
                                     attendance_date,
@@ -261,7 +271,6 @@ try {
                 error_log('Attendance recording failed for request id=' . $requestId . ': ' . $e->getMessage());
             }
             // If attendance recording failed or skipped, we still proceed and return success for the review.
-            }
         }
     }
 
