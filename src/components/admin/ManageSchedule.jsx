@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { buildApiUrl } from '../../config/api.js';
+import { FiMoreVertical, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 const scheduleViewOptions = [
   { value: 'priority', label: 'Priority Barangays', type: 'priority', clusterId: '1C-PB' },
@@ -70,6 +71,11 @@ export default function ManageSchedule() {
   const [editForm, setEditForm] = useState({ day_of_week: '', start_time: '', end_time: '', week_of_month: '' });
   const [editError, setEditError] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
+  // Delete modal state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleteDeleting, setDeleteDeleting] = useState(false);
   // Add schedule modal state
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState(null);
@@ -90,6 +96,10 @@ export default function ManageSchedule() {
   const clearSelected = () => setSelectedIds(new Set());
   const selectedCount = selectedIds.size;
   const selectedArray = Array.from(selectedIds);
+
+  // Menu state for three-dot menu
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRefs = useRef({});
 
   // Track Ctrl/Meta key
   useEffect(() => {
@@ -321,6 +331,72 @@ export default function ManageSchedule() {
     return `${e.label}\n${e.scheduleType}${e.weekOfMonth ? ` (Week ${e.weekOfMonth})` : ''}\n${e.time} - ${e.end}\nUpdated: ${e.updatedAt || '—'}`;
   };
 
+  // Delete handler function
+  const handleDeleteSchedule = async () => {
+    if (!scheduleToDelete) return;
+    setDeleteError(null);
+    try {
+      setDeleteDeleting(true);
+      const idVal = (
+        scheduleToDelete?.schedule_template_id ||
+        scheduleToDelete?.template_id ||
+        scheduleToDelete?.id ||
+        scheduleToDelete?.schedule_id ||
+        scheduleToDelete?.predefined_id
+      );
+      let res;
+      if (idVal) {
+        res = await fetch(buildApiUrl('delete_predefined_schedule.php'), {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ id: idVal })
+        });
+      } else {
+        res = await fetch(buildApiUrl('delete_predefined_schedule.php'), {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            barangay_id: scheduleToDelete.barangay_id,
+            cluster_id: scheduleToDelete.cluster_id,
+            schedule_type: scheduleToDelete.schedule_type,
+            day_of_week: scheduleToDelete.day_of_week,
+            start_time: (scheduleToDelete.start_time || '').substring(0,5),
+            week_of_month: scheduleToDelete.week_of_month
+          })
+        });
+      }
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Failed to delete schedule');
+      
+      // Remove locally
+      setPredefinedSchedules(prev => prev.filter(s => {
+        const sId = s.schedule_template_id || s.id;
+        if (idVal) return sId !== idVal;
+        const sStart = (s.start_time || '').substring(0,5);
+        return !(
+          s.barangay_id === scheduleToDelete.barangay_id &&
+          s.cluster_id === scheduleToDelete.cluster_id &&
+          s.schedule_type === scheduleToDelete.schedule_type &&
+          s.day_of_week === scheduleToDelete.day_of_week &&
+          sStart === (scheduleToDelete.start_time || '').substring(0,5)
+        );
+      }));
+      
+      setDeleteOpen(false);
+      setScheduleToDelete(null);
+      // Also close edit modal if it's open
+      if (editOpen) {
+        setEditOpen(false);
+        setEditingSchedule(null);
+      }
+      await fetchSchedules();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteDeleting(false);
+    }
+  };
+
   // Bulk helpers
   const bulkDelete = async () => {
     if (selectedCount === 0) return;
@@ -411,6 +487,21 @@ export default function ManageSchedule() {
     clearSelected();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedView, currentWeek]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openMenuId && menuRefs.current[openMenuId]) {
+        if (!menuRefs.current[openMenuId].contains(event.target)) {
+          setOpenMenuId(null);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   return (
     <div className="p-2 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans text-xs">
@@ -569,82 +660,147 @@ export default function ManageSchedule() {
                         className="w-full flex flex-col items-center justify-center border-r border-gray-100"
                         style={{ height: rowHeight }}
                       >
-                        {events.map((event, idx) => (
-                          <div
-                            key={`${event.id || event.label}-${idx}`}
-                            className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center mb-2 p-2.5 hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer ${selectedIds.has(event.id) ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}
-                            style={{ 
-                              width: eventWidth, 
-                              height: eventHeight, 
-                              fontWeight: 700, 
-                              fontSize: eventFontSize,
-                              minHeight: '55px',
-                              overflow: 'hidden',
-                              position: 'relative'
-                            }}
-                            title={formatTooltip(event)}
-                            onClick={(e) => {
-                              // If Ctrl/Meta is held, toggle selection; otherwise open edit
-                              if (e.ctrlKey || e.metaKey || ctrlPressed) {
-                                toggleSelected(event.id);
-                                return;
-                              }
-                              const s = event.schedule;
-                              setEditingSchedule(s);
-                              setEditForm({
-                                day_of_week: s.day_of_week,
-                                start_time: s.start_time?.substring(0,5) || '',
-                                end_time: s.end_time?.substring(0,5) || '',
-                                week_of_month: s.week_of_month || ''
-                              });
-                              setEditError(null);
-                              setEditOpen(true);
-                            }}
-                          >
-                            {/* NEW badge for recently created schedules */}
-                            {event.isNew && (
-                              <div className={`absolute -top-1.5 -right-1.5 z-20 ${event.badgeColor} text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border-2 border-white animate-pulse`}>
-                                NEW
-                              </div>
-                            )}
-                            
-                            {/* Decorative corner accent */}
-                            <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
-                            
-                            {/* Main content */}
-                            <div className="flex items-center justify-center w-full gap-2 min-w-0 relative z-10">
-                              {/* Icon indicator */}
-                              <div className={`flex-shrink-0 w-2 h-2 rounded-full ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-500' : 'bg-green-500'} shadow-sm`}></div>
-                              
-                              <span 
-                                className={`text-sm font-bold ${event.text} truncate flex-1 text-center`} 
-                                style={{ 
-                                  overflow: 'hidden', 
-                                  textOverflow: 'ellipsis', 
-                                  whiteSpace: 'nowrap',
-                                  lineHeight: '1.3'
-                                }}
-                              >
-                                {event.label}
-                              </span>
-                              
-                              {(ctrlPressed || selectedCount > 0) && (
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4 flex-shrink-0"
-                                  checked={selectedIds.has(event.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={() => toggleSelected(event.id)}
-                                />
+                        {events.map((event, idx) => {
+                          const eventKey = `${event.id || event.label}-${idx}`;
+                          const isMenuOpen = openMenuId === eventKey;
+                          
+                          return (
+                            <div
+                              key={eventKey}
+                              className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center mb-2 p-2.5 hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer ${selectedIds.has(event.id) ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}
+                              style={{ 
+                                width: eventWidth, 
+                                height: eventHeight, 
+                                fontWeight: 700, 
+                                fontSize: eventFontSize,
+                                minHeight: '55px',
+                                overflow: 'visible',
+                                position: 'relative'
+                              }}
+                              title={formatTooltip(event)}
+                              onClick={(e) => {
+                                // If Ctrl/Meta is held, toggle selection; otherwise open edit
+                                if (e.ctrlKey || e.metaKey || ctrlPressed) {
+                                  toggleSelected(event.id);
+                                  return;
+                                }
+                                // Don't open edit if clicking on menu
+                                if (e.target.closest('.menu-button') || e.target.closest('.menu-dropdown')) {
+                                  return;
+                                }
+                                const s = event.schedule;
+                                setEditingSchedule(s);
+                                setEditForm({
+                                  day_of_week: s.day_of_week,
+                                  start_time: s.start_time?.substring(0,5) || '',
+                                  end_time: s.end_time?.substring(0,5) || '',
+                                  week_of_month: s.week_of_month || ''
+                                });
+                                setEditError(null);
+                                setEditOpen(true);
+                              }}
+                            >
+                              {/* NEW badge for recently created schedules */}
+                              {event.isNew && (
+                                <div className={`absolute -top-1.5 -right-1.5 z-20 ${event.badgeColor} text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border-2 border-white animate-pulse`}>
+                                  NEW
+                                </div>
                               )}
-                            </div>
+                              
+                              {/* Decorative corner accent */}
+                              <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
+                              
+                              {/* Three-dot menu button */}
+                              <div 
+                                className="absolute top-1 right-1 z-30 menu-button"
+                                ref={(el) => { menuRefs.current[eventKey] = el; }}
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(isMenuOpen ? null : eventKey);
+                                  }}
+                                  className={`p-1 rounded-full hover:bg-black/10 transition-colors ${isMenuOpen ? 'bg-black/20' : ''}`}
+                                  title="More options"
+                                >
+                                  <FiMoreVertical className="w-3 h-3 text-gray-700" />
+                                </button>
+                                
+                                {/* Dropdown menu */}
+                                {isMenuOpen && (
+                                  <div className="absolute right-0 top-6 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px] z-40 menu-dropdown">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        const s = event.schedule;
+                                        setEditingSchedule(s);
+                                        setEditForm({
+                                          day_of_week: s.day_of_week,
+                                          start_time: s.start_time?.substring(0,5) || '',
+                                          end_time: s.end_time?.substring(0,5) || '',
+                                          week_of_month: s.week_of_month || ''
+                                        });
+                                        setEditError(null);
+                                        setEditOpen(true);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                      <FiEdit2 className="w-3 h-3" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuId(null);
+                                        setScheduleToDelete(event.schedule);
+                                        setDeleteError(null);
+                                        setDeleteOpen(true);
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    >
+                                      <FiTrash2 className="w-3 h-3" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Main content */}
+                              <div className="flex items-center justify-center w-full gap-2 min-w-0 relative z-10">
+                                {/* Icon indicator */}
+                                <div className={`flex-shrink-0 w-2 h-2 rounded-full ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-500' : 'bg-green-500'} shadow-sm`}></div>
+                                
+                                <span 
+                                  className={`text-sm font-bold ${event.text} truncate flex-1 text-center`} 
+                                  style={{ 
+                                    overflow: 'hidden', 
+                                    textOverflow: 'ellipsis', 
+                                    whiteSpace: 'nowrap',
+                                    lineHeight: '1.3'
+                                  }}
+                                >
+                                  {event.label}
+                                </span>
+                                
+                                {(ctrlPressed || selectedCount > 0) && (
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 flex-shrink-0"
+                                    checked={selectedIds.has(event.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={() => toggleSelected(event.id)}
+                                  />
+                                )}
+                              </div>
 
-                            {/* Subtle pattern overlay */}
-                            <div className={`absolute inset-0 opacity-5 ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-600' : 'bg-green-600'}`} style={{
-                              backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, currentColor 2px, currentColor 4px)'
-                            }}></div>
-                          </div>
-                        ))}
+                              {/* Subtle pattern overlay */}
+                              <div className={`absolute inset-0 opacity-5 ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-600' : 'bg-green-600'}`} style={{
+                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, currentColor 2px, currentColor 4px)'
+                              }}></div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -956,60 +1112,10 @@ export default function ManageSchedule() {
                   <button
                     type="button"
                     className="px-2 py-1 rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
-                    onClick={async () => {
-                      if (!window.confirm('Delete this schedule?')) return;
-                      setEditError(null);
-                      try {
-                        setEditSaving(true);
-                        const idVal = (
-                          editingSchedule?.schedule_template_id ||
-                          editingSchedule?.template_id ||
-                          editingSchedule?.id ||
-                          editingSchedule?.schedule_id ||
-                          editingSchedule?.predefined_id
-                        );
-                        let res;
-                        if (idVal) {
-                          res = await fetch(buildApiUrl('delete_predefined_schedule.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({ id: idVal })
-                          });
-                        } else {
-                          res = await fetch(buildApiUrl('delete_predefined_schedule.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({
-                              barangay_id: editingSchedule.barangay_id,
-                              cluster_id: editingSchedule.cluster_id,
-                              schedule_type: editingSchedule.schedule_type,
-                              day_of_week: editingSchedule.day_of_week,
-                              start_time: (editingSchedule.start_time || '').substring(0,5),
-                              week_of_month: editingSchedule.week_of_month
-                            })
-                          });
-                        }
-                        const data = await res.json();
-                        if (!data.success) throw new Error(data.message || 'Failed to delete schedule');
-                        // Remove locally
-                        setPredefinedSchedules(prev => prev.filter(s => {
-                          const sId = s.schedule_template_id || s.id;
-                          if (idVal) return sId !== idVal;
-                          const sStart = (s.start_time || '').substring(0,5);
-                          return !(
-                            s.barangay_id === editingSchedule.barangay_id &&
-                            s.cluster_id === editingSchedule.cluster_id &&
-                            s.schedule_type === editingSchedule.schedule_type &&
-                            s.day_of_week === editingSchedule.day_of_week &&
-                            sStart === (editingSchedule.start_time || '').substring(0,5)
-                          );
-                        }));
-                        setEditOpen(false);
-                      } catch (err) {
-                        setEditError(err.message);
-                      } finally {
-                        setEditSaving(false);
-                      }
+                    onClick={() => {
+                      setScheduleToDelete(editingSchedule);
+                      setDeleteError(null);
+                      setDeleteOpen(true);
                     }}
                   >
                     Delete
@@ -1152,6 +1258,118 @@ export default function ManageSchedule() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteOpen && scheduleToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+              <button
+                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setScheduleToDelete(null);
+                  setDeleteError(null);
+                }}
+                aria-label="Close"
+                title="Close"
+                disabled={deleteDeleting}
+              >✕</button>
+              <div className="flex items-center gap-2">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <FiTrash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Delete Schedule</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-4 py-3">
+              {deleteError && (
+                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                  {deleteError}
+                </div>
+              )}
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 mb-3">
+                  Are you sure you want to delete this schedule?
+                </p>
+                
+                {/* Schedule Details */}
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600 w-24">Barangay:</span>
+                      <span className="text-xs text-gray-800 font-semibold">{scheduleToDelete.barangay_name || scheduleToDelete.barangay_id}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600 w-24">Day:</span>
+                      <span className="text-xs text-gray-800">{scheduleToDelete.day_of_week}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600 w-24">Time:</span>
+                      <span className="text-xs text-gray-800">
+                        {scheduleToDelete.start_time?.substring(0,5) || ''} - {scheduleToDelete.end_time?.substring(0,5) || ''}
+                      </span>
+                    </div>
+                    {scheduleToDelete.schedule_type === 'weekly_cluster' && scheduleToDelete.week_of_month && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600 w-24">Week:</span>
+                        <span className="text-xs text-gray-800">Week {scheduleToDelete.week_of_month}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600 w-24">Type:</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 uppercase">
+                        {scheduleToDelete.schedule_type}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setScheduleToDelete(null);
+                  setDeleteError(null);
+                }}
+                disabled={deleteDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleDeleteSchedule}
+                disabled={deleteDeleting}
+              >
+                {deleteDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <FiTrash2 className="w-4 h-4" />
+                    Delete Schedule
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
