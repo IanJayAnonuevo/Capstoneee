@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 23, 2025 at 12:32 AM
+-- Generation Time: Nov 25, 2025 at 02:27 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -63,7 +63,14 @@ INSERT INTO `attendance` (`attendance_id`, `user_id`, `attendance_date`, `sessio
 (3, 30, '2025-11-21', 'AM', '05:13:28', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:30', '2025-11-21 16:26:30'),
 (4, 35, '2025-11-21', 'AM', '05:14:04', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:31', '2025-11-21 16:26:31'),
 (5, 29, '2025-11-21', 'AM', '05:14:33', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:32', '2025-11-21 16:26:32'),
-(6, 33, '2025-11-21', 'AM', '05:15:04', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:33', '2025-11-21 16:26:33');
+(6, 33, '2025-11-21', 'AM', '05:15:04', NULL, 'present', 'verified', 91, NULL, '2025-11-21 16:26:33', '2025-11-21 16:26:33'),
+(7, 16, '2025-11-23', 'AM', '05:13:43', NULL, 'present', 'verified', 91, NULL, '2025-11-23 16:14:27', '2025-11-23 16:14:27'),
+(8, 28, '2025-11-24', 'AM', '05:18:46', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:29:52', '2025-11-24 16:29:52'),
+(9, 31, '2025-11-24', 'AM', '05:16:44', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:30:16', '2025-11-24 16:30:16'),
+(10, 35, '2025-11-24', 'AM', '05:15:02', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:30:17', '2025-11-24 16:30:17'),
+(11, 30, '2025-11-24', 'AM', '05:14:15', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:30:18', '2025-11-24 16:30:18'),
+(12, 17, '2025-11-24', 'AM', '05:12:08', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:30:18', '2025-11-24 16:30:18'),
+(13, 16, '2025-11-24', 'AM', '05:11:14', NULL, 'present', 'verified', 91, NULL, '2025-11-24 16:30:19', '2025-11-24 16:30:19');
 
 -- --------------------------------------------------------
 
@@ -96,7 +103,14 @@ INSERT INTO `attendance_request` (`id`, `user_id`, `schedule_id`, `photo_path`, 
 (14, 30, NULL, 'uploads/attendance/attendance_30_20251121171328_3899acf8.png', NULL, 'approved', 91, NULL, '2025-11-21 05:13:28', '2025-11-21 05:26:30', NULL, NULL),
 (15, 35, NULL, 'uploads/attendance/attendance_35_20251121171404_d4ea96e8.png', NULL, 'approved', 91, NULL, '2025-11-21 05:14:04', '2025-11-21 05:26:31', NULL, NULL),
 (16, 29, NULL, 'uploads/attendance/attendance_29_20251121171433_caf7aadd.jpg', NULL, 'approved', 91, NULL, '2025-11-21 05:14:33', '2025-11-21 05:26:32', NULL, NULL),
-(17, 33, NULL, 'uploads/attendance/attendance_33_20251121171504_585ea45f.png', NULL, 'approved', 91, NULL, '2025-11-21 05:15:04', '2025-11-21 05:26:33', NULL, NULL);
+(17, 33, NULL, 'uploads/attendance/attendance_33_20251121171504_585ea45f.png', NULL, 'approved', 91, NULL, '2025-11-21 05:15:04', '2025-11-21 05:26:33', NULL, NULL),
+(18, 16, NULL, 'uploads/attendance/attendance_16_20251123171343_2efa833e.jpg', NULL, 'approved', 91, NULL, '2025-11-23 05:13:43', '2025-11-23 05:14:27', NULL, NULL),
+(19, 16, NULL, 'uploads/attendance/attendance_16_20251124171114_93e3a3cd.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:11:14', '2025-11-24 05:30:19', NULL, NULL),
+(20, 17, NULL, 'uploads/attendance/attendance_17_20251124171208_1266a851.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:12:08', '2025-11-24 05:30:18', NULL, NULL),
+(21, 30, NULL, 'uploads/attendance/attendance_30_20251124171415_5401d8d6.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:14:15', '2025-11-24 05:30:18', NULL, NULL),
+(22, 35, NULL, 'uploads/attendance/attendance_35_20251124171502_f37cca48.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:15:02', '2025-11-24 05:30:17', NULL, NULL),
+(23, 31, NULL, 'uploads/attendance/attendance_31_20251124171644_01f6d167.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:16:44', '2025-11-24 05:30:16', NULL, NULL),
+(24, 28, NULL, 'uploads/attendance/attendance_28_20251124171846_9c9a047e.jpg', '{\"intent\":\"time_in\"}', 'approved', 91, NULL, '2025-11-24 05:18:46', '2025-11-24 05:29:52', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -457,7 +471,14 @@ INSERT INTO `collection_schedule` (`schedule_id`, `barangay_id`, `type_id`, `sch
 (1580, '31-NRTHC', NULL, '2025-11-21', 'AM', NULL, '10:00:00', '11:00:00', 'approved'),
 (1581, '39-STHCN', NULL, '2025-11-21', 'AM', NULL, '07:00:00', '08:00:00', 'approved'),
 (1582, '39-STHCN', NULL, '2025-11-21', 'AM', NULL, '11:00:00', '12:00:00', 'approved'),
-(1583, '46-YB', NULL, '2025-11-21', 'AM', NULL, '09:00:00', '10:00:00', 'approved');
+(1583, '46-YB', NULL, '2025-11-21', 'AM', NULL, '09:00:00', '10:00:00', 'approved'),
+(1584, '20-IMPG', NULL, '2025-11-24', 'AM', NULL, '08:00:00', '10:00:00', 'approved'),
+(1585, '42-TR', NULL, '2025-11-24', 'AM', NULL, '10:00:00', '12:00:00', 'approved'),
+(1586, '31-NRTHC', NULL, '2025-11-24', 'AM', NULL, '06:00:00', '07:00:00', 'approved'),
+(1587, '31-NRTHC', NULL, '2025-11-24', 'AM', NULL, '10:00:00', '11:00:00', 'approved'),
+(1588, '39-STHCN', NULL, '2025-11-24', 'AM', NULL, '07:00:00', '08:00:00', 'approved'),
+(1589, '39-STHCN', NULL, '2025-11-24', 'AM', NULL, '11:00:00', '12:00:00', 'approved'),
+(1590, '30-MNTL', NULL, '2025-11-24', 'AM', NULL, '09:00:00', '10:00:00', 'approved');
 
 -- --------------------------------------------------------
 
@@ -573,7 +594,14 @@ INSERT INTO `collection_team` (`team_id`, `schedule_id`, `truck_id`, `driver_id`
 (1316, 1580, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
 (1317, 1581, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
 (1318, 1582, 1, 16, 'AM', '{\"driver_attendance_id\":2,\"collector_attendance_ids\":[3,4,5]}', 'approved'),
-(1319, 1583, 2, 17, 'AM', '{\"driver_attendance_id\":1,\"collector_attendance_ids\":[6]}', 'approved');
+(1319, 1583, 2, 17, 'AM', '{\"driver_attendance_id\":1,\"collector_attendance_ids\":[6]}', 'approved'),
+(1320, 1584, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1321, 1585, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1322, 1586, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1323, 1587, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1324, 1588, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1325, 1589, 1, 16, 'AM', '{\"driver_attendance_id\":13,\"collector_attendance_ids\":[11,10]}', 'approved'),
+(1326, 1590, 2, 17, 'AM', '{\"driver_attendance_id\":12,\"collector_attendance_ids\":[9,8]}', 'approved');
 
 -- --------------------------------------------------------
 
@@ -799,7 +827,21 @@ INSERT INTO `collection_team_member` (`team_member_id`, `team_id`, `collector_id
 (3916, 1318, 30, 'approved'),
 (3917, 1318, 35, 'approved'),
 (3918, 1318, 29, 'approved'),
-(3919, 1319, 33, 'approved');
+(3919, 1319, 33, 'approved'),
+(3920, 1320, 30, 'approved'),
+(3921, 1320, 35, 'approved'),
+(3922, 1321, 30, 'approved'),
+(3923, 1321, 35, 'approved'),
+(3924, 1322, 30, 'approved'),
+(3925, 1322, 35, 'approved'),
+(3926, 1323, 30, 'approved'),
+(3927, 1323, 35, 'approved'),
+(3928, 1324, 30, 'approved'),
+(3929, 1324, 35, 'approved'),
+(3930, 1325, 30, 'approved'),
+(3931, 1325, 35, 'approved'),
+(3932, 1326, 31, 'approved'),
+(3933, 1326, 28, 'approved');
 
 -- --------------------------------------------------------
 
@@ -942,7 +984,30 @@ INSERT INTO `daily_route` (`id`, `date`, `cluster_id`, `barangay_id`, `barangay_
 (624, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 1, 1171, '07:00:00', '08:00:00', 'completed', 'generated', 9, NULL, NULL, NULL, NULL, '2025-11-22 05:24:45', '2025-11-22 10:15:52'),
 (625, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 2, 1172, '11:00:00', '12:00:00', 'scheduled', 'generated', 10, NULL, NULL, NULL, NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
 (626, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 1, 1173, '14:00:00', '15:00:00', 'scheduled', 'generated', 11, NULL, NULL, NULL, NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(627, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 2, 1174, '17:00:00', '18:00:00', 'scheduled', 'generated', 12, NULL, NULL, NULL, NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45');
+(627, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 2, 1174, '17:00:00', '18:00:00', 'scheduled', 'generated', 12, NULL, NULL, NULL, NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(632, '2025-11-21', '1C-PB', '20-IMPG', 'Impig', 1, 1163, '09:00:00', '10:00:00', 'scheduled', 'generated', 13, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(633, '2025-11-21', '1C-PB', '25-MLBG', 'Malubago', 2, 1164, '08:00:00', '10:00:00', 'in_progress', 'generated', 14, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-24 08:39:01'),
+(634, '2025-11-21', '1C-PB', '42-TR', 'Tara', 1, 1165, '10:00:00', '12:00:00', 'scheduled', 'generated', 15, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(635, '2025-11-21', '1C-PB', '05-AZCN', 'Azucena', 2, 1166, '13:00:00', '15:00:00', 'scheduled', 'generated', 16, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(636, '2025-11-21', '1C-PB', '31-NRTHC', 'North Centro', 1, 1167, '06:00:00', '07:00:00', 'scheduled', 'generated', 17, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(637, '2025-11-21', '1C-PB', '31-NRTHC', 'North Centro', 2, 1168, '10:00:00', '11:00:00', 'scheduled', 'generated', 18, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(638, '2025-11-21', '1C-PB', '31-NRTHC', 'North Centro', 1, 1169, '13:00:00', '14:00:00', 'scheduled', 'generated', 19, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(639, '2025-11-21', '1C-PB', '31-NRTHC', 'North Centro', 2, 1170, '16:00:00', '17:00:00', 'scheduled', 'generated', 20, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(640, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 1, 1171, '07:00:00', '08:00:00', 'scheduled', 'generated', 21, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(641, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 2, 1172, '11:00:00', '12:00:00', 'scheduled', 'generated', 22, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(642, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 1, 1173, '14:00:00', '15:00:00', 'scheduled', 'generated', 23, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(643, '2025-11-21', '1C-PB', '39-STHCN', 'South Centro', 2, 1174, '17:00:00', '18:00:00', 'scheduled', 'generated', 24, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(644, '2025-11-21', '2C-CA', '44-TLTL', 'Tula-tula', 1, 1175, '09:00:00', '10:00:00', 'scheduled', 'generated', 1, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(645, '2025-11-21', '3C-CB', '21-LPLP', 'Lipilip', 2, 1176, '09:00:00', '10:00:00', 'scheduled', 'generated', 1, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(646, '2025-11-21', '4C-CC', '46-YB', 'Yabo', 1, 1177, '09:00:00', '10:00:00', 'scheduled', 'generated', 1, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(647, '2025-11-21', '5C-CD', '28-MNGG', 'Mangga', 2, 1178, '09:00:00', '10:00:00', 'scheduled', 'generated', 1, NULL, NULL, NULL, NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(683, '2025-11-24', '1C-PB', '20-IMPG', 'Impig', 1, 1320, '08:00:00', '10:00:00', 'in_progress', 'generated', 1, NULL, NULL, NULL, '{\"truck_full\":false,\"truck_full_timestamp\":\"2025-11-25T02:02:34+01:00\",\"truck_full_collector_id\":30,\"truck_full_cleared_at\":\"2025-11-25T01:03:32.250Z\"}', '2025-11-24 05:52:42', '2025-11-24 14:03:32'),
+(684, '2025-11-24', '1C-PB', '42-TR', 'Tara', 1, 1321, '10:00:00', '12:00:00', 'scheduled', 'generated', 2, NULL, NULL, NULL, NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(685, '2025-11-24', '1C-PB', '31-NRTHC', 'North Centro', 1, 1322, '06:00:00', '07:00:00', 'in_progress', 'generated', 3, NULL, NULL, NULL, '{\"emergency\":{\"active\":true,\"impact\":\"delay\",\"type\":\"weather\",\"type_label\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"attachment\":null,\"log_id\":7}}', '2025-11-24 05:52:42', '2025-11-24 13:54:37'),
+(686, '2025-11-24', '1C-PB', '31-NRTHC', 'North Centro', 1, 1323, '10:00:00', '11:00:00', 'scheduled', 'generated', 4, NULL, NULL, NULL, NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(687, '2025-11-24', '1C-PB', '39-STHCN', 'South Centro', 1, 1324, '07:00:00', '08:00:00', 'completed', 'generated', 5, NULL, NULL, NULL, NULL, '2025-11-24 05:52:42', '2025-11-24 14:02:20'),
+(688, '2025-11-24', '1C-PB', '39-STHCN', 'South Centro', 1, 1325, '11:00:00', '12:00:00', 'scheduled', 'generated', 6, NULL, NULL, NULL, NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(689, '2025-11-24', '5C-CD', '30-MNTL', 'Mantila', 2, 1326, '09:00:00', '10:00:00', 'in_progress', 'generated', 1, NULL, NULL, NULL, NULL, '2025-11-24 05:52:42', '2025-11-24 05:56:13');
 
 -- --------------------------------------------------------
 
@@ -964,6 +1029,7 @@ CREATE TABLE `daily_route_stop` (
   `etd` datetime DEFAULT NULL,
   `planned_volume_kg` int(11) DEFAULT NULL,
   `status` enum('pending','visited','skipped') NOT NULL DEFAULT 'pending',
+  `proof_photo_url` varchar(500) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -972,299 +1038,359 @@ CREATE TABLE `daily_route_stop` (
 -- Dumping data for table `daily_route_stop`
 --
 
-INSERT INTO `daily_route_stop` (`id`, `daily_route_id`, `seq`, `collection_point_id`, `name`, `lat`, `lng`, `window_start`, `window_end`, `eta`, `etd`, `planned_volume_kg`, `status`, `created_at`, `updated_at`) VALUES
-(1010, 530, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1011, 531, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1012, 532, 1, 22, 'Lubigan Jr. CP', 13.7310000, 122.9208000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1013, 533, 1, 26, 'Manangle CP', 13.7683000, 122.9190000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1014, 534, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-10-08 00:17:53', '2025-10-08 01:31:48'),
-(1015, 534, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-10-08 00:17:53', '2025-10-08 01:31:56'),
-(1016, 534, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-10-08 00:17:53', '2025-10-08 01:32:00'),
-(1017, 534, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-10-08 00:17:53', '2025-10-08 01:31:58'),
-(1018, 535, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1019, 535, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1020, 535, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1021, 535, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1022, 536, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1023, 536, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1024, 536, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1025, 536, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1026, 537, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1027, 537, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1028, 537, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1029, 537, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1030, 538, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1031, 538, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1032, 538, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1033, 538, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1034, 539, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1035, 539, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1036, 539, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1037, 539, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1038, 540, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1039, 540, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1040, 540, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1041, 540, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1042, 541, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1043, 541, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1044, 541, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1045, 541, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
-(1046, 542, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1047, 543, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1048, 544, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1049, 545, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1050, 546, 1, 11, 'Bulawan CP', 13.7501000, 122.8885000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1051, 547, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1052, 547, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1053, 547, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1054, 547, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1055, 548, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1056, 548, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1057, 548, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1058, 548, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1059, 549, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1060, 549, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1061, 549, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1062, 549, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1063, 550, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1064, 550, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1065, 550, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1066, 550, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1067, 551, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1068, 551, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1069, 551, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1070, 551, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1071, 552, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1072, 552, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1073, 552, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1074, 552, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1075, 553, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1076, 553, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1077, 553, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1078, 553, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1079, 554, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1080, 554, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1081, 554, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1082, 554, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
-(1083, 555, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1084, 556, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1085, 557, 1, 7, 'Binahian CP', 13.7374000, 122.8698000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1086, 558, 1, 13, 'Caima CP', 13.6857000, 122.8724000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1087, 559, 1, 6, 'Bagong Sirang CP', 13.7189000, 122.9027000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1088, 560, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1089, 560, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1090, 560, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1091, 560, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1092, 561, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1093, 561, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1094, 561, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1095, 561, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1096, 562, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1097, 562, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1098, 562, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1099, 562, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1100, 563, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1101, 563, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1102, 563, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1103, 563, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1104, 564, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1105, 564, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1106, 564, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1107, 564, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1108, 565, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1109, 565, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1110, 565, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1111, 565, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1112, 566, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1113, 566, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1114, 566, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1115, 566, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1116, 567, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1117, 567, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1118, 567, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1119, 567, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
-(1120, 568, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1121, 569, 1, 16, 'Carayrayan CP', 13.7195000, 122.8767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1122, 570, 1, 21, 'Lipilip CP', 13.6948000, 122.8896000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1123, 571, 1, 23, 'Lubigan Sr. CP', 13.7432000, 122.9393000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1124, 572, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1125, 572, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1126, 572, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1127, 572, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1128, 573, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1129, 573, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1130, 573, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1131, 573, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1132, 574, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1133, 574, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1134, 574, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1135, 574, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1136, 575, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1137, 575, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1138, 575, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1139, 575, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1140, 576, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1141, 576, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1142, 576, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1143, 576, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1144, 577, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1145, 577, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1146, 577, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1147, 577, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1148, 578, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1149, 578, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1150, 578, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1151, 578, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1152, 579, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1153, 579, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1154, 579, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1155, 579, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
-(1156, 580, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1157, 581, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1158, 582, 1, 46, 'Yabo CP', 13.7936000, 122.9327000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1159, 583, 1, 34, 'Salanda CP', 13.8058000, 122.9465000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1160, 584, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1161, 584, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1162, 584, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1163, 584, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1164, 585, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1165, 585, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1166, 585, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1167, 585, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1168, 586, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1169, 586, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1170, 586, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1171, 586, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1172, 587, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1173, 587, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1174, 587, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1175, 587, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1176, 588, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1177, 588, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1178, 588, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1179, 588, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1180, 589, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1181, 589, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1182, 589, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1183, 589, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1184, 590, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1185, 590, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1186, 590, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1187, 590, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1188, 591, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1189, 591, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1190, 591, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1191, 591, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
-(1192, 592, 1, 19, 'Gaongan CP', 13.7602000, 122.9668000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1193, 593, 1, 9, 'Bolo Sur CP', 13.8044000, 122.9584000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1194, 594, 1, 2, 'Alteza Corner CP', 13.7921000, 122.9718000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1195, 595, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1196, 595, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1197, 595, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1198, 595, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1199, 596, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1200, 596, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1201, 596, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1202, 596, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1203, 597, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1204, 597, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1205, 597, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1206, 597, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1207, 598, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1208, 598, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1209, 598, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1210, 598, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1211, 599, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1212, 599, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1213, 599, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1214, 599, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1215, 600, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1216, 600, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1217, 600, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1218, 600, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1219, 601, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1220, 601, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1221, 601, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1222, 601, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1223, 602, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1224, 602, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1225, 602, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1226, 602, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
-(1227, 603, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1228, 604, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1229, 605, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1230, 606, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1231, 607, 1, 40, 'South Villazar CP', 13.8549000, 122.9522000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1232, 608, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1233, 608, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1234, 608, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1235, 608, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1236, 609, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1237, 609, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1238, 609, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1239, 609, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1240, 610, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1241, 610, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1242, 610, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1243, 610, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1244, 611, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1245, 611, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1246, 611, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1247, 611, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1248, 612, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1249, 612, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1250, 612, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1251, 612, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1252, 613, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1253, 613, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1254, 613, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1255, 613, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1256, 614, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1257, 614, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1258, 614, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1259, 614, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1260, 615, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1261, 615, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1262, 615, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1263, 615, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
-(1264, 616, 2, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 12:23:29'),
-(1265, 617, 2, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 11:28:35'),
-(1266, 618, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1267, 619, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1268, 620, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 09:46:21'),
-(1269, 620, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 09:46:47'),
-(1270, 620, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 09:46:48'),
-(1271, 620, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 09:46:48'),
-(1272, 621, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 12:24:00'),
-(1273, 621, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 12:30:23'),
-(1274, 621, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 12:31:10'),
-(1275, 621, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 12:31:30'),
-(1276, 622, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1277, 622, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1278, 622, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1279, 622, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1280, 623, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1281, 623, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1282, 623, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1283, 623, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1284, 624, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 10:15:25'),
-(1285, 624, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 10:15:25'),
-(1286, 624, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 10:15:26'),
-(1287, 624, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 05:24:45', '2025-11-22 10:15:27'),
-(1288, 625, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1289, 625, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1290, 625, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1291, 625, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1292, 626, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1293, 626, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1294, 626, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1295, 626, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1296, 627, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1297, 627, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1298, 627, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1299, 627, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
-(1304, 617, 1, NULL, 'Mantila - Truck Full Destination', 13.6550000, 122.7650000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 10:33:40', '2025-11-22 11:28:33'),
-(1305, 616, 1, NULL, 'Mantila - Truck Full Destination', 13.6550000, 122.7650000, NULL, NULL, NULL, NULL, NULL, 'visited', '2025-11-22 11:35:20', '2025-11-22 11:50:10');
+INSERT INTO `daily_route_stop` (`id`, `daily_route_id`, `seq`, `collection_point_id`, `name`, `lat`, `lng`, `window_start`, `window_end`, `eta`, `etd`, `planned_volume_kg`, `status`, `proof_photo_url`, `created_at`, `updated_at`) VALUES
+(1010, 530, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1011, 531, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1012, 532, 1, 22, 'Lubigan Jr. CP', 13.7310000, 122.9208000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1013, 533, 1, 26, 'Manangle CP', 13.7683000, 122.9190000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1014, 534, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-10-08 00:17:53', '2025-10-08 01:31:48'),
+(1015, 534, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-10-08 00:17:53', '2025-10-08 01:31:56'),
+(1016, 534, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-10-08 00:17:53', '2025-10-08 01:32:00'),
+(1017, 534, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-10-08 00:17:53', '2025-10-08 01:31:58'),
+(1018, 535, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1019, 535, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1020, 535, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1021, 535, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1022, 536, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1023, 536, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1024, 536, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1025, 536, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1026, 537, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1027, 537, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1028, 537, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1029, 537, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1030, 538, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1031, 538, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1032, 538, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1033, 538, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1034, 539, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1035, 539, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1036, 539, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1037, 539, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1038, 540, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1039, 540, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1040, 540, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1041, 540, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1042, 541, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1043, 541, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1044, 541, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1045, 541, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-08 00:17:53', '2025-10-08 00:17:53'),
+(1046, 542, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1047, 543, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1048, 544, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1049, 545, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1050, 546, 1, 11, 'Bulawan CP', 13.7501000, 122.8885000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1051, 547, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1052, 547, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1053, 547, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1054, 547, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1055, 548, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1056, 548, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1057, 548, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1058, 548, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1059, 549, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1060, 549, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1061, 549, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1062, 549, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1063, 550, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1064, 550, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1065, 550, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1066, 550, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1067, 551, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1068, 551, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1069, 551, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1070, 551, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1071, 552, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1072, 552, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1073, 552, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1074, 552, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1075, 553, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1076, 553, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1077, 553, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1078, 553, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1079, 554, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1080, 554, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1081, 554, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1082, 554, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-09 01:49:04', '2025-10-09 01:49:04'),
+(1083, 555, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1084, 556, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1085, 557, 1, 7, 'Binahian CP', 13.7374000, 122.8698000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1086, 558, 1, 13, 'Caima CP', 13.6857000, 122.8724000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1087, 559, 1, 6, 'Bagong Sirang CP', 13.7189000, 122.9027000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1088, 560, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1089, 560, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1090, 560, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1091, 560, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1092, 561, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1093, 561, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1094, 561, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1095, 561, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1096, 562, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1097, 562, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1098, 562, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1099, 562, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1100, 563, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1101, 563, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1102, 563, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1103, 563, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1104, 564, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1105, 564, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1106, 564, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1107, 564, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1108, 565, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1109, 565, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1110, 565, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1111, 565, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1112, 566, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1113, 566, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1114, 566, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1115, 566, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1116, 567, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1117, 567, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1118, 567, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1119, 567, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-12 01:49:03', '2025-10-12 01:49:03'),
+(1120, 568, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1121, 569, 1, 16, 'Carayrayan CP', 13.7195000, 122.8767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1122, 570, 1, 21, 'Lipilip CP', 13.6948000, 122.8896000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1123, 571, 1, 23, 'Lubigan Sr. CP', 13.7432000, 122.9393000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1124, 572, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1125, 572, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1126, 572, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1127, 572, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1128, 573, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1129, 573, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1130, 573, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1131, 573, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1132, 574, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1133, 574, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1134, 574, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1135, 574, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1136, 575, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1137, 575, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1138, 575, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1139, 575, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1140, 576, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1141, 576, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1142, 576, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1143, 576, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1144, 577, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1145, 577, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1146, 577, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1147, 577, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1148, 578, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1149, 578, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1150, 578, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1151, 578, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1152, 579, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1153, 579, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1154, 579, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1155, 579, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-13 01:49:03', '2025-10-13 01:49:03'),
+(1156, 580, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1157, 581, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1158, 582, 1, 46, 'Yabo CP', 13.7936000, 122.9327000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1159, 583, 1, 34, 'Salanda CP', 13.8058000, 122.9465000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1160, 584, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1161, 584, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1162, 584, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1163, 584, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1164, 585, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1165, 585, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1166, 585, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1167, 585, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1168, 586, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1169, 586, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1170, 586, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1171, 586, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1172, 587, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1173, 587, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1174, 587, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1175, 587, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1176, 588, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1177, 588, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1178, 588, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1179, 588, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1180, 589, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1181, 589, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1182, 589, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1183, 589, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1184, 590, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1185, 590, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1186, 590, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1187, 590, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1188, 591, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1189, 591, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1190, 591, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1191, 591, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-14 01:49:03', '2025-10-14 01:49:03'),
+(1192, 592, 1, 19, 'Gaongan CP', 13.7602000, 122.9668000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1193, 593, 1, 9, 'Bolo Sur CP', 13.8044000, 122.9584000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1194, 594, 1, 2, 'Alteza Corner CP', 13.7921000, 122.9718000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1195, 595, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1196, 595, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1197, 595, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1198, 595, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1199, 596, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1200, 596, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1201, 596, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1202, 596, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1203, 597, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1204, 597, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1205, 597, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1206, 597, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1207, 598, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1208, 598, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1209, 598, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1210, 598, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1211, 599, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1212, 599, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1213, 599, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1214, 599, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1215, 600, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1216, 600, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1217, 600, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1218, 600, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1219, 601, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1220, 601, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1221, 601, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1222, 601, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1223, 602, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1224, 602, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1225, 602, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1226, 602, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-15 01:49:03', '2025-10-15 01:49:03'),
+(1227, 603, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1228, 604, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1229, 605, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1230, 606, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1231, 607, 1, 40, 'South Villazar CP', 13.8549000, 122.9522000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1232, 608, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1233, 608, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1234, 608, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1235, 608, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1236, 609, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1237, 609, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1238, 609, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1239, 609, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1240, 610, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1241, 610, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1242, 610, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1243, 610, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1244, 611, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1245, 611, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1246, 611, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1247, 611, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1248, 612, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1249, 612, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1250, 612, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1251, 612, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1252, 613, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1253, 613, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1254, 613, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1255, 613, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1256, 614, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1257, 614, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1258, 614, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1259, 614, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1260, 615, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1261, 615, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1262, 615, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1263, 615, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-10-16 01:49:04', '2025-10-16 01:49:04'),
+(1264, 616, 2, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 12:23:29'),
+(1265, 617, 2, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 11:28:35'),
+(1266, 618, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1267, 619, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1268, 620, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 09:46:21'),
+(1269, 620, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 09:46:47'),
+(1270, 620, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 09:46:48'),
+(1271, 620, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 09:46:48'),
+(1272, 621, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 12:24:00'),
+(1273, 621, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 12:30:23'),
+(1274, 621, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 12:31:10'),
+(1275, 621, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 12:31:30'),
+(1276, 622, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1277, 622, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1278, 622, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1279, 622, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1280, 623, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1281, 623, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1282, 623, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1283, 623, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1284, 624, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 10:15:25'),
+(1285, 624, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 10:15:25'),
+(1286, 624, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 10:15:26'),
+(1287, 624, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 05:24:45', '2025-11-22 10:15:27'),
+(1288, 625, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1289, 625, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1290, 625, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1291, 625, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1292, 626, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1293, 626, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1294, 626, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1295, 626, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1296, 627, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1297, 627, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1298, 627, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1299, 627, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-22 05:24:45', '2025-11-22 05:24:45'),
+(1304, 617, 1, NULL, 'Mantila - Truck Full Destination', 13.6550000, 122.7650000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 10:33:40', '2025-11-22 11:28:33'),
+(1305, 616, 1, NULL, 'Mantila - Truck Full Destination', 13.6550000, 122.7650000, NULL, NULL, NULL, NULL, NULL, 'visited', NULL, '2025-11-22 11:35:20', '2025-11-22 11:50:10'),
+(1306, 632, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1307, 633, 1, 53, 'Malubago Main Collection Point', 13.6800000, 122.8150000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1308, 634, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1309, 635, 1, 5, 'Azucena Central CP', 13.7774000, 122.9662000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1310, 636, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1311, 636, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1312, 636, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1313, 636, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1314, 637, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1315, 637, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1316, 637, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1317, 637, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1318, 638, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1319, 638, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1320, 638, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1321, 638, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1322, 639, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1323, 639, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1324, 639, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1325, 639, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1326, 640, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1327, 640, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1328, 640, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17');
+INSERT INTO `daily_route_stop` (`id`, `daily_route_id`, `seq`, `collection_point_id`, `name`, `lat`, `lng`, `window_start`, `window_end`, `eta`, `etd`, `planned_volume_kg`, `status`, `proof_photo_url`, `created_at`, `updated_at`) VALUES
+(1329, 640, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1330, 641, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1331, 641, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1332, 641, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1333, 641, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1334, 642, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1335, 642, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1336, 642, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1337, 642, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1338, 643, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1339, 643, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1340, 643, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1341, 643, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1342, 644, 1, 44, 'Tula-tula CP', 13.8497000, 123.0073000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1343, 645, 1, 21, 'Lipilip CP', 13.6948000, 122.8896000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1344, 646, 1, 46, 'Yabo CP', 13.7936000, 122.9327000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1345, 647, 1, 28, 'Mangga CP', 13.7806000, 123.0408000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-23 14:19:17', '2025-11-23 14:19:17'),
+(1441, 683, 1, 20, 'Impig CP', 13.7886000, 122.9855000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1442, 684, 1, 42, 'Tara CP', 13.7476000, 122.9738000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1443, 685, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1443_1764016291.jpg', '2025-11-24 05:52:42', '2025-11-24 09:31:31'),
+(1444, 685, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1444_1764018104.jpg', '2025-11-24 05:52:42', '2025-11-24 10:01:44'),
+(1445, 685, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1445_1764032182.jpg', '2025-11-24 05:52:42', '2025-11-24 13:56:22'),
+(1446, 685, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1446_1764032211.jpg', '2025-11-24 05:52:42', '2025-11-24 13:56:51'),
+(1447, 686, 1, 31, 'North Centro CP', 13.7701000, 122.9762000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1448, 686, 2, 47, 'North Centro CP - A', 13.7705000, 122.9767000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1449, 686, 3, 48, 'North Centro CP - B', 13.7698000, 122.9758000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1450, 686, 4, 49, 'North Centro CP - C', 13.7703000, 122.9754000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1451, 687, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1451_1764032429.jpg', '2025-11-24 05:52:42', '2025-11-24 14:00:29'),
+(1452, 687, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1452_1764032440.jpg', '2025-11-24 05:52:42', '2025-11-24 14:00:40'),
+(1453, 687, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1453_1764032452.jpg', '2025-11-24 05:52:42', '2025-11-24 14:00:52'),
+(1454, 687, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'visited', 'uploads/route_proofs/stop_1454_1764032503.jpg', '2025-11-24 05:52:42', '2025-11-24 14:01:43'),
+(1455, 688, 1, 39, 'South Centro CP', 13.7644000, 122.9760000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1456, 688, 2, 50, 'South Centro CP - A', 13.7648000, 122.9764000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1457, 688, 3, 51, 'South Centro CP - B', 13.7640000, 122.9756000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1458, 688, 4, 52, 'South Centro CP - C', 13.7637000, 122.9763000, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42'),
+(1459, 689, 1, 30, 'Mantila CP', 13.7834133, 123.0199262, NULL, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-24 05:52:42', '2025-11-24 05:52:42');
 
 -- --------------------------------------------------------
 
@@ -1675,7 +1801,60 @@ INSERT INTO `gps_route_log` (`log_id`, `team_id`, `truck_id`, `driver_id`, `lati
 (2390, 1318, 1, 16, 13.68718806, 123.09720434, '2025-11-22 12:30:45', NULL, 159.00, NULL, NULL),
 (2391, 1318, 1, 16, 13.68718806, 123.09720434, '2025-11-22 12:31:19', NULL, 159.00, NULL, NULL),
 (2392, 1318, 1, 16, 13.68718806, 123.09720434, '2025-11-22 12:31:34', NULL, 159.00, NULL, NULL),
-(2393, 1318, 1, 16, 13.68718806, 123.09720434, '2025-11-22 12:31:41', NULL, 159.00, NULL, NULL);
+(2393, 1318, 1, 16, 13.68718806, 123.09720434, '2025-11-22 12:31:41', NULL, 159.00, NULL, NULL),
+(2394, 1318, 1, 16, 13.68742800, 123.09631300, '2025-11-24 08:39:06', NULL, 500.00, NULL, NULL),
+(2395, 1318, 1, 16, 13.68742800, 123.09631300, '2025-11-24 08:39:21', NULL, 500.00, NULL, NULL),
+(2396, 1326, 2, 17, 13.68742800, 123.09631300, '2025-11-24 05:56:14', NULL, 500.00, NULL, NULL),
+(2397, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 05:58:36', NULL, 500.00, NULL, NULL),
+(2398, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 06:04:32', NULL, 500.00, NULL, NULL),
+(2399, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 09:29:30', NULL, 159.00, NULL, NULL),
+(2400, 1325, 1, 16, 0.00000000, 0.00000000, '2025-11-24 09:29:46', NULL, 150.00, NULL, NULL),
+(2401, 1325, 1, 16, 0.00000000, 122.97620000, '2025-11-24 09:30:05', NULL, 150.00, NULL, NULL),
+(2402, 1325, 1, 16, 0.00000000, 122.97620000, '2025-11-24 09:30:27', NULL, 150.00, NULL, NULL),
+(2403, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 09:30:32', NULL, 150.00, NULL, NULL),
+(2404, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 09:31:48', NULL, 150.00, NULL, NULL),
+(2405, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 10:03:06', NULL, 150.00, NULL, NULL),
+(2406, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 10:39:42', NULL, 150.00, NULL, NULL),
+(2407, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 10:42:07', NULL, 150.00, NULL, NULL),
+(2408, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 10:46:02', NULL, 150.00, NULL, NULL),
+(2409, 1325, 1, 16, 13.77010000, 122.97620000, '2025-11-24 10:46:41', NULL, 150.00, NULL, NULL),
+(2410, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:16:56', NULL, 500.00, NULL, NULL),
+(2411, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:18:18', NULL, 500.00, NULL, NULL),
+(2412, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 11:19:45', NULL, 159.00, NULL, NULL),
+(2413, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:38:28', NULL, 500.00, NULL, NULL),
+(2414, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:38:32', NULL, 500.00, NULL, NULL),
+(2415, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:43:52', NULL, 500.00, NULL, NULL),
+(2416, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 11:43:57', NULL, 159.00, NULL, NULL),
+(2417, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 11:44:23', NULL, 159.00, NULL, NULL),
+(2418, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:56:08', NULL, 500.00, NULL, NULL),
+(2419, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:56:45', NULL, 500.00, NULL, NULL),
+(2420, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 11:57:48', NULL, 500.00, NULL, NULL),
+(2421, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:01:56', NULL, 500.00, NULL, NULL),
+(2422, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:02:29', NULL, 500.00, NULL, NULL),
+(2423, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:14:03', NULL, 500.00, NULL, NULL),
+(2424, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:14:15', NULL, 500.00, NULL, NULL),
+(2425, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:26:45', NULL, 500.00, NULL, NULL),
+(2426, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:38:07', NULL, 500.00, NULL, NULL),
+(2427, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:38:28', NULL, 500.00, NULL, NULL),
+(2428, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 12:46:48', NULL, 500.00, NULL, NULL),
+(2429, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 12:48:30', NULL, 159.00, NULL, NULL),
+(2430, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 12:50:09', NULL, 159.00, NULL, NULL),
+(2431, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 12:53:44', NULL, 159.00, NULL, NULL),
+(2432, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 12:55:01', NULL, 159.00, NULL, NULL),
+(2433, 1325, 1, 16, 13.68718806, 123.09720434, '2025-11-24 13:35:08', NULL, 159.00, NULL, NULL),
+(2434, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:41:02', NULL, 500.00, NULL, NULL),
+(2435, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:53:50', NULL, 500.00, NULL, NULL),
+(2436, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:53:53', NULL, 500.00, NULL, NULL),
+(2437, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:54:37', NULL, 500.00, NULL, NULL),
+(2438, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:55:05', NULL, 500.00, NULL, NULL),
+(2439, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:55:28', NULL, 500.00, NULL, NULL),
+(2440, 1325, 1, 16, 13.77030000, 122.97540000, '2025-11-24 13:55:41', NULL, 150.00, NULL, NULL),
+(2441, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:56:02', NULL, 500.00, NULL, NULL),
+(2442, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:58:18', NULL, 500.00, NULL, NULL),
+(2443, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:58:22', NULL, 500.00, NULL, NULL),
+(2444, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:58:37', NULL, 500.00, NULL, NULL),
+(2445, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 13:59:06', NULL, 500.00, NULL, NULL),
+(2446, 1325, 1, 16, 13.68742800, 123.09631300, '2025-11-24 14:02:15', NULL, 500.00, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1952,7 +2131,36 @@ INSERT INTO `notification` (`notification_id`, `recipient_id`, `message`, `creat
 (11720, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":617,\"team_id\":1164,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"25-MLBG\",\"barangay_name\":\"Malubago\",\"timestamp\":\"2025-11-22T22:33:40+01:00\"}', '2025-11-22 10:33:40', 'unread'),
 (11721, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":616,\"team_id\":1163,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"20-IMPG\",\"barangay_name\":\"Impig\",\"timestamp\":\"2025-11-22T23:35:20+01:00\"}', '2025-11-22 11:35:20', 'unread'),
 (11722, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":621,\"team_id\":1168,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"timestamp\":\"2025-11-23T00:24:25+01:00\"}', '2025-11-22 12:24:25', 'unread'),
-(11723, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":621,\"team_id\":1168,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"timestamp\":\"2025-11-23T00:30:41+01:00\"}', '2025-11-22 12:30:41', 'unread');
+(11723, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":621,\"team_id\":1168,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"timestamp\":\"2025-11-23T00:30:41+01:00\"}', '2025-11-22 12:30:41', 'unread'),
+(11724, 91, '{\"type\":\"attendance_request\",\"request_id\":18,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-23 05:13:43\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251123171343_2efa833e.jpg\"}', '2025-11-23 05:13:43', 'unread'),
+(11725, 16, '{\"type\":\"attendance_reviewed\",\"request_id\":18,\"decision\":\"approved\",\"reviewed_by\":91,\"reviewer_name\":\"Emeir Amado\",\"reviewed_at\":\"2025-11-23 05:14:27\",\"review_note\":null}', '2025-11-23 05:14:27', 'unread'),
+(11726, 91, '{\"type\":\"attendance_request\",\"request_id\":19,\"user_id\":16,\"name\":\"Paul Ezra Bermal\",\"submitted_at\":\"2025-11-24 05:11:14\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_16_20251124171114_93e3a3cd.jpg\"}', '2025-11-24 05:11:14', 'unread'),
+(11727, 91, '{\"type\":\"attendance_request\",\"request_id\":20,\"user_id\":17,\"name\":\"Ronald Frondozo\",\"submitted_at\":\"2025-11-24 05:12:08\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_17_20251124171208_1266a851.jpg\"}', '2025-11-24 05:12:08', 'unread'),
+(11728, 91, '{\"type\":\"attendance_request\",\"request_id\":21,\"user_id\":30,\"name\":\"Joseph Osela\",\"submitted_at\":\"2025-11-24 05:14:15\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_30_20251124171415_5401d8d6.jpg\"}', '2025-11-24 05:14:15', 'unread'),
+(11729, 91, '{\"type\":\"attendance_request\",\"request_id\":22,\"user_id\":35,\"name\":\"Rosario Mabini\",\"submitted_at\":\"2025-11-24 05:15:02\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_35_20251124171502_f37cca48.jpg\"}', '2025-11-24 05:15:02', 'unread'),
+(11730, 91, '{\"type\":\"attendance_request\",\"request_id\":23,\"user_id\":31,\"name\":\"Michael Abres\",\"submitted_at\":\"2025-11-24 05:16:44\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_31_20251124171644_01f6d167.jpg\"}', '2025-11-24 05:16:44', 'unread'),
+(11731, 91, '{\"type\":\"attendance_request\",\"request_id\":24,\"user_id\":28,\"name\":\"Alvin Monida\",\"submitted_at\":\"2025-11-24 05:18:46\",\"remarks\":null,\"schedule_id\":null,\"photo_path\":\"uploads\\/attendance\\/attendance_28_20251124171846_9c9a047e.jpg\"}', '2025-11-24 05:18:46', 'unread'),
+(11732, 16, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1320,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1321,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1322,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1323,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1324,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1325,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11733, 30, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1320,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1321,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1322,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1323,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1324,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1325,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11734, 35, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1320,\"barangay\":\"Impig\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"08:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1321,\"barangay\":\"Tara\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"fixed_days\",\"truck\":\"ABC-1234\"},{\"team_id\":1322,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"06:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1323,\"barangay\":\"North Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"10:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1324,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"07:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"},{\"team_id\":1325,\"barangay\":\"South Centro\",\"cluster\":\"1C-PB\",\"date\":\"2025-11-24\",\"time\":\"11:00:00\",\"type\":\"daily_priority\",\"truck\":\"ABC-1234\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11735, 17, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1326,\"barangay\":\"Mantila\",\"cluster\":\"5C-CD\",\"date\":\"2025-11-24\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11736, 31, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1326,\"barangay\":\"Mantila\",\"cluster\":\"5C-CD\",\"date\":\"2025-11-24\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11737, 28, '{\"type\":\"daily_assignments\",\"date\":\"2025-11-24\",\"assignments\":[{\"team_id\":1326,\"barangay\":\"Mantila\",\"cluster\":\"5C-CD\",\"date\":\"2025-11-24\",\"time\":\"09:00:00\",\"type\":\"weekly_cluster\",\"truck\":\"XYZ-5678\"}]}', '2025-11-24 05:32:14', 'unread'),
+(11738, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Flat Tire reported. Expect delays while the team resolves the issue. Details: Wala\",\"route_id\":685,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"Wala\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T22:42:28+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":1}', '2025-11-24 10:42:28', 'unread'),
+(11739, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Flat Tire reported. Expect delays while the team resolves the issue. Details: Wala\",\"route_id\":685,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"Wala\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T22:42:53+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":2}', '2025-11-24 10:42:53', 'unread'),
+(11740, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Medical Emergency reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Medical Emergency\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T23:18:50+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":3}', '2025-11-24 11:18:50', 'unread'),
+(11741, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Flat Tire reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":null,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T23:38:40+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":4,\"affected_barangays\":[\"31-NRTHC\"]}', '2025-11-24 11:38:40', 'unread'),
+(11742, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Accident reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":null,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Accident\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T23:44:02+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":5,\"affected_barangays\":[\"31-NRTHC\"]}', '2025-11-24 11:44:02', 'unread'),
+(11743, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Medical Emergency reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":null,\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Medical Emergency\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-24T23:57:54+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":6,\"affected_barangays\":[\"31-NRTHC\"]}', '2025-11-24 11:57:54', 'unread'),
+(11744, 70, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11745, 75, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11746, 79, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11747, 88, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11748, 89, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11749, 60, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11750, 10, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11751, 91, '{\"type\":\"route_emergency\",\"title\":\"Collection delayed\",\"message\":\"North Centro route: Severe Weather reported. Expect delays while the team resolves the issue.\",\"route_id\":685,\"route_date\":\"2025-11-24\",\"barangay_id\":\"31-NRTHC\",\"barangay_name\":\"North Centro\",\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"delay_minutes\":null,\"reported_at\":\"2025-11-25T00:02:03+01:00\",\"reported_by\":16,\"reported_name\":\"Paul Ezra Bermal\",\"attachment\":null,\"log_id\":7,\"affected_barangays\":[\"31-NRTHC\",\"20-IMPG\",\"39-STHCN\",\"42-TR\"]}', '2025-11-24 12:02:03', 'unread'),
+(11752, 16, '{\"type\":\"truck_full_request\",\"title\":\"Truck capacity reached\",\"message\":\"Collectors reported the truck is full. Please coordinate landfill trip.\",\"route_id\":683,\"team_id\":1320,\"note\":\"Collector reported truck capacity reached\",\"collector_id\":30,\"collector_name\":\"Joseph\",\"barangay_id\":\"20-IMPG\",\"barangay_name\":\"Impig\",\"timestamp\":\"2025-11-25T02:02:34+01:00\"}', '2025-11-24 14:02:34', 'unread');
 
 -- --------------------------------------------------------
 
@@ -2170,7 +2378,8 @@ INSERT INTO `predefined_schedules` (`schedule_template_id`, `barangay_id`, `bara
 (318, '17-CTM', 'Cotmo', '5C-CD', 'weekly_cluster', 'Saturday', 'AM', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
 (319, '03-ANB', 'Anib', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '09:00:00', '10:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
 (320, '37-SNVCN', 'San Vicente', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '10:00:00', '11:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
-(321, '24-MLGC', 'Malaguico', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '11:00:00', '12:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44');
+(321, '24-MLGC', 'Malaguico', '5C-CD', 'weekly_cluster', 'Sunday', 'AM', '11:00:00', '12:00:00', 1, 4, 1, '2025-11-19 10:07:44', '2025-11-19 10:07:44'),
+(322, '05-AZCN', 'Azucena', '1C-PB', 'daily_priority', 'Saturday', 'AM', '08:00:00', '09:00:00', 1, NULL, 0, '2025-11-24 00:34:17', '2025-11-24 00:35:07');
 
 -- --------------------------------------------------------
 
@@ -2206,6 +2415,39 @@ CREATE TABLE `role_permission` (
   `role_id` int(11) NOT NULL,
   `permission_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `route_emergency_log`
+--
+
+CREATE TABLE `route_emergency_log` (
+  `id` int(11) NOT NULL,
+  `route_id` bigint(20) UNSIGNED NOT NULL,
+  `reported_by` int(11) DEFAULT NULL,
+  `emergency_type` varchar(50) NOT NULL,
+  `impact` enum('delay','cancel') NOT NULL DEFAULT 'delay',
+  `notes` text DEFAULT NULL,
+  `attachment_path` varchar(255) DEFAULT NULL,
+  `delay_minutes` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `resolved_at` timestamp NULL DEFAULT NULL,
+  `resolved_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `route_emergency_log`
+--
+
+INSERT INTO `route_emergency_log` (`id`, `route_id`, `reported_by`, `emergency_type`, `impact`, `notes`, `attachment_path`, `delay_minutes`, `created_at`, `resolved_at`, `resolved_by`) VALUES
+(1, 685, 16, 'Flat Tire', 'delay', 'Wala', NULL, NULL, '2025-11-24 21:42:28', NULL, NULL),
+(2, 685, 16, 'Flat Tire', 'delay', 'Wala', NULL, NULL, '2025-11-24 21:42:53', NULL, NULL),
+(3, 685, 16, 'Medical Emergency', 'delay', NULL, NULL, NULL, '2025-11-24 22:18:50', NULL, NULL),
+(4, 685, 16, 'Flat Tire', 'delay', NULL, NULL, NULL, '2025-11-24 22:38:40', NULL, NULL),
+(5, 685, 16, 'Accident', 'delay', NULL, NULL, NULL, '2025-11-24 22:44:02', NULL, NULL),
+(6, 685, 16, 'Medical Emergency', 'delay', NULL, NULL, NULL, '2025-11-24 22:57:54', NULL, NULL),
+(7, 685, 16, 'Severe Weather', 'delay', NULL, NULL, NULL, '2025-11-24 23:02:03', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -2262,7 +2504,12 @@ INSERT INTO `route_generation_run` (`id`, `date`, `status`, `policy`, `scope`, `
 (90, '2025-10-15', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 12 routes, 36 stops', '2025-10-14 01:49:03'),
 (91, '2025-10-16', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 11 routes, 35 stops', '2025-10-15 01:49:03'),
 (92, '2025-10-17', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 13 routes, 37 stops', '2025-10-16 01:49:04'),
-(93, '2025-11-21', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 16 routes, 40 stops', '2025-11-22 05:24:45');
+(93, '2025-11-21', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 16 routes, 40 stops', '2025-11-22 05:24:45'),
+(94, '2025-11-21', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 16 routes, 40 stops', '2025-11-23 14:19:17'),
+(95, '2025-11-24', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 14 routes, 38 stops', '2025-11-24 05:37:37'),
+(96, '2025-11-24', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 14 routes, 38 stops', '2025-11-24 05:47:08'),
+(97, '2025-11-24', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 7 routes, 19 stops', '2025-11-24 05:48:12'),
+(98, '2025-11-24', 'success', 'preserve_manual', 'all', NULL, NULL, 'Generated 7 routes, 19 stops', '2025-11-24 05:52:42');
 
 -- --------------------------------------------------------
 
@@ -2529,7 +2776,40 @@ INSERT INTO `task_events` (`id`, `assignment_id`, `user_id`, `event_type`, `befo
 (242, 1168, '30', 'stop_status_updated', NULL, '{\"stop_id\":1273,\"status\":\"visited\"}', '2025-11-22 23:30:23'),
 (243, 1168, '30', 'collector_reported_truck_full', NULL, '{\"route_id\":621,\"driver_id\":16,\"note\":\"Collector reported truck capacity reached\",\"collector_name\":\"Joseph\"}', '2025-11-22 23:30:41'),
 (244, 1168, '30', 'stop_status_updated', NULL, '{\"stop_id\":1274,\"status\":\"visited\"}', '2025-11-22 23:31:10'),
-(245, 1168, '30', 'stop_status_updated', NULL, '{\"stop_id\":1275,\"status\":\"visited\"}', '2025-11-22 23:31:30');
+(245, 1168, '30', 'stop_status_updated', NULL, '{\"stop_id\":1275,\"status\":\"visited\"}', '2025-11-22 23:31:30'),
+(246, 1164, '16', 'route_status_updated', '{\"status\":\"scheduled\"}', '{\"route_id\":633,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 19:39:01'),
+(247, 1326, '17', 'route_status_updated', '{\"status\":\"scheduled\"}', '{\"route_id\":689,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 16:56:13'),
+(248, 1322, '16', 'route_status_updated', '{\"status\":\"scheduled\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 16:58:36'),
+(249, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 20:29:26'),
+(250, 1322, '30', 'stop_status_updated', NULL, '{\"stop_id\":1443,\"status\":\"visited\"}', '2025-11-24 20:31:31'),
+(251, 1322, '30', 'stop_status_updated', NULL, '{\"stop_id\":1444,\"status\":\"visited\"}', '2025-11-24 21:01:45'),
+(252, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 21:39:41'),
+(253, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"Wala\",\"attachment\":null}', '2025-11-24 21:42:28'),
+(254, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"Wala\",\"attachment\":null}', '2025-11-24 21:42:53'),
+(255, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 22:16:04'),
+(256, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 22:16:49'),
+(257, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Medical Emergency\",\"notes\":\"\",\"attachment\":null}', '2025-11-24 22:18:50'),
+(258, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Flat Tire\",\"notes\":\"\",\"attachment\":null}', '2025-11-24 22:38:40'),
+(259, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Accident\",\"notes\":\"\",\"attachment\":null}', '2025-11-24 22:44:02'),
+(260, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 22:56:44'),
+(261, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Medical Emergency\",\"notes\":\"\",\"attachment\":null}', '2025-11-24 22:57:54'),
+(262, 1322, '16', 'route_emergency_reported', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"impact\":\"delay\",\"reason\":\"Severe Weather\",\"notes\":\"\",\"attachment\":null}', '2025-11-24 23:02:03'),
+(263, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-24 23:26:40'),
+(264, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 00:35:07'),
+(265, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 00:41:01'),
+(266, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 00:53:53'),
+(267, 1322, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":685,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 00:54:37'),
+(268, 1322, '30', 'stop_status_updated', NULL, '{\"stop_id\":1445,\"status\":\"visited\"}', '2025-11-25 00:56:22'),
+(269, 1322, '30', 'stop_status_updated', NULL, '{\"stop_id\":1446,\"status\":\"visited\"}', '2025-11-25 00:56:51'),
+(270, 1324, '16', 'route_status_updated', '{\"status\":\"scheduled\"}', '{\"route_id\":687,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 00:58:21'),
+(271, 1324, '30', 'stop_status_updated', NULL, '{\"stop_id\":1451,\"status\":\"visited\"}', '2025-11-25 01:00:29'),
+(272, 1324, '30', 'stop_status_updated', NULL, '{\"stop_id\":1452,\"status\":\"visited\"}', '2025-11-25 01:00:40'),
+(273, 1324, '30', 'stop_status_updated', NULL, '{\"stop_id\":1453,\"status\":\"visited\"}', '2025-11-25 01:00:52'),
+(274, 1324, '30', 'stop_status_updated', NULL, '{\"stop_id\":1454,\"status\":\"visited\"}', '2025-11-25 01:01:43'),
+(275, 1324, '16', 'route_status_updated', '{\"status\":\"in_progress\"}', '{\"route_id\":687,\"status\":\"completed\",\"note\":null}', '2025-11-25 01:02:20'),
+(276, 1324, '16', 'route_submitted', NULL, '{\"route_id\":\"687\",\"total_stops\":4,\"visited\":4}', '2025-11-25 01:02:20'),
+(277, 1320, '16', 'route_status_updated', '{\"status\":\"scheduled\"}', '{\"route_id\":683,\"status\":\"in_progress\",\"note\":null}', '2025-11-25 01:02:20'),
+(278, 1320, '30', 'collector_reported_truck_full', NULL, '{\"route_id\":683,\"driver_id\":16,\"note\":\"Collector reported truck capacity reached\",\"collector_name\":\"Joseph\"}', '2025-11-25 01:02:34');
 
 -- --------------------------------------------------------
 
@@ -2594,7 +2874,7 @@ INSERT INTO `user` (`user_id`, `username`, `email`, `password`, `role_id`, `stat
 (1, 'admin', 'admin@gmail.com', '$2y$10$QIeP1OVt6MM.lmNlJorPAOUxNCYmOZStgIZNAOHTZnJDWwxnV2qyq', 1, NULL, 'online'),
 (3, 'admin', 'njy.nnv@gmail.com', '$2y$10$DTWreJ2agwiY.RUuan9DQO4H1uVDFgf.zeDlq9Xsugkbqcq.kyd0G', 1, NULL, 'offline'),
 (10, 'barangayhead', 'bh@gmail.com', '$2y$10$LaI6NqGKAVnyJukvi1.ieeheTHygmoFkjtMImfn71s1enWFcAAfuy', 2, NULL, 'offline'),
-(16, 'Paul123', 'paulbermal@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'online'),
+(16, 'Paul123', 'paulbermal@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'offline'),
 (17, 'Ronald123', 'ronaldfrondozo@gmail.com', '$2y$10$eytboxNv1wzJy/CmcrcIxOB3jv/D17ibUsAZcKtLM6es1O7UXdpRG', 3, 'On Duty', 'offline'),
 (28, 'Alvin', 'alvinmonida@gmail.com', '$2y$10$KHLR4xizvKJvTyfQlvnMBelgeTK4pq/sW93Q.JOJUBkCsMF2qlyvS', 4, 'On Duty', 'offline'),
 (29, 'Rico', 'ricomaralit@gmail.com', '$2y$10$BH1dy4njVraysT1ZLinu/uxhJwgAMGmzgt8d7eff1jwWslFH4Z6G2', 4, 'On Duty', 'offline'),
@@ -2609,7 +2889,7 @@ INSERT INTO `user` (`user_id`, `username`, `email`, `password`, `role_id`, `stat
 (57, 'Carls', 'carljames@gmail.com', '$2y$10$6U/.19kS/RfyJ//Q1eD16.XgFOI1.iJGjicenW4V/Tt1BDLlDebqG', 5, NULL, 'offline'),
 (58, 'Tia', 'ianjay.anonuevo@cbsua.edu.ph', '$2y$10$JywZHEQPhuiJemOvtyA4ROrasS2wv9NjdsSVCx..vbMHyx4lzYGZe', 5, NULL, 'offline'),
 (59, 'Cassy', 'cssndrjoyce.04@gmail.com', '$2y$10$BCDu07FKBhVjuEsnqp/HXOBI3h5lC8qjGVVDl7Fw307Sb6csPkrv6', 5, NULL, 'offline'),
-(60, 'IanJay26', 'moyile6626@cnguopin.com', '$2y$10$LaI6NqGKAVnyJukvi1.ieeheTHygmoFkjtMImfn71s1enWFcAAfuy', 5, NULL, 'offline'),
+(60, 'IanJay26', 'moyile6626@cnguopin.com', '$2y$10$LaI6NqGKAVnyJukvi1.ieeheTHygmoFkjtMImfn71s1enWFcAAfuy', 5, NULL, 'online'),
 (61, 'Zia', 'moyile6626@cnguopin.com', '$2y$10$r5FWiE.CH3SuRTaPDFn0du7ztleqVe7xLUMpEnmWGQzWC2GqNdtgG', 5, NULL, 'offline'),
 (62, 'test_resident', '', 'password', 3, NULL, 'offline'),
 (67, 'Elmer', 'emeir.amado@cbsua.edu.ph', '$2y$10$4kGFUKKTW4rVjyw2HwjAD.upR1kUHUebOvl6qV3c793F0CGWG8M4W', 5, NULL, 'offline'),
@@ -2636,7 +2916,7 @@ INSERT INTO `user` (`user_id`, `username`, `email`, `password`, `role_id`, `stat
 (88, 'Benejose', 'nikopalenquez01@gmail.com', '$2y$10$963aa0q3dfXNJGQ8EGhOBeY716S1USqftJRHshQpjleShEODA0XIK', 5, NULL, 'offline'),
 (89, 'BeneJosejr', 'nikopalenquez1@gmail.com', '$2y$10$CBnhagBk6p4EqJv/zymUxOWFObUvJGpJ61D9RnTyo0IF7rxkoIJaq', 5, NULL, 'offline'),
 (90, 'support', 'support@koletrash.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 6, '', 'offline'),
-(91, 'foreman', 'foreman@gmail.com', '$2y$10$zOgVez8hOmb79o4YPfFDZ.len8JnoPGH0avUjcPzXiHT8FNB9SuOm', 7, NULL, 'online');
+(91, 'foreman', 'foreman@gmail.com', '$2y$10$zOgVez8hOmb79o4YPfFDZ.len8JnoPGH0avUjcPzXiHT8FNB9SuOm', 7, NULL, 'offline');
 
 -- --------------------------------------------------------
 
@@ -2960,6 +3240,14 @@ ALTER TABLE `role_permission`
   ADD KEY `permission_id` (`permission_id`);
 
 --
+-- Indexes for table `route_emergency_log`
+--
+ALTER TABLE `route_emergency_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_route` (`route_id`),
+  ADD KEY `idx_impact` (`impact`);
+
+--
 -- Indexes for table `route_generation_run`
 --
 ALTER TABLE `route_generation_run`
@@ -3018,13 +3306,13 @@ ALTER TABLE `waste_log`
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `attendance_request`
 --
 ALTER TABLE `attendance_request`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `collection`
@@ -3042,19 +3330,19 @@ ALTER TABLE `collection_point`
 -- AUTO_INCREMENT for table `collection_schedule`
 --
 ALTER TABLE `collection_schedule`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1584;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1591;
 
 --
 -- AUTO_INCREMENT for table `collection_team`
 --
 ALTER TABLE `collection_team`
-  MODIFY `team_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1320;
+  MODIFY `team_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1327;
 
 --
 -- AUTO_INCREMENT for table `collection_team_member`
 --
 ALTER TABLE `collection_team_member`
-  MODIFY `team_member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3920;
+  MODIFY `team_member_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3934;
 
 --
 -- AUTO_INCREMENT for table `collection_type`
@@ -3066,13 +3354,13 @@ ALTER TABLE `collection_type`
 -- AUTO_INCREMENT for table `daily_route`
 --
 ALTER TABLE `daily_route`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=632;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=690;
 
 --
 -- AUTO_INCREMENT for table `daily_route_stop`
 --
 ALTER TABLE `daily_route_stop`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1306;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1460;
 
 --
 -- AUTO_INCREMENT for table `email_verification`
@@ -3096,7 +3384,7 @@ ALTER TABLE `feedback`
 -- AUTO_INCREMENT for table `gps_route_log`
 --
 ALTER TABLE `gps_route_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2394;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2447;
 
 --
 -- AUTO_INCREMENT for table `iec_material`
@@ -3120,7 +3408,7 @@ ALTER TABLE `issue_reports`
 -- AUTO_INCREMENT for table `notification`
 --
 ALTER TABLE `notification`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11724;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11753;
 
 --
 -- AUTO_INCREMENT for table `password_resets`
@@ -3144,7 +3432,7 @@ ALTER TABLE `pickup_requests`
 -- AUTO_INCREMENT for table `predefined_schedules`
 --
 ALTER TABLE `predefined_schedules`
-  MODIFY `schedule_template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=322;
+  MODIFY `schedule_template_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=323;
 
 --
 -- AUTO_INCREMENT for table `role`
@@ -3153,16 +3441,22 @@ ALTER TABLE `role`
   MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
+-- AUTO_INCREMENT for table `route_emergency_log`
+--
+ALTER TABLE `route_emergency_log`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `route_generation_run`
 --
 ALTER TABLE `route_generation_run`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
 
 --
 -- AUTO_INCREMENT for table `task_events`
 --
 ALTER TABLE `task_events`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=246;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=279;
 
 --
 -- AUTO_INCREMENT for table `truck`
