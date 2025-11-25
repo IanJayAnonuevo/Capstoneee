@@ -36,28 +36,28 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
 
           // Get current date and time
           const now = new Date();
-          const dateStr = now.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          const dateStr = now.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           });
-          const timeStr = now.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
+          const timeStr = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
             second: '2-digit',
-            hour12: true 
+            hour12: true
           });
 
           // Watermark styling
           const fontSize = Math.max(20, Math.floor(img.width / 30));
           ctx.font = `bold ${fontSize}px Arial`;
-          
+
           // Add semi-transparent background for watermark
           const padding = 10;
           const lineHeight = fontSize + 5;
           const bgHeight = (lineHeight * 2) + (padding * 2);
           const bgWidth = canvas.width;
-          
+
           ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
           ctx.fillRect(0, canvas.height - bgHeight, bgWidth, bgHeight);
 
@@ -65,10 +65,10 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
           ctx.fillStyle = '#FFFFFF';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
-          
+
           // Draw date
           ctx.fillText(dateStr, padding, canvas.height - bgHeight + padding);
-          
+
           // Draw time
           ctx.fillText(timeStr, padding, canvas.height - bgHeight + padding + lineHeight);
 
@@ -200,7 +200,7 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Time In Request</h2>
+          <h2 className="text-xl font-bold text-gray-900">{intent === 'time_out' ? 'Time Out Request' : 'Time In Request'}</h2>
           <button
             onClick={handleClose}
             disabled={loading}

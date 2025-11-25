@@ -67,17 +67,17 @@ const fetchScheduledRoutes = async (date) => {
   try {
     const url = `${buildApiUrl('get_routes.php')}?date=${encodeURIComponent(date)}`;
     const response = await fetch(url, { headers: getAuthHeaders() });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       const routes = (data.routes || []).map((r) => {
-        const start = r.start_time ? String(r.start_time).slice(0,5) : '00:00';
-        const end = r.end_time ? String(r.end_time).slice(0,5) : '00:00';
+        const start = r.start_time ? String(r.start_time).slice(0, 5) : '00:00';
+        const end = r.end_time ? String(r.end_time).slice(0, 5) : '00:00';
         return {
           id: r.id,
           name: `${r.cluster_id || ''} - ${r.barangay_name || 'Route'}`.trim(),
@@ -85,7 +85,7 @@ const fetchScheduledRoutes = async (date) => {
           driver: r.team_id ? `Team ${r.team_id}` : 'Unassigned Driver',
           barangay: r.barangay_name || 'N/A',
           datetime: `${r.date}, ${start} - ${end}`,
-          volume: (r.capacity_used_kg ? (Number(r.capacity_used_kg)/1000).toFixed(1) : '0.0') + ' tons',
+          volume: (r.capacity_used_kg ? (Number(r.capacity_used_kg) / 1000).toFixed(1) : '0.0') + ' tons',
           status: (r.status || 'scheduled').replace(/\b\w/g, c => c.toUpperCase()),
           statusColor: { bg: 'bg-green-50', color: 'text-green-800' },
           coordinates: BARANGAY_COORDINATES[r.barangay_name] || [13.7766, 122.9826],
@@ -311,7 +311,7 @@ const createTruckIcon = (status, isMoving = false) => {
     'Completed': '#10b981',
     'Missed': '#ef4444'
   };
-  
+
   return L.divIcon({
     html: `<div style="
       background-color: ${colors[status] || '#3b82f6'};
@@ -349,9 +349,9 @@ const createCollectionPointIcon = (type, volume) => {
     'middle': '#f59e0b',
     'end': '#ef4444'
   };
-  
+
   const size = Math.max(16, Math.min(24, volume * 8)); // Size based on volume
-  
+
   return L.divIcon({
     html: `<div style="
       background-color: ${colors[type] || '#10b981'};
@@ -369,7 +369,7 @@ const createCollectionPointIcon = (type, volume) => {
     ">📦</div>`,
     className: 'collection-point-marker',
     iconSize: [size, size],
-    iconAnchor: [size/2, size/2]
+    iconAnchor: [size / 2, size / 2]
   });
 };
 
@@ -379,43 +379,43 @@ function AnimatedTruck({ positions, isActive, selectedRoute }) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [eta, setEta] = useState(null);
   const [speed, setSpeed] = useState(0);
-  
+
   useEffect(() => {
     if (!isActive || positions.length === 0) {
       setIsAnimating(false);
       return;
     }
-    
+
     setIsAnimating(true);
     const interval = setInterval(() => {
       setCurrentIndex((prev) => {
         const next = (prev + 1) % positions.length;
         return next;
       });
-      
+
       // Simulate real-time updates
       setSpeed(Math.floor(Math.random() * 40) + 20); // 20-60 km/h
       setEta(new Date(Date.now() + Math.random() * 300000).toLocaleTimeString()); // Random ETA
     }, 2000); // Update every 2 seconds
-    
+
     return () => {
       clearInterval(interval);
       setIsAnimating(false);
     };
   }, [isActive, positions.length]);
-  
+
   if (!isActive || positions.length === 0 || !isAnimating) return null;
-  
+
   const currentPosition = positions[currentIndex];
   const nextIndex = (currentIndex + 1) % positions.length;
   const nextPosition = positions[nextIndex];
-  
+
   // Calculate rotation angle based on movement direction
   const angle = Math.atan2(
     nextPosition[0] - currentPosition[0],
     nextPosition[1] - currentPosition[1]
   ) * 180 / Math.PI;
-  
+
   return (
     <Marker
       position={currentPosition}
@@ -453,33 +453,33 @@ function AnimatedTruck({ positions, isActive, selectedRoute }) {
 // Component to handle map bounds updates
 function MapBoundsUpdater({ bounds }) {
   const map = useMap();
-  
+
   React.useEffect(() => {
     if (bounds) {
       map.fitBounds(bounds, { padding: [20, 20] });
     }
   }, [bounds, map]);
-  
+
   return null;
 }
 
 // Add this component near your other map-related components
 function MapController({ center, zoom }) {
   const map = useMap();
-  
+
   useEffect(() => {
     if (center) {
       map.setView(center, zoom);
     }
   }, [center, zoom, map]);
-  
+
   return null;
 }
 
 // Component to handle map tile updates
 function MapTileController({ tileType }) {
   const map = useMap();
-  
+
   useEffect(() => {
     if (map) {
       // Remove existing tile layer
@@ -488,7 +488,7 @@ function MapTileController({ tileType }) {
           map.removeLayer(layer);
         }
       });
-      
+
       // Add new tile layer
       const newTileLayer = L.tileLayer(MAP_TILES[tileType], {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -496,7 +496,7 @@ function MapTileController({ tileType }) {
       newTileLayer.addTo(map);
     }
   }, [map, tileType]);
-  
+
   return null;
 }
 
@@ -507,7 +507,7 @@ const ManageRoute = () => {
   const [status, setStatus] = useState("All");
   const [driver, setDriver] = useState("All");
   const [barangay, setBarangay] = useState("All");
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Set to today's date
+  const [date, setDate] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`); // Set to today's date
   const [modalRoute, setModalRoute] = useState(null);
   const [modalTab, setModalTab] = useState('details');
   const [showForm, setShowForm] = useState(false);
@@ -532,7 +532,7 @@ const ManageRoute = () => {
     const loadScheduledRoutes = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const routes = await fetchScheduledRoutes(date);
         setScheduledRoutes(routes);
@@ -553,7 +553,7 @@ const ManageRoute = () => {
   const handleRefresh = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const routes = await fetchScheduledRoutes(date);
       setScheduledRoutes(routes);
@@ -665,7 +665,7 @@ const ManageRoute = () => {
     setModalRoute(route);
     setModalTab('details');
     setShowAnimation(false); // Reset animation when selecting new route
-    
+
     // If this is a generated route with id, load its ordered stops
     if (route?.id) {
       try {
@@ -677,8 +677,8 @@ const ManageRoute = () => {
           .sort((a, b) => (a.seq || 0) - (b.seq || 0))
           .map((s, idx) => ({
             name: s.name || `Stop ${s.seq || idx + 1}`,
-            time: s.window_start ? String(s.window_start).slice(0,5) : '',
-            volume: s.planned_volume_kg ? (Number(s.planned_volume_kg)/1000).toFixed(1) + ' tons' : '0.0 tons',
+            time: s.window_start ? String(s.window_start).slice(0, 5) : '',
+            volume: s.planned_volume_kg ? (Number(s.planned_volume_kg) / 1000).toFixed(1) + ' tons' : '0.0 tons',
             coordinates: [parseFloat(s.lat), parseFloat(s.lng)]
           }));
         const merged = {
@@ -706,13 +706,13 @@ const ManageRoute = () => {
       const actualCoords = [parseFloat(route.latitude), parseFloat(route.longitude)];
       setMapCenter(actualCoords);
       setMapZoom(16); // Higher zoom for specific location
-      
+
       // Calculate bounds for collection points if they have real coordinates
       if (route.collectionPoints && route.collectionPoints.length > 0) {
-        const pointsWithRealCoords = route.collectionPoints.filter(pt => 
+        const pointsWithRealCoords = route.collectionPoints.filter(pt =>
           pt.coordinates && Array.isArray(pt.coordinates) && pt.coordinates.length === 2
         );
-        
+
         if (pointsWithRealCoords.length > 0) {
           const bounds = L.latLngBounds(pointsWithRealCoords.map(pt => pt.coordinates));
           setMapBounds(bounds);
@@ -738,21 +738,21 @@ const ManageRoute = () => {
   // Function to handle barangay click
   const handleBarangayClick = (route, e) => {
     e.stopPropagation(); // Prevent triggering the row click
-    
+
     // Use actual coordinates from collection_point table if available
     if (route.latitude && route.longitude) {
       const actualCoords = [parseFloat(route.latitude), parseFloat(route.longitude)];
       setSelectedRoute(route);
       setMapCenter(actualCoords);
       setMapZoom(16); // Higher zoom level for specific location
-      
+
       // Optional: Add a timeout to allow the map to settle
       setTimeout(() => {
         if (route.collectionPoints?.length > 0) {
-          const pointsWithRealCoords = route.collectionPoints.filter(pt => 
+          const pointsWithRealCoords = route.collectionPoints.filter(pt =>
             pt.coordinates && Array.isArray(pt.coordinates) && pt.coordinates.length === 2
           );
-          
+
           if (pointsWithRealCoords.length > 0) {
             const bounds = L.latLngBounds(pointsWithRealCoords.map(pt => pt.coordinates));
             setMapBounds(bounds);
@@ -766,7 +766,7 @@ const ManageRoute = () => {
         setSelectedRoute(route);
         setMapCenter(barangayCoords);
         setMapZoom(16); // Higher zoom level for barangay view
-        
+
         // Optional: Add a timeout to allow the map to settle
         setTimeout(() => {
           if (route.collectionPoints?.length > 0) {
@@ -797,15 +797,15 @@ const ManageRoute = () => {
   // Function to get route statistics
   const getRouteStats = () => {
     if (!selectedRoute) return null;
-    
+
     const totalPoints = selectedRoute.collectionPoints.length;
-    const totalVolume = selectedRoute.collectionPoints.reduce((sum, pt) => 
+    const totalVolume = selectedRoute.collectionPoints.reduce((sum, pt) =>
       sum + parseFloat(pt.volume), 0
     );
-    const avgTimePerPoint = totalPoints > 0 ? 
-      Math.round((new Date(`2025-01-20 ${selectedRoute.datetime.split(', ')[1].split(' - ')[1]}`) - 
-                 new Date(`2025-01-20 ${selectedRoute.datetime.split(', ')[1].split(' - ')[0]}`)) / 
-                 (totalPoints * 60000)) : 0;
+    const avgTimePerPoint = totalPoints > 0 ?
+      Math.round((new Date(`2025-01-20 ${selectedRoute.datetime.split(', ')[1].split(' - ')[1]}`) -
+        new Date(`2025-01-20 ${selectedRoute.datetime.split(', ')[1].split(' - ')[0]}`)) /
+        (totalPoints * 60000)) : 0;
 
     return {
       totalPoints,
@@ -892,12 +892,12 @@ const ManageRoute = () => {
   }
 
   // --- Assign Truck/Team ---
-  function openAssign(route){
+  function openAssign(route) {
     setAssignForm({ id: route.id, truck_id: route.truck_id || '', team_id: route.team_id || '' });
     setShowAssign(true);
   }
-  function closeAssign(){ setShowAssign(false); }
-  async function submitAssign(e){
+  function closeAssign() { setShowAssign(false); }
+  async function submitAssign(e) {
     e.preventDefault();
     try {
       const res = await fetch(buildApiUrl('update_route_assignment.php'), {
@@ -928,12 +928,12 @@ const ManageRoute = () => {
   function exportToCSV() {
     const headers = ['Location', 'Truck', 'Driver', 'Barangay', 'Date & Time', 'Volume', 'Status'];
     const rows = filteredRoutes.map(r => [
-      r.locationName || 'Main Area', 
-      r.truck, 
-      r.driver, 
-      r.barangay, 
-      r.datetime, 
-      r.volume, 
+      r.locationName || 'Main Area',
+      r.truck,
+      r.driver,
+      r.barangay,
+      r.datetime,
+      r.volume,
       r.status
     ]);
     const csvContent = [headers, ...rows].map(row => row.map(cell => '"' + (cell || '') + '"').join(',')).join('\n');
@@ -984,9 +984,8 @@ const ManageRoute = () => {
         <button
           onClick={handleRegenerate}
           disabled={isLoading}
-          className={`px-4 py-2 text-white border-none rounded-md font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 ${
-            isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-600'
-          }`}
+          className={`px-4 py-2 text-white border-none rounded-md font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-600'
+            }`}
         >
           {isLoading ? 'Working…' : 'Regenerate'}
         </button>
@@ -1004,7 +1003,7 @@ const ManageRoute = () => {
           <div className="flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800 text-sm">{error}</span>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="ml-auto text-red-600 hover:text-red-800 text-sm"
             >
@@ -1017,11 +1016,11 @@ const ManageRoute = () => {
       {/* Filters - Minimal Design */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6 items-center justify-center p-4 bg-white rounded-lg border border-gray-200">
         <div className="relative w-full">
-        <input
-          type="text"
-          placeholder="Search routes, drivers..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          <input
+            type="text"
+            placeholder="Search routes, drivers..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             className="w-full pl-3 pr-3 py-2 rounded-md border border-gray-200 text-sm bg-white text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
           />
         </div>
@@ -1108,12 +1107,11 @@ const ManageRoute = () => {
                       </tr>
                     ) : filteredRoutes.length > 0 ? (
                       filteredRoutes.map((route, idx) => (
-                        <tr 
-                          key={idx} 
-                          onClick={() => handleRouteClick(route)} 
-                          className={`cursor-pointer border-b border-green-200 transition-all duration-200 ${
-                            selectedRoute === route ? 'bg-green-50' : 'hover:bg-green-50'
-                          }`}
+                        <tr
+                          key={idx}
+                          onClick={() => handleRouteClick(route)}
+                          className={`cursor-pointer border-b border-green-200 transition-all duration-200 ${selectedRoute === route ? 'bg-green-50' : 'hover:bg-green-50'
+                            }`}
                         >
                           <td className="p-3 text-blue-600 font-medium">
                             <div className="truncate max-w-[120px]" title={route.locationName || 'Main Area'}>
@@ -1130,7 +1128,7 @@ const ManageRoute = () => {
                               {route.driver}
                             </div>
                           </td>
-                          <td 
+                          <td
                             className="p-3 cursor-pointer text-green-800 underline font-medium hover:text-green-600 transition-colors duration-200"
                             onClick={(e) => handleBarangayClick(route, e)}
                           >
@@ -1149,12 +1147,11 @@ const ManageRoute = () => {
                             </div>
                           </td>
                           <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              route.status === "Scheduled" ? "bg-green-50 text-green-800" :
-                              route.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
-                              route.status === "Completed" ? "bg-green-100 text-green-700" :
-                              "bg-red-100 text-red-700"
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${route.status === "Scheduled" ? "bg-green-50 text-green-800" :
+                                route.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
+                                  route.status === "Completed" ? "bg-green-100 text-green-700" :
+                                    "bg-red-100 text-red-700"
+                              }`}>
                               {route.status}
                             </span>
                           </td>
@@ -1168,8 +1165,8 @@ const ManageRoute = () => {
                     ) : (
                       <tr>
                         <td colSpan={8} className="p-8 text-center text-gray-500 text-sm">
-                          {scheduledRoutes.length === 0 && manualRoutes.length === 0 
-                            ? 'No routes found for the selected date.' 
+                          {scheduledRoutes.length === 0 && manualRoutes.length === 0
+                            ? 'No routes found for the selected date.'
                             : 'No routes match the current filters.'}
                         </td>
                       </tr>
@@ -1189,7 +1186,7 @@ const ManageRoute = () => {
                 <h2 className="text-lg m-0 text-green-800 font-medium">Interactive Map</h2>
                 <div className="flex gap-2 flex-wrap">
                   {/* Map Controls */}
-                  <select 
+                  <select
                     value={mapTile}
                     onChange={(e) => handleMapTileChange(e.target.value)}
                     className="px-3 py-1.5 bg-green-50 text-gray-800 border border-green-200 rounded text-xs cursor-pointer transition-all duration-200 focus:border-green-800"
@@ -1198,11 +1195,11 @@ const ManageRoute = () => {
                     <option value="satellite">Satellite</option>
                     <option value="terrain">Terrain</option>
                   </select>
-                  
 
-                  
+
+
                   {selectedRoute && (
-                    <button 
+                    <button
                       onClick={clearRouteSelection}
                       className="px-3 py-1.5 bg-green-50 text-gray-800 border border-green-200 rounded text-xs cursor-pointer transition-all duration-200 hover:bg-green-100"
                     >
@@ -1210,18 +1207,17 @@ const ManageRoute = () => {
                     </button>
                   )}
                   {selectedRoute && selectedRoute.collectionPoints && selectedRoute.collectionPoints.length > 0 && (
-                    <button 
+                    <button
                       onClick={toggleAnimation}
-                      className={`px-3 py-1.5 border border-green-200 rounded text-xs cursor-pointer transition-all duration-200 ${
-                        showAnimation 
-                          ? 'bg-green-600 text-white' 
+                      className={`px-3 py-1.5 border border-green-200 rounded text-xs cursor-pointer transition-all duration-200 ${showAnimation
+                          ? 'bg-green-600 text-white'
                           : 'bg-green-50 text-gray-800 hover:bg-green-100'
-                      }`}
+                        }`}
                     >
                       {showAnimation ? 'Stop' : 'Animate'}
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={() => setMapZoom(13)}
                     className="px-3 py-1.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-xs cursor-pointer transition-all duration-200 hover:bg-blue-100"
                   >
@@ -1231,7 +1227,7 @@ const ManageRoute = () => {
               </div>
 
               <div className="h-80 rounded-md overflow-hidden border border-green-200 relative">
-                <MapContainer 
+                <MapContainer
                   center={MAP_CONFIG.center}
                   zoom={MAP_CONFIG.zoom}
                   className="h-full w-full"
@@ -1240,7 +1236,7 @@ const ManageRoute = () => {
                   maxZoom={MAP_CONFIG.maxZoom}
                 >
                   <MapTileController tileType={mapTile} />
-                  
+
                   {/* Main Sipocot Marker */}
                   <Marker position={MAP_CONFIG.center}>
                     <Popup>
@@ -1280,11 +1276,11 @@ const ManageRoute = () => {
                   {/* Route Lines and Collection Points */}
                   {selectedRoute?.collectionPoints?.map((point, index, points) => (
                     <React.Fragment key={index}>
-                      <Marker 
+                      <Marker
                         position={point.coordinates}
                         icon={createCollectionPointIcon(
-                          point.name.includes('Start') ? 'start' : 
-                          point.name.includes('End') ? 'end' : 'middle', 
+                          point.name.includes('Start') ? 'start' :
+                            point.name.includes('End') ? 'end' : 'middle',
                           parseFloat(point.volume) || 0
                         )}
                       >
@@ -1308,7 +1304,7 @@ const ManageRoute = () => {
                           </div>
                         </Popup>
                       </Marker>
-                      
+
                       {index < points.length - 1 && (
                         <Polyline
                           positions={[point.coordinates, points[index + 1].coordinates]}
@@ -1325,7 +1321,7 @@ const ManageRoute = () => {
 
                   {/* Live Truck Tracking */}
                   {showAnimation && selectedRoute && (
-                    <AnimatedTruck 
+                    <AnimatedTruck
                       positions={selectedRoute.collectionPoints.map(pt => pt.coordinates)}
                       isActive={showAnimation}
                       selectedRoute={selectedRoute}
@@ -1335,7 +1331,7 @@ const ManageRoute = () => {
                   {/* Map Bounds Controller */}
                   <MapBoundsUpdater bounds={mapBounds} />
                   <MapController center={mapCenter} zoom={mapZoom} />
-                  
+
                   {/* Selected Barangay Highlight */}
                   {selectedRoute && BARANGAY_COORDINATES[selectedRoute.barangay] && (
                     <CircleMarker
@@ -1415,7 +1411,7 @@ const ManageRoute = () => {
                     <span className="text-gray-800">Moving Truck</span>
                   </div>
                 </div>
-                
+
 
               </div>
             </div>
@@ -1435,19 +1431,17 @@ const ManageRoute = () => {
             <div className="border-b border-green-200 flex">
               <button
                 onClick={() => setModalTab('details')}
-                className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${
-                  modalTab === 'details' 
-                    ? 'bg-white text-green-800 border-b-2 border-green-800' 
+                className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${modalTab === 'details'
+                    ? 'bg-white text-green-800 border-b-2 border-green-800'
                     : 'bg-transparent text-gray-500 border-b-2 border-transparent'
-                }`}
+                  }`}
               >Details</button>
               <button
                 onClick={() => setModalTab('notes')}
-                className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${
-                  modalTab === 'notes' 
-                    ? 'bg-white text-green-800 border-b-2 border-green-800' 
+                className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${modalTab === 'notes'
+                    ? 'bg-white text-green-800 border-b-2 border-green-800'
                     : 'bg-transparent text-gray-500 border-b-2 border-transparent'
-                }`}
+                  }`}
               >Complaints/Notes</button>
             </div>
             <div className="p-6 flex-1 overflow-y-auto">
@@ -1463,12 +1457,11 @@ const ManageRoute = () => {
                     </div>
                     <div>
                       <div className="font-medium mb-1 text-gray-500 text-xs">Status</div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        modalRoute.status === "Scheduled" ? "bg-green-50 text-green-800" :
-                        modalRoute.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
-                        modalRoute.status === "Completed" ? "bg-green-100 text-green-700" :
-                        "bg-red-100 text-red-700"
-                      }`}>{modalRoute.status}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${modalRoute.status === "Scheduled" ? "bg-green-50 text-green-800" :
+                          modalRoute.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
+                            modalRoute.status === "Completed" ? "bg-green-100 text-green-700" :
+                              "bg-red-100 text-red-700"
+                        }`}>{modalRoute.status}</span>
                     </div>
                     <div>
                       <div className="font-medium mb-1 text-gray-500 text-xs">Location</div>
@@ -1578,30 +1571,30 @@ const ManageRoute = () => {
               <div className="flex-1">
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Route Name</label>
-                  <input 
-                    name="name" 
-                    value={formRoute.name} 
-                    onChange={handleFormChange} 
-                    required 
+                  <input
+                    name="name"
+                    value={formRoute.name}
+                    onChange={handleFormChange}
+                    required
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
                   />
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Truck</label>
-                  <input 
-                    name="truck" 
-                    value={formRoute.truck} 
-                    onChange={handleFormChange} 
-                    required 
+                  <input
+                    name="truck"
+                    value={formRoute.truck}
+                    onChange={handleFormChange}
+                    required
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
                   />
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Driver</label>
-                  <select 
-                    name="driver" 
-                    value={formRoute.driver} 
-                    onChange={handleFormChange} 
+                  <select
+                    name="driver"
+                    value={formRoute.driver}
+                    onChange={handleFormChange}
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
                     {DRIVERS.map(d => <option key={d}>{d}</option>)}
@@ -1609,10 +1602,10 @@ const ManageRoute = () => {
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Barangay</label>
-                  <select 
-                    name="barangay" 
-                    value={formRoute.barangay} 
-                    onChange={handleFormChange} 
+                  <select
+                    name="barangay"
+                    value={formRoute.barangay}
+                    onChange={handleFormChange}
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
                     {BARANGAYS.map(b => <option key={b}>{b}</option>)}
@@ -1620,30 +1613,30 @@ const ManageRoute = () => {
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Date & Time</label>
-                  <input 
-                    name="datetime" 
-                    value={formRoute.datetime} 
-                    onChange={handleFormChange} 
-                    required 
+                  <input
+                    name="datetime"
+                    value={formRoute.datetime}
+                    onChange={handleFormChange}
+                    required
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
                   />
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Total Volume (tons)</label>
-                  <input 
-                    name="volume" 
-                    value={formRoute.volume} 
-                    onChange={handleFormChange} 
-                    required 
+                  <input
+                    name="volume"
+                    value={formRoute.volume}
+                    onChange={handleFormChange}
+                    required
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
                   />
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Status</label>
-                  <select 
-                    name="status" 
-                    value={formRoute.status} 
-                    onChange={handleFormChange} 
+                  <select
+                    name="status"
+                    value={formRoute.status}
+                    onChange={handleFormChange}
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
                   >
                     {STATUSES.map(s => <option key={s}>{s}</option>)}
@@ -1653,19 +1646,19 @@ const ManageRoute = () => {
               <div className="flex-1">
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Driver Notes</label>
-                  <textarea 
-                    name="driverNotes" 
-                    value={formRoute.driverNotes} 
-                    onChange={handleFormChange} 
+                  <textarea
+                    name="driverNotes"
+                    value={formRoute.driverNotes}
+                    onChange={handleFormChange}
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 min-h-[60px] text-sm bg-green-50 text-gray-800 outline-none resize-y transition-all duration-200 focus:border-green-800"
                   />
                 </div>
                 <div className="mb-3">
                   <label className="block mb-1 font-medium text-xs text-gray-800">Complaints (comma separated)</label>
-                  <input 
-                    name="complaints" 
-                    value={formRoute.complaints?.join(', ') || ''} 
-                    onChange={e => setFormRoute(r => ({ ...r, complaints: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} 
+                  <input
+                    name="complaints"
+                    value={formRoute.complaints?.join(', ') || ''}
+                    onChange={e => setFormRoute(r => ({ ...r, complaints: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
                     className="w-full px-3 py-2 rounded-md border border-green-200 mt-0.5 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
                   />
                 </div>
@@ -1687,15 +1680,15 @@ const ManageRoute = () => {
               </div>
             </div>
             <div className="border-t border-green-200 pt-4 text-right bg-green-50 -m-6 px-6">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="px-4 py-2 bg-gray-500 text-white border-none rounded-md font-medium text-xs cursor-pointer mr-2 transition-all duration-200 hover:bg-gray-600"
                 onClick={closeForm}
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="px-5 py-2 bg-green-600 text-white border-none rounded-md font-medium text-xs cursor-pointer transition-all duration-200 hover:bg-green-800"
               >
                 {formMode === 'add' ? 'Add Route' : 'Save Changes'}
@@ -1798,9 +1791,8 @@ const PhoneTracking = ({ driverInfo }) => {
         </div>
         <button
           onClick={() => startTracking()}
-          className={`px-4 py-2 text-white border-none rounded-md cursor-pointer transition-all duration-200 ${
-            trackingStatus === 'tracking' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
-          }`}
+          className={`px-4 py-2 text-white border-none rounded-md cursor-pointer transition-all duration-200 ${trackingStatus === 'tracking' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
+            }`}
         >
           {trackingStatus === 'tracking' ? 'Stop Tracking' : 'Start Tracking'}
         </button>
@@ -1834,7 +1826,7 @@ const PhoneTracking = ({ driverInfo }) => {
             attribution='&copy; OpenStreetMap'
           />
           {location && (
-            <Marker 
+            <Marker
               position={[location.lat, location.lng]}
               icon={L.divIcon({
                 html: `<div class="bg-green-600 w-6 h-6 rounded-full border-3 border-white shadow-md flex items-center justify-center">📱</div>`,
@@ -1867,11 +1859,11 @@ const LiveTracking = () => {
   return (
     <div>
       <h2 className="mb-4">Live Driver Tracking</h2>
-      
+
       {!selectedDriver ? (
         <div className="grid gap-3">
           {ROUTES.map((route, index) => (
-            <div 
+            <div
               key={index}
               className="p-3 bg-white rounded-lg border border-green-200 cursor-pointer hover:bg-green-50 transition-colors duration-200"
               onClick={() => setSelectedDriver(route)}

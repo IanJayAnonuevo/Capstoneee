@@ -49,13 +49,13 @@ export default function Pickup() {
       try {
         setLoading(true);
         setError('');
-        
+
         console.log('Fetching pickup requests...'); // Debug log
-        
+
         const response = await authService.getPickupRequests();
-        
+
         console.log('API Response:', response); // Debug log
-        
+
         if (response && response.status === 'success') {
           // Simple transformation first
           const transformedRequests = (response.data || []).map((req, index) => ({
@@ -64,8 +64,8 @@ export default function Pickup() {
             address: req.barangay || 'Not specified',
             barangay: req.barangay || 'Not specified',
             wasteType: req.waste_type || 'Other',
-            submitted: req.created_at ? req.created_at.split(' ')[0] : new Date().toISOString().split('T')[0],
-            preferred: req.pickup_date || new Date().toISOString().split('T')[0],
+            submitted: req.created_at ? req.created_at.split(' ')[0] : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
+            preferred: req.pickup_date || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
             status: req.status || 'Pending',
             image: '',
             remarks: req.admin_remarks || req.declined_reason || '',
@@ -73,7 +73,7 @@ export default function Pickup() {
             contact: req.contact_number || '',
             originalData: req
           }));
-          
+
           console.log('Transformed requests:', transformedRequests); // Debug log
           setRequests(transformedRequests);
         } else {
@@ -113,7 +113,7 @@ export default function Pickup() {
     setShowModal(true);
     setRemarks(req.remarks || '');
   }
-  
+
   function closeModal() {
     setShowModal(false);
     setSelected(null);
@@ -126,50 +126,50 @@ export default function Pickup() {
   // Action Functions
   function handleApprove() {
     if (!selected) return;
-    
-    const updatedRequests = requests.map(req => 
-      req.id === selected.id 
+
+    const updatedRequests = requests.map(req =>
+      req.id === selected.id
         ? { ...req, status: 'Scheduled', remarks: remarks }
         : req
     );
-    
+
     setRequests(updatedRequests);
     setSelected({ ...selected, status: 'Scheduled', remarks: remarks });
-    
+
     alert('Request approved and scheduled successfully!');
   }
 
   function handleSchedule() {
     if (!selected) return;
-    
-    const updatedRequests = requests.map(req => 
-      req.id === selected.id 
+
+    const updatedRequests = requests.map(req =>
+      req.id === selected.id
         ? { ...req, status: 'Scheduled', remarks: remarks }
         : req
     );
-    
+
     setRequests(updatedRequests);
     setSelected({ ...selected, status: 'Scheduled', remarks: remarks });
-    
+
     alert('Request scheduled successfully!');
   }
 
   function handleDecline() {
     if (!selected) return;
-    
+
     const reason = prompt('Please provide a reason for declining this request:');
     if (reason === null) return; // User cancelled
-    
-    const updatedRequests = requests.map(req => 
-      req.id === selected.id 
+
+    const updatedRequests = requests.map(req =>
+      req.id === selected.id
         ? { ...req, status: 'Declined', remarks: reason }
         : req
     );
-    
+
     setRequests(updatedRequests);
     setSelected({ ...selected, status: 'Declined', remarks: reason });
     setRemarks(reason);
-    
+
     alert('Request declined successfully!');
   }
 
@@ -183,18 +183,18 @@ export default function Pickup() {
       alert('Please select a new date');
       return;
     }
-    
-    const updatedRequests = requests.map(req => 
-      req.id === selected.id 
+
+    const updatedRequests = requests.map(req =>
+      req.id === selected.id
         ? { ...req, preferred: newScheduleDate, remarks: remarks }
         : req
     );
-    
+
     setRequests(updatedRequests);
     setSelected({ ...selected, preferred: newScheduleDate, remarks: remarks });
     setShowReschedule(false);
     setNewScheduleDate('');
-    
+
     // Show success message
     alert('Request rescheduled successfully!');
   }
@@ -208,19 +208,19 @@ export default function Pickup() {
       alert('Please enter a message');
       return;
     }
-    
-    const updatedRequests = requests.map(req => 
-      req.id === selected.id 
+
+    const updatedRequests = requests.map(req =>
+      req.id === selected.id
         ? { ...req, remarks: remarks + '\n\nMessage sent: ' + messageText }
         : req
     );
-    
+
     setRequests(updatedRequests);
     setSelected({ ...selected, remarks: remarks + '\n\nMessage sent: ' + messageText });
     setRemarks(remarks + '\n\nMessage sent: ' + messageText);
     setShowMessage(false);
     setMessageText('');
-    
+
     // Show success message
     alert('Message sent successfully!');
   }
@@ -246,8 +246,8 @@ export default function Pickup() {
       <div className="p-6 bg-red-50 min-h-screen">
         <h1 className="text-2xl text-red-800 mb-4">Error Loading Pickup Requests</h1>
         <p className="text-red-600">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
+        <button
+          onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >
           Reload Page
@@ -281,16 +281,16 @@ export default function Pickup() {
 
       {/* Filters - Minimal Design */}
       <div className="flex gap-3 mb-6 items-center justify-center p-4 bg-white rounded-lg border border-green-200 flex-wrap">
-        <select 
-          value={barangay} 
-          onChange={e => setBarangay(e.target.value)} 
+        <select
+          value={barangay}
+          onChange={e => setBarangay(e.target.value)}
           className="flex-1 min-w-[150px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           {getUniqueBarangays(requests).map(b => <option key={b}>{b}</option>)}
         </select>
-        <select 
-          value={status} 
-          onChange={e => setStatus(e.target.value)} 
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
           className="flex-1 min-w-[150px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           <option>All</option>
@@ -299,17 +299,17 @@ export default function Pickup() {
           <option>Completed</option>
           <option>Declined</option>
         </select>
-        <input 
-          type="date" 
-          value={dateFrom} 
-          onChange={e => setDateFrom(e.target.value)} 
-          className="flex-1 min-w-[140px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800" 
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={e => setDateFrom(e.target.value)}
+          className="flex-1 min-w-[140px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
         />
-        <input 
-          type="date" 
-          value={dateTo} 
-          onChange={e => setDateTo(e.target.value)} 
-          className="flex-1 min-w-[140px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800" 
+        <input
+          type="date"
+          value={dateTo}
+          onChange={e => setDateTo(e.target.value)}
+          className="flex-1 min-w-[140px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
         />
       </div>
 
@@ -337,9 +337,8 @@ export default function Pickup() {
                   </tr>
                 )}
                 {filtered.map((req, i) => (
-                  <tr key={req.id} className={`border-b border-green-200 transition-all duration-200 ${
-                    i % 2 === 0 ? 'bg-green-50' : 'hover:bg-green-50'
-                  }`}>
+                  <tr key={req.id} className={`border-b border-green-200 transition-all duration-200 ${i % 2 === 0 ? 'bg-green-50' : 'hover:bg-green-50'
+                    }`}>
                     <td className="py-3 px-4 font-mono text-gray-700">{req.id}</td>
                     <td className="py-3 px-4 flex items-center gap-2">
                       <FiUser className="text-green-600" />
@@ -357,15 +356,15 @@ export default function Pickup() {
                       </span>
                     </td>
                     <td className="py-3 px-4 flex gap-2">
-                      <button 
-                        className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-all duration-200" 
-                        title="View Details" 
+                      <button
+                        className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-all duration-200"
+                        title="View Details"
                         onClick={() => openModal(req)}
                       >
                         View
                       </button>
-                      <button 
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-all duration-200" 
+                      <button
+                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-all duration-200"
                         title="Schedule Pickup"
                         onClick={() => {
                           openModal(req);
@@ -374,8 +373,8 @@ export default function Pickup() {
                       >
                         Schedule
                       </button>
-                      <button 
-                        className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-all duration-200" 
+                      <button
+                        className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-all duration-200"
                         title="Decline Request"
                         onClick={() => {
                           openModal(req);
@@ -409,21 +408,21 @@ export default function Pickup() {
                 {STATUS_COLORS[req.status].icon} {req.status}
               </span>
             </div>
-            
+
             {/* Waste Type */}
             <div className="flex items-center gap-2">
               {WASTE_ICONS[req.wasteType] || WASTE_ICONS.Other}
             </div>
-            
+
             {/* Barangay Head */}
             <div className="flex items-center gap-2">
               <FiUser className="text-green-600" />
               <span className="text-gray-700 font-medium">{req.resident}</span>
             </div>
-            
+
             {/* Address */}
             <div className="text-sm text-gray-600">{req.address}</div>
-            
+
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -435,17 +434,17 @@ export default function Pickup() {
                 <div className="text-gray-700">{req.preferred}</div>
               </div>
             </div>
-            
+
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-2">
-              <button 
-                className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-all duration-200" 
+              <button
+                className="flex-1 px-3 py-2 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-all duration-200"
                 onClick={() => openModal(req)}
               >
                 View
               </button>
-              <button 
-                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-all duration-200" 
+              <button
+                className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-all duration-200"
                 onClick={() => {
                   openModal(req);
                   setTimeout(() => handleSchedule(), 100);
@@ -453,8 +452,8 @@ export default function Pickup() {
               >
                 Schedule
               </button>
-              <button 
-                className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-all duration-200" 
+              <button
+                className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-all duration-200"
                 onClick={() => {
                   openModal(req);
                   setTimeout(() => handleDecline(), 100);
@@ -481,7 +480,7 @@ export default function Pickup() {
                   </span>
                 </div>
               </div>
-              
+
               {/* Main Content */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-6">
                 {/* Left Column - Basic Information */}
@@ -571,9 +570,9 @@ export default function Pickup() {
               {/* Remarks Section */}
               <div className="mb-6 bg-white p-4 rounded-lg border border-green-200">
                 <label className="block font-medium text-green-700 mb-3">Remarks / Message to Resident:</label>
-                <textarea 
-                  className="w-full border border-green-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-800 resize-none bg-green-50 text-gray-800" 
-                  rows={3} 
+                <textarea
+                  className="w-full border border-green-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-800 resize-none bg-green-50 text-gray-800"
+                  rows={3}
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Add any remarks or message for the resident..."
@@ -584,7 +583,7 @@ export default function Pickup() {
               <div className="flex flex-col sm:flex-row gap-3 sm:flex-wrap sm:justify-between sm:items-center bg-white p-4 rounded-lg border border-green-200">
                 <div className="flex flex-col sm:flex-row gap-3 sm:flex-wrap">
                   {selected.status === 'Pending' && (
-                    <button 
+                    <button
                       className="flex items-center justify-center gap-2 px-5 py-2 bg-green-800 text-white rounded-lg font-medium hover:bg-green-700 transition-all duration-200 w-full sm:w-auto"
                       onClick={handleApprove}
                     >
@@ -592,7 +591,7 @@ export default function Pickup() {
                     </button>
                   )}
                   {selected.status === 'Pending' && (
-                    <button 
+                    <button
                       className="flex items-center justify-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-all duration-200 w-full sm:w-auto"
                       onClick={handleSchedule}
                     >
@@ -600,7 +599,7 @@ export default function Pickup() {
                     </button>
                   )}
                   {selected.status === 'Pending' && (
-                    <button 
+                    <button
                       className="flex items-center justify-center gap-2 px-5 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 transition-all duration-200 w-full sm:w-auto"
                       onClick={handleDecline}
                     >
@@ -608,22 +607,22 @@ export default function Pickup() {
                     </button>
                   )}
                   {selected.status === 'Scheduled' && (
-                    <button 
+                    <button
                       className="flex items-center justify-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 transition-all duration-200 w-full sm:w-auto"
                       onClick={handleReschedule}
                     >
                       <FiEdit2 /> Reschedule
                     </button>
                   )}
-                  <button 
+                  <button
                     className="flex items-center justify-center gap-2 px-5 py-2 bg-green-100 text-green-800 rounded-lg font-medium hover:bg-green-200 transition-all duration-200 w-full sm:w-auto border border-green-300"
                     onClick={handleSendMessage}
                   >
                     <FiMessageCircle /> Send Message
                   </button>
                 </div>
-                <button 
-                  className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 w-full sm:w-auto border border-gray-300" 
+                <button
+                  className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 w-full sm:w-auto border border-gray-300"
                   onClick={closeModal}
                 >
                   Close
@@ -641,21 +640,21 @@ export default function Pickup() {
             <h3 className="text-lg font-medium text-green-800 mb-4">Reschedule Pick-up</h3>
             <div className="mb-4 bg-white p-4 rounded-lg border border-green-200">
               <label className="block font-medium text-green-700 mb-2">New Preferred Date:</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={newScheduleDate}
                 onChange={(e) => setNewScheduleDate(e.target.value)}
                 className="w-full border border-green-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-800 bg-green-50 text-gray-800"
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-end">
-              <button 
+              <button
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 w-full sm:w-auto border border-gray-300"
                 onClick={() => setShowReschedule(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="px-4 py-2 bg-green-800 text-white rounded-lg font-medium hover:bg-green-700 transition-all duration-200 w-full sm:w-auto"
                 onClick={confirmReschedule}
               >
@@ -673,7 +672,7 @@ export default function Pickup() {
             <h3 className="text-lg font-medium text-green-800 mb-4">Send Message to Resident</h3>
             <div className="mb-4 bg-white p-4 rounded-lg border border-green-200">
               <label className="block font-medium text-green-700 mb-2">Message:</label>
-              <textarea 
+              <textarea
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 className="w-full border border-green-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-800 resize-none bg-green-50 text-gray-800"
@@ -682,13 +681,13 @@ export default function Pickup() {
               ></textarea>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-end">
-              <button 
+              <button
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 w-full sm:w-auto border border-gray-300"
                 onClick={() => setShowMessage(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="px-4 py-2 bg-green-800 text-white rounded-lg font-medium hover:bg-green-700 transition-all duration-200 w-full sm:w-auto"
                 onClick={sendMessage}
               >

@@ -94,7 +94,7 @@ export default function TruckDriverVehicle() {
         id: Date.now(),
         description: newIssue.description,
         type: newIssue.type,
-        reported: new Date().toISOString().split('T')[0],
+        reported: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
         status: 'pending'
       };
       setVehicleData(prev => ({
@@ -291,11 +291,10 @@ export default function TruckDriverVehicle() {
                       >
                         <button
                           onClick={() => handleChecklistItem(item.id)}
-                          className={`w-5 h-5 rounded-md border ${
-                            item.checked
+                          className={`w-5 h-5 rounded-md border ${item.checked
                               ? 'bg-green-500 border-green-500 text-white'
                               : 'border-gray-300 hover:border-green-500'
-                          } flex items-center justify-center transition-colors`}
+                            } flex items-center justify-center transition-colors`}
                         >
                           {item.checked && <FiCheck className="w-3 h-3" />}
                         </button>
@@ -377,12 +376,10 @@ export default function TruckDriverVehicle() {
                     <div key={issue.id} className="p-4 lg:p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex items-start gap-4">
                         <div className="mt-1">
-                          <div className={`p-2 rounded-lg ${
-                            issue.type === 'warning' ? 'bg-yellow-50' : 'bg-red-50'
-                          }`}>
-                            <FiAlertTriangle className={`w-5 h-5 ${
-                              issue.type === 'warning' ? 'text-yellow-500' : 'text-red-500'
-                            }`} />
+                          <div className={`p-2 rounded-lg ${issue.type === 'warning' ? 'bg-yellow-50' : 'bg-red-50'
+                            }`}>
+                            <FiAlertTriangle className={`w-5 h-5 ${issue.type === 'warning' ? 'text-yellow-500' : 'text-red-500'
+                              }`} />
                           </div>
                         </div>
                         <div className="flex-1">
@@ -390,11 +387,10 @@ export default function TruckDriverVehicle() {
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                             <span className="text-xs text-gray-500">Reported: {issue.reported}</span>
                             <span className="text-xs text-gray-300">•</span>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                              issue.status === 'pending'
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${issue.status === 'pending'
                                 ? 'bg-yellow-50 text-yellow-700'
                                 : 'bg-green-50 text-green-700'
-                            }`}>
+                              }`}>
                               {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
                             </span>
                           </div>

@@ -10,7 +10,16 @@ export default function ForemanAttendance() {
 
   // Navigation State
   const [view, setView] = useState('menu'); // 'menu', 'today', 'verification', 'history_months', 'history_calendar', 'daily_detail', 'leave_requests'
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const getLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getLocalDate());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11
 
@@ -169,7 +178,7 @@ export default function ForemanAttendance() {
           <p className="text-green-100 mb-4 text-sm">Track who's here today.</p>
           <button
             onClick={() => {
-              setSelectedDate(new Date().toISOString().split('T')[0]);
+              setSelectedDate(getLocalDate());
               setView('today');
             }}
             className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 rounded-xl transition-colors backdrop-blur-sm"
@@ -231,7 +240,7 @@ export default function ForemanAttendance() {
     const { personnel, attendance, summary } = attendanceSheet;
 
     const getRecord = (userId, session) => {
-      return attendance.find(r => r.user_id === userId && r.session === session);
+      return attendance.find(r => String(r.user_id) === String(userId) && r.session === session);
     };
 
     return (
@@ -247,7 +256,7 @@ export default function ForemanAttendance() {
                 <h1 className="text-xl font-bold">Attendance Monitoring</h1>
                 <h2 className="text-lg font-semibold opacity-90">{title}</h2>
                 <p className="text-sm opacity-80 mt-1">
-                  DATE: {new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                  DATE: {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
                 </p>
               </div>
               <MdCheckCircle className="w-8 h-8 opacity-80" />
@@ -351,10 +360,10 @@ export default function ForemanAttendance() {
                         <td className="border border-gray-800 p-2 font-medium text-left pl-4">
                           Total {statusLabel}
                         </td>
-                        <td className="border border-gray-800 p-2">{s.driver.am[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s.driver.pm[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s.collector.am[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s.collector.pm[key] || 0}</td>
+                        <td className="border border-gray-800 p-2">{s?.driver?.am?.[key] || 0}</td>
+                        <td className="border border-gray-800 p-2">{s?.driver?.pm?.[key] || 0}</td>
+                        <td className="border border-gray-800 p-2">{s?.collector?.am?.[key] || 0}</td>
+                        <td className="border border-gray-800 p-2">{s?.collector?.pm?.[key] || 0}</td>
                       </tr>
                     );
                   })}
@@ -493,7 +502,23 @@ export default function ForemanAttendance() {
                 <div>
                   <p className="font-bold text-sm text-gray-900">{req.personnel_name}</p>
                   <p className="text-xs text-gray-500">{new Date(req.submitted_at).toLocaleString()}</p>
-                  {req.remarks && <p className="text-xs text-gray-600 mt-1 italic">"{req.remarks}"</p>}
+                  {(() => {
+                    if (!req.remarks) return null;
+                    try {
+                      const parsed = JSON.parse(req.remarks);
+                      if (parsed && typeof parsed === 'object') {
+                        const parts = [];
+                        if (parsed.intent) {
+                          const intentMap = { time_in: 'Time In', time_out: 'Time Out', absent: 'Absent' };
+                          parts.push(intentMap[parsed.intent] || parsed.intent);
+                        }
+                        if (parsed.session) parts.push(parsed.session);
+                        if (parsed.note) parts.push(`"${parsed.note}"`);
+                        return <p className="text-xs text-gray-600 mt-1 italic">{parts.join(' • ')}</p>;
+                      }
+                    } catch (e) { }
+                    return <p className="text-xs text-gray-600 mt-1 italic">"{req.remarks}"</p>;
+                  })()}
                 </div>
                 <div className="flex gap-2">
                   <button

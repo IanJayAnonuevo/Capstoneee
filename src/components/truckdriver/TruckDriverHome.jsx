@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import React from 'react';
 import { FiCheckCircle, FiMapPin, FiTruck, FiCalendar, FiChevronRight, FiPlay, FiStopCircle, FiXCircle, FiFileText } from 'react-icons/fi';
-import { MdEvent } from 'react-icons/md';
+import { MdEvent, MdAccessTime } from 'react-icons/md';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -31,16 +31,28 @@ export default function TruckDriverHome() {
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
   const [showTimeInSuccessModal, setShowTimeInSuccessModal] = React.useState(false);
   const [hasSubmittedAbsence, setHasSubmittedAbsence] = React.useState(false);
-  const [hasPendingTimeIn, setHasPendingTimeIn] = React.useState(false);
-  const [hasApprovedAttendance, setHasApprovedAttendance] = React.useState(false);
-  const [hasPendingRequest, setHasPendingRequest] = React.useState(false);
-  const [timedInSession, setTimedInSession] = React.useState(null);
+  const [showAttendanceOptions, setShowAttendanceOptions] = React.useState(false);
 
-  // Attendance time window logic (5:00 AM – 6:00 AM)
+  // New Session Status State
+  const [sessionStatus, setSessionStatus] = React.useState({
+    am: { hasTimeIn: false, hasTimeOut: false, isVerified: false, pending: false },
+    pm: { hasTimeIn: false, hasTimeOut: false, isVerified: false, pending: false }
+  });
+
+  // Time Window Constants
   const [now, setNow] = React.useState(new Date());
-  const WINDOW_START_HOUR = 5;   // 5:00 AM
-  const WINDOW_END_HOUR = 6;     // 6:00 AM
-  const NEAR_END_MINUTES = 5;    // 5:55–6:00 warning window
+
+  // Morning Session
+  const AM_START_HOUR = 5;
+  const AM_END_HOUR = 6;
+  const AM_TIMEOUT_START = 12;
+  const AM_TIMEOUT_END = 13;
+
+  // Afternoon Session
+  const PM_START_HOUR = 13; // 1 PM
+  const PM_END_HOUR = 14;   // 2 PM
+  const PM_TIMEOUT_START = 17; // 5 PM
+  const PM_TIMEOUT_END = 18;   // 6 PM
 
   React.useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30 * 1000);
@@ -55,54 +67,52 @@ export default function TruckDriverHome() {
         const token = localStorage.getItem('access_token');
         if (!userData?.user_id || !token) return;
 
-        // Build local YYYY-MM-DD date (use local timezone to avoid UTC shift)
         const d = new Date();
         const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-        // 1) Check attendance table for verified/recorded attendance
-        const attendanceUrl = `http://localhost/kolektrash/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
+        // 1) Check attendance table
+        const attendanceUrl = `http://localhost/Capstoneee/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
         const attendanceResp = await fetch(attendanceUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const attendanceData = await attendanceResp.json();
-        console.log('get_attendance API response:', attendanceData, 'requested_date:', todayLocal);
+        console.log('get_attendance API response:', attendanceData);
 
-        let approved = false;
-        let hasRecorded = false;
-        let recordedSession = null;
-        let fetchedAttendanceStatus = null;
-        if (attendanceData.success && Array.isArray(attendanceData.attendance)) {
-          approved = attendanceData.attendance.some(a => String(a.user_id) === String(userData.user_id) && String(a.verification_status) === 'verified');
-          hasRecorded = attendanceData.attendance.some(a => String(a.user_id) === String(userData.user_id) && (a.status === 'present' || !!a.time_in));
-          const rec = attendanceData.attendance.find(a => String(a.user_id) === String(userData.user_id) && !!a.time_in);
-          if (rec) {
-            if (rec.session) recordedSession = rec.session;
-            if (rec.time_in && !rec.time_out) {
-              fetchedAttendanceStatus = 'timed_in';
-            } else if (rec.time_out) {
-              fetchedAttendanceStatus = 'timed_out';
-            }
-          }
-        }
-
-        setHasApprovedAttendance(approved);
-        setTimedInSession(recordedSession);
-        if (fetchedAttendanceStatus) setAttendanceStatus(fetchedAttendanceStatus);
-
-        // 2) Check attendance_request table for pending requests today
-        const reqUrl = `http://localhost/kolektrash/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
+        // 2) Check requests table
+        const reqUrl = `http://localhost/Capstoneee/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
         const reqResp = await fetch(reqUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const reqData = await reqResp.json();
         console.log('list_attendance_requests API response:', reqData);
 
-        let pendingReq = false;
-        if (reqData.status === 'success' && Array.isArray(reqData.data?.requests)) {
-          pendingReq = reqData.data.requests.some(r => String(r.user_id) === String(userData.user_id) && String(r.request_status) === 'pending');
+        // Process AM/PM status
+        const newStatus = {
+          am: { hasTimeIn: false, hasTimeOut: false, isVerified: false, pending: false },
+          pm: { hasTimeIn: false, hasTimeOut: false, isVerified: false, pending: false }
+        };
+
+        if (attendanceData.success && Array.isArray(attendanceData.attendance)) {
+          attendanceData.attendance.forEach(a => {
+            if (String(a.user_id) !== String(userData.user_id)) return;
+            const sess = a.session === 'AM' ? 'am' : (a.session === 'PM' ? 'pm' : null);
+            if (sess) {
+              newStatus[sess].hasTimeIn = !!a.time_in;
+              newStatus[sess].hasTimeOut = !!a.time_out;
+              newStatus[sess].isVerified = a.verification_status === 'verified';
+            }
+          });
         }
 
-        setHasPendingRequest(pendingReq);
+        if (reqData.status === 'success' && Array.isArray(reqData.data?.requests)) {
+          reqData.data.requests.forEach(r => {
+            if (String(r.user_id) !== String(userData.user_id)) return;
+            if (r.request_status === 'pending') {
+              const sess = r.session === 'AM' ? 'am' : (r.session === 'PM' ? 'pm' : null);
+              if (sess) newStatus[sess].pending = true;
+            }
+          });
+        }
 
-        // Decide whether to disable time-in button: disable if already approved OR pending request OR already recorded
-        setHasPendingTimeIn(approved || pendingReq || hasRecorded);
-        console.log('approved / pendingReq / hasRecorded:', approved, pendingReq, hasRecorded);
+        setSessionStatus(newStatus);
+        console.log('Updated Session Status:', newStatus);
+
       } catch (error) {
         console.error('Error checking attendance:', error);
       }
@@ -111,32 +121,41 @@ export default function TruckDriverHome() {
     checkTodayAttendance();
   }, []);
 
-  const isBetween = (date, startHour, endHour) => {
-    const y = date.getFullYear();
-    const m = date.getMonth();
-    const d = date.getDate();
-    const start = new Date(y, m, d, startHour, 0, 0, 0);
-    const end = new Date(y, m, d, endHour, 0, 0, 0);
-    return date >= start && date < end;
-  };
-
-  const computeState = (date) => {
-    const minute = date.getMinutes();
-    const hour = date.getHours();
-    const nearWindow = hour === WINDOW_END_HOUR - 0 && minute >= (60 - NEAR_END_MINUTES) && minute < 60;
-    if (isBetween(date, WINDOW_START_HOUR, WINDOW_END_HOUR)) {
-      return nearWindow ? 'near_end' : 'open';
-    }
-    if (hour >= WINDOW_END_HOUR) return 'closed';
-    return 'pre';
-  };
-
-  const attendanceState = computeState(now);
-  const timeInEnabled = attendanceState === 'open' || attendanceState === 'near_end';
+  // Determine current window and button state
   const currentHour = now.getHours();
-  const isTimeOutWindowForAM = currentHour >= 12 && currentHour < 13; // 12:00 - 12:59
-  const timeOutEnabled = attendanceStatus === 'timed_in' && (timedInSession === 'AM' ? isTimeOutWindowForAM : true);
-  const otherButtonsEnabled = timeInEnabled || attendanceState === 'closed' || attendanceState === 'pre';
+
+  let currentWindow = 'CLOSED';
+  let activeSession = null;
+
+  // Morning Windows
+  if (currentHour >= AM_START_HOUR && currentHour < AM_END_HOUR) {
+    currentWindow = 'AM_TIME_IN';
+    activeSession = 'am';
+  } else if (currentHour >= AM_TIMEOUT_START && currentHour < AM_TIMEOUT_END) {
+    currentWindow = 'AM_TIME_OUT';
+    activeSession = 'am';
+  }
+  // Afternoon Windows
+  else if (currentHour >= PM_START_HOUR && currentHour < PM_END_HOUR) {
+    currentWindow = 'PM_TIME_IN';
+    activeSession = 'pm';
+  } else if (currentHour >= PM_TIMEOUT_START && currentHour < PM_TIMEOUT_END) {
+    currentWindow = 'PM_TIME_OUT';
+    activeSession = 'pm';
+  }
+
+  // Logic for enabling buttons
+  const isTimeInEnabled = (
+    (currentWindow === 'AM_TIME_IN' && !sessionStatus.am.hasTimeIn && !sessionStatus.am.pending) ||
+    (currentWindow === 'PM_TIME_IN' && !sessionStatus.pm.hasTimeIn && !sessionStatus.pm.pending)
+  );
+
+  const isTimeOutEnabled = (
+    (currentWindow === 'AM_TIME_OUT' && sessionStatus.am.hasTimeIn && !sessionStatus.am.hasTimeOut) ||
+    (currentWindow === 'PM_TIME_OUT' && sessionStatus.pm.hasTimeIn && !sessionStatus.pm.hasTimeOut)
+  );
+
+  const otherButtonsEnabled = true; // Always allow absent/leave for now, or refine as needed
 
   // Handle attendance action
   const handleAttendance = async (action) => {
@@ -160,12 +179,18 @@ export default function TruckDriverHome() {
       // Use local date (avoid UTC shift) to match server attendance_date
       const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const hour = currentDate.getHours();
-      // If timing out, prefer the recorded session (AM/PM) if available
-      const session = action === 'time_out' && timedInSession ? timedInSession : (hour < 12 ? 'AM' : 'PM');
+
+      // Determine session based on time
+      let session = 'AM';
+      if (hour >= PM_START_HOUR || (hour >= PM_TIMEOUT_START && hour < PM_TIMEOUT_END)) {
+        session = 'PM';
+      } else if (hour >= AM_TIMEOUT_START && hour < AM_TIMEOUT_END) {
+        session = 'AM';
+      }
 
       const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -232,13 +257,13 @@ export default function TruckDriverHome() {
       }
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toISOString().split('T')[0];
+      const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
       const hour = currentDate.getHours();
       const session = hour < 12 ? 'AM' : 'PM';
 
       const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
@@ -360,7 +385,7 @@ export default function TruckDriverHome() {
         <Slider {...carouselSettings} className="h-full">
           {eventImages.map((event, index) => (
             <div key={index} className="relative h-64 md:h-80">
-              <div 
+              <div
                 className="w-full h-full bg-cover bg-center relative"
                 style={{ backgroundImage: `url(${event.url})` }}
                 role="img"
@@ -368,7 +393,7 @@ export default function TruckDriverHome() {
               >
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                
+
                 {/* Event Info */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                   <div className="flex items-center gap-2 mb-2">
@@ -386,42 +411,52 @@ export default function TruckDriverHome() {
 
       {/* Success/Error Messages */}
       {message.text && (
-        <div className={`mb-3 border-l-4 p-3 rounded ${
-          message.type === 'success' 
-            ? 'border-emerald-500 bg-emerald-50 text-emerald-800' 
-            : message.type === 'info'
+        <div className={`mb-3 border-l-4 p-3 rounded ${message.type === 'success'
+          ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+          : message.type === 'info'
             ? 'border-blue-500 bg-blue-50 text-blue-800'
             : 'border-red-500 bg-red-50 text-red-800'
-        }`}>
+          }`}>
           <div className="text-sm font-medium">{message.text}</div>
         </div>
       )}
 
       {/* Time-based notifications */}
       <div className="mb-3">
-        {hasApprovedAttendance && (
+        {sessionStatus.am.isVerified && sessionStatus.pm.isVerified && (
           <div className="border-l-4 border-green-500 bg-green-50 text-green-800 p-3 rounded">
-            <div className="text-sm"><span className="mr-1">✅</span><strong>Attendance Approved:</strong> Your attendance for today has been approved by the foreman. You cannot submit another request.</div>
+            <div className="text-sm"><span className="mr-1">✅</span><strong>All Done:</strong> Attendance for today is complete and verified.</div>
           </div>
         )}
-        {!hasApprovedAttendance && hasPendingRequest && (
-          <div className="border-l-4 border-blue-500 bg-blue-50 text-blue-800 p-3 rounded">
-            <div className="text-sm"><span className="mr-1">⏳</span><strong>Time-In Request Submitted:</strong> You have already submitted your time-in request for today. Please wait for foreman approval.</div>
-          </div>
-        )}
-        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'open' && (
+
+        {/* Morning Notifications */}
+        {currentWindow === 'AM_TIME_IN' && !sessionStatus.am.hasTimeIn && !sessionStatus.am.pending && (
           <div className="border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800 p-3 rounded">
-            <div className="text-sm"><span className="mr-1">📢</span><strong>System Notice:</strong> Time-in window is open from 5:00 AM to 6:00 AM. Please complete your attendance.</div>
+            <div className="text-sm"><span className="mr-1">☀️</span><strong>Morning Session:</strong> Time-in window is open (5:00 - 6:00 AM).</div>
           </div>
         )}
-        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'near_end' && (
-          <div className="border-l-4 border-amber-500 bg-amber-50 text-amber-800 p-3 rounded">
-            <div className="text-sm"><span className="mr-1">⏰</span><strong>You haven’t timed in yet!</strong> Please log in immediately to avoid being marked <strong>absent</strong>.</div>
+        {currentWindow === 'AM_TIME_OUT' && sessionStatus.am.hasTimeIn && !sessionStatus.am.hasTimeOut && (
+          <div className="border-l-4 border-blue-500 bg-blue-50 text-blue-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">🍽️</span><strong>Morning Break:</strong> Time-out window is open (12:00 - 1:00 PM).</div>
           </div>
         )}
-        {!hasApprovedAttendance && !hasPendingRequest && attendanceState === 'closed' && (
-          <div className="border-l-4 border-red-500 bg-red-50 text-red-800 p-3 rounded">
-            <div className="text-sm"><span className="mr-1">⛔</span><strong>Time-In Closed:</strong> The time-in period is now over. You can no longer record attendance for today.</div>
+
+        {/* Afternoon Notifications */}
+        {currentWindow === 'PM_TIME_IN' && !sessionStatus.pm.hasTimeIn && !sessionStatus.pm.pending && (
+          <div className="border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">🌤️</span><strong>Afternoon Session:</strong> Time-in window is open (1:00 - 2:00 PM).</div>
+          </div>
+        )}
+        {currentWindow === 'PM_TIME_OUT' && sessionStatus.pm.hasTimeIn && !sessionStatus.pm.hasTimeOut && (
+          <div className="border-l-4 border-blue-500 bg-blue-50 text-blue-800 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">🏠</span><strong>End of Day:</strong> Time-out window is open (5:00 - 6:00 PM).</div>
+          </div>
+        )}
+
+        {/* Closed Notifications */}
+        {currentWindow === 'CLOSED' && (
+          <div className="border-l-4 border-gray-400 bg-gray-50 text-gray-700 p-3 rounded">
+            <div className="text-sm"><span className="mr-1">🔒</span><strong>Attendance Closed:</strong> No active time-in/time-out window at this time.</div>
           </div>
         )}
       </div>
@@ -431,84 +466,122 @@ export default function TruckDriverHome() {
         <div className="mb-3 text-sm font-medium text-slate-600">
           <span className="text-emerald-700">Today:</span> {today}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <button 
-            type="button" 
-            disabled={!timeInEnabled || loading || hasPendingTimeIn} 
-            onClick={() => { setModalIntent('time_in'); setShowTimeInModal(true); }}
-            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeInEnabled && !loading && !hasPendingTimeIn ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+
+        {!showAttendanceOptions ? (
+          <button
+            onClick={() => setShowAttendanceOptions(true)}
+            className="w-full group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft bg-emerald-800 hover:bg-emerald-700 transition-all"
           >
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
-                <FiPlay className="h-5 w-5" />
+                <MdAccessTime className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-base font-semibold">{hasPendingTimeIn ? 'Submitted' : 'Time In'}</div>
-                <div className="text-xs text-emerald-100/80">{hasApprovedAttendance ? 'Approved' : hasPendingRequest ? 'Request pending' : (hasPendingTimeIn ? 'Recorded' : 'Tap to record')}</div>
+                <div className="text-base font-semibold">Attendance</div>
+                <div className="text-xs text-emerald-100/80">Time In, Time Out, Absent, Leave</div>
               </div>
             </div>
             <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
           </button>
-          <button 
-            type="button" 
-            disabled={!timeOutEnabled || loading} 
-            onClick={() => {
-              const d = new Date();
-              const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-              const sess = timedInSession || (d.getHours() < 12 ? 'AM' : 'PM');
-              setModalIntent('time_out');
-              setModalAttendanceDate(todayLocal);
-              setModalSession(sess);
-              setShowTimeInModal(true);
-            }}
-            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${timeOutEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
-                <FiStopCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-base font-semibold">Time Out</div>
-                <div className="text-xs text-emerald-100/80">{timedInSession === 'AM' && attendanceStatus === 'timed_in' && !isTimeOutWindowForAM ? 'Available 12:00–12:59 PM' : 'Tap to record'}</div>
-              </div>
+        ) : (
+          <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <button
+              onClick={() => setShowAttendanceOptions(false)}
+              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-2 font-medium"
+            >
+              <FiChevronRight className="rotate-180" /> Back to Menu
+            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={!isTimeInEnabled || loading}
+                onClick={() => {
+                  setModalIntent('time_in');
+                  setModalSession(activeSession === 'am' ? 'AM' : 'PM');
+                  setShowTimeInModal(true);
+                }}
+                className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${isTimeInEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                    <FiPlay className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">
+                      {(activeSession && sessionStatus[activeSession].pending) ? 'Submitted' : 'Time In'}
+                    </div>
+                    <div className="text-xs text-emerald-100/80">
+                      {activeSession && sessionStatus[activeSession].pending ? 'Request pending' :
+                        (activeSession && sessionStatus[activeSession].hasTimeIn ? 'Recorded' : 'Tap to record')}
+                    </div>
+                  </div>
+                </div>
+                <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+              </button>
+              <button
+                type="button"
+                disabled={!isTimeOutEnabled || loading}
+                onClick={() => {
+                  const d = new Date();
+                  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  const sess = activeSession === 'am' ? 'AM' : 'PM';
+                  setModalIntent('time_out');
+                  setModalAttendanceDate(todayLocal);
+                  setModalSession(sess);
+                  setShowTimeInModal(true);
+                }}
+                className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${isTimeOutEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                    <FiStopCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">Time Out</div>
+                    <div className="text-xs text-emerald-100/80">
+                      {isTimeOutEnabled ? 'Tap to record' : 'Not available'}
+                    </div>
+                  </div>
+                </div>
+                <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+              </button>
+              <button
+                type="button"
+                disabled={!otherButtonsEnabled || loading || hasSubmittedAbsence}
+                onClick={handleAbsent}
+                className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading && !hasSubmittedAbsence ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                    <FiXCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">{hasSubmittedAbsence ? 'Submitted' : 'Absent'}</div>
+                    <div className="text-xs text-emerald-100/80">{hasSubmittedAbsence ? 'Already marked' : 'Mark for today'}</div>
+                  </div>
+                </div>
+                <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+              </button>
+              <button
+                type="button"
+                disabled={!otherButtonsEnabled || loading}
+                onClick={handleFileLeave}
+                className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
+                    <FiFileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold">File Leave</div>
+                    <div className="text-xs text-emerald-100/80">Submit request</div>
+                  </div>
+                </div>
+                <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
+              </button>
             </div>
-            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
-          </button>
-          <button 
-            type="button" 
-            disabled={!otherButtonsEnabled || loading || hasSubmittedAbsence} 
-            onClick={handleAbsent}
-            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading && !hasSubmittedAbsence ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
-                <FiXCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-base font-semibold">{hasSubmittedAbsence ? 'Submitted' : 'Absent'}</div>
-                <div className="text-xs text-emerald-100/80">{hasSubmittedAbsence ? 'Already marked' : 'Mark for today'}</div>
-              </div>
-            </div>
-            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
-          </button>
-          <button 
-            type="button" 
-            disabled={!otherButtonsEnabled || loading} 
-            onClick={handleFileLeave}
-            className={`group relative flex items-center justify-between rounded-2xl px-4 py-4 text-left text-white shadow-soft ${otherButtonsEnabled && !loading ? 'bg-emerald-800 hover:bg-emerald-700' : 'bg-emerald-800/60 cursor-not-allowed'}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600/30 text-emerald-200">
-                <FiFileText className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-base font-semibold">File Leave</div>
-                <div className="text-xs text-emerald-100/80">Submit request</div>
-              </div>
-            </div>
-            <div className="h-10 w-1 rounded-full bg-gradient-to-b from-emerald-300 to-emerald-500" />
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -562,9 +635,9 @@ export default function TruckDriverHome() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
               <p className="text-sm text-blue-800">
-                <strong>📋 Next Steps:</strong><br/>
-                • Ensure you have all required documents ready<br/>
-                • Wait for foreman verification<br/>
+                <strong>📋 Next Steps:</strong><br />
+                • Ensure you have all required documents ready<br />
+                • Wait for foreman verification<br />
                 • Check back for approval status
               </p>
             </div>
@@ -650,10 +723,10 @@ export default function TruckDriverHome() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
               <p className="text-sm text-blue-800">
-                <strong>📋 Next Steps:</strong><br/>
-                • Your request is pending verification<br/>
-                • Wait for foreman approval<br/>
-                • You'll be notified once approved<br/>
+                <strong>📋 Next Steps:</strong><br />
+                • Your request is pending verification<br />
+                • Wait for foreman approval<br />
+                • You'll be notified once approved<br />
                 • Check your attendance status later
               </p>
             </div>
@@ -679,7 +752,14 @@ export default function TruckDriverHome() {
         onSuccess={() => {
           if (modalIntent === 'time_in') {
             setShowTimeInSuccessModal(true);
-            setHasPendingTimeIn(true);
+            // Optimistically update pending status
+            const sess = activeSession;
+            if (sess) {
+              setSessionStatus(prev => ({
+                ...prev,
+                [sess]: { ...prev[sess], pending: true }
+              }));
+            }
           } else {
             setMessage({ type: 'success', text: 'Time-out request submitted. Awaiting foreman review.' });
             setTimeout(() => setMessage({ type: '', text: '' }), 3500);

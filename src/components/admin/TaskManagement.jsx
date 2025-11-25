@@ -597,9 +597,8 @@ export default function TaskManagement() {
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded shadow-md text-sm ${
-            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-gray-800 text-white'
-          }`}
+          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded shadow-md text-sm ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-gray-800 text-white'
+            }`}
         >
           {toast.message}
         </div>
@@ -731,7 +730,7 @@ export default function TaskManagement() {
                   {selectedSchedule?.status === 'assigned' && <span className="text-yellow-600">Assigned</span>}
                   {selectedSchedule?.status === 'accepted' && <span className="text-green-600">Accepted</span>}
                   {selectedSchedule?.status === 'declined' && <span className="text-red-600">Declined</span>}
-                  {!['assigned','accepted','declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
+                  {!['assigned', 'accepted', 'declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
                 </div>
                 <div className="text-xs text-green-700 font-normal">COLLECTION STATUS</div>
               </div>
@@ -786,17 +785,15 @@ export default function TaskManagement() {
             {!barangayLoading && !barangayError && filteredBarangays.map(b => (
               <div
                 key={b.barangay_id}
-                className={`px-4 py-3 cursor-pointer flex flex-col transition-all duration-200 border-b border-gray-100 last:border-b-0 ${
-                  selected && selected.barangay_id === b.barangay_id
+                className={`px-4 py-3 cursor-pointer flex flex-col transition-all duration-200 border-b border-gray-100 last:border-b-0 ${selected && selected.barangay_id === b.barangay_id
                     ? 'bg-green-800 text-white'
                     : 'hover:bg-emerald-50 text-gray-700'
-                }`}
+                  }`}
                 onClick={() => setSelected(b)}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block w-2 h-2 rounded-full ${
-                    selected && selected.barangay_id === b.barangay_id ? 'bg-white' : 'bg-green-600'
-                  }`}></span>
+                  <span className={`inline-block w-2 h-2 rounded-full ${selected && selected.barangay_id === b.barangay_id ? 'bg-white' : 'bg-green-600'
+                    }`}></span>
                   <span className="text-sm font-semibold">{b.barangay_name}</span>
                 </div>
               </div>
@@ -909,11 +906,10 @@ export default function TaskManagement() {
                       <td className="px-4 py-2">{sched.start_time}</td>
                       <td className="px-4 py-2">{sched.end_time}</td>
                       <td className="px-4 py-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          sched.status === 'scheduled' ? 'bg-green-100 text-green-800' : 
-                          sched.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${sched.status === 'scheduled' ? 'bg-green-100 text-green-800' :
+                            sched.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
                           {sched.status}
                         </span>
                       </td>
@@ -1080,7 +1076,7 @@ export default function TaskManagement() {
               <thead>
                 <tr className="bg-green-100 text-green-800">
                   <th className="px-4 py-2">
-                    <input type="checkbox" checked={paginatedAssignments.every(a => isSelected(a.assignment_id)) && paginatedAssignments.length>0}
+                    <input type="checkbox" checked={paginatedAssignments.every(a => isSelected(a.assignment_id)) && paginatedAssignments.length > 0}
                       onChange={(e) => selectAllOnPage(e.target.checked)} />
                   </th>
                   <th className="px-4 py-2">Barangay</th>
@@ -1157,19 +1153,19 @@ export default function TaskManagement() {
                     <td className="px-4 py-2">
                       {assignment.collectors && assignment.collectors.length > 0
                         ? assignment.collectors.map((collector, idx) => (
-                            <span
-                              key={collector.name + idx}
-                              style={{
-                                color: collector.status === 'declined' ? 'red' : undefined,
-                                fontWeight: collector.status === 'accepted' ? 'bold' : undefined,
-                                marginRight: 4
-                              }}
-                            >
-                              {collector.name}
-                              {collector.status === 'pending' && <span> (Pending)</span>}
-                              {idx < assignment.collectors.length - 1 && ', '}
-                            </span>
-                          ))
+                          <span
+                            key={collector.name + idx}
+                            style={{
+                              color: collector.status === 'declined' ? 'red' : undefined,
+                              fontWeight: collector.status === 'accepted' ? 'bold' : undefined,
+                              marginRight: 4
+                            }}
+                          >
+                            {collector.name}
+                            {collector.status === 'pending' && <span> (Pending)</span>}
+                            {idx < assignment.collectors.length - 1 && ', '}
+                          </span>
+                        ))
                         : '-'
                       }
                     </td>
@@ -1368,27 +1364,27 @@ export default function TaskManagement() {
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
             <button className="absolute top-2 right-2 text-gray-500 hover:text-blue-700" onClick={closeAutoGenModal}><FaTimes size={20} /></button>
             <h2 className="text-xl font-semibold text-blue-800 mb-4">Auto-Generate Tasks</h2>
-            
+
             <form className="flex flex-col gap-4 mb-6" onSubmit={handleAutoGenerateTasks}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm text-blue-700 mb-1">Start Date</label>
-                  <input 
-                    type="date" 
-                    name="start_date" 
-                    className="w-full border border-blue-200 rounded px-3 py-2" 
-                    min={new Date().toISOString().split('T')[0]}
-                    required 
+                  <input
+                    type="date"
+                    name="start_date"
+                    className="w-full border border-blue-200 rounded px-3 py-2"
+                    min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-blue-700 mb-1">End Date</label>
-                  <input 
-                    type="date" 
-                    name="end_date" 
-                    className="w-full border border-blue-200 rounded px-3 py-2" 
-                    min={new Date().toISOString().split('T')[0]}
-                    required 
+                  <input
+                    type="date"
+                    name="end_date"
+                    className="w-full border border-blue-200 rounded px-3 py-2"
+                    min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+                    required
                   />
                 </div>
                 <div>
@@ -1401,7 +1397,7 @@ export default function TaskManagement() {
                   </select>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="text-sm font-semibold text-blue-800 mb-2">Auto-Generation Rules:</h3>
                 <ul className="text-xs text-blue-700 space-y-1">
@@ -1413,14 +1409,14 @@ export default function TaskManagement() {
                 </ul>
               </div>
 
-              <button 
-                type="submit" 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded mt-2" 
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded mt-2"
                 disabled={autoGenLoading}
               >
                 {autoGenLoading ? 'Generating Tasks...' : 'Generate Tasks'}
               </button>
-              
+
               {autoGenLoading && (
                 <div className="text-xs text-gray-500 mt-2 text-center">Please wait while generating tasks...</div>
               )}
@@ -1474,27 +1470,27 @@ export default function TaskManagement() {
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
             <button className="absolute top-2 right-2 text-gray-500 hover:text-purple-700" onClick={closePredefinedGenModal}><FaTimes size={20} /></button>
             <h2 className="text-xl font-semibold text-purple-800 mb-4">Generate Tasks from Predefined Schedules</h2>
-            
+
             <form className="flex flex-col gap-4 mb-6" onSubmit={handlePredefinedGenerateTasks}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-purple-700 mb-1">Start Date</label>
-                  <input 
-                    type="date" 
-                    name="predefined_start_date" 
-                    className="w-full border border-purple-200 rounded px-3 py-2" 
-                    min={new Date().toISOString().split('T')[0]}
-                    required 
+                  <input
+                    type="date"
+                    name="predefined_start_date"
+                    className="w-full border border-purple-200 rounded px-3 py-2"
+                    min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-purple-700 mb-1">End Date</label>
-                  <input 
-                    type="date" 
-                    name="predefined_end_date" 
-                    className="w-full border border-purple-200 rounded px-3 py-2" 
-                    min={new Date().toISOString().split('T')[0]}
-                    required 
+                  <input
+                    type="date"
+                    name="predefined_end_date"
+                    className="w-full border border-purple-200 rounded px-3 py-2"
+                    min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
+                    required
                   />
                 </div>
               </div>
@@ -1502,7 +1498,7 @@ export default function TaskManagement() {
                 <input id="overwritePredefined" type="checkbox" className="accent-purple-600" checked={predefinedOverwrite} onChange={(e) => setPredefinedOverwrite(e.target.checked)} />
                 <label htmlFor="overwritePredefined" className="text-sm text-purple-800">Overwrite existing schedules in range (same barangay & start time)</label>
               </div>
-              
+
               <div className="bg-purple-50 p-4 rounded-lg">
                 <h3 className="text-sm font-semibold text-purple-800 mb-2">Predefined Schedule Rules:</h3>
                 <ul className="text-xs text-purple-700 space-y-1">
@@ -1514,14 +1510,14 @@ export default function TaskManagement() {
                 </ul>
               </div>
 
-              <button 
-                type="submit" 
-                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded mt-2" 
+              <button
+                type="submit"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded mt-2"
                 disabled={predefinedGenLoading}
               >
                 {predefinedGenLoading ? 'Generating Tasks...' : 'Generate Tasks from Predefined Schedules'}
               </button>
-              
+
               {predefinedGenLoading && (
                 <div className="text-xs text-gray-500 mt-2 text-center">Please wait while generating tasks from predefined schedules...</div>
               )}
@@ -1568,11 +1564,10 @@ export default function TaskManagement() {
                             <div className="text-xs">
                               {task.collectors ? task.collectors.join(', ') : 'N/A'}
                               {task.collector_team && (
-                                <div className={`font-semibold mt-1 px-2 py-1 rounded text-xs ${
-                                  task.collector_team.includes('Priority') 
-                                    ? 'bg-blue-100 text-blue-800' 
+                                <div className={`font-semibold mt-1 px-2 py-1 rounded text-xs ${task.collector_team.includes('Priority')
+                                    ? 'bg-blue-100 text-blue-800'
                                     : 'bg-green-100 text-green-800'
-                                }`}>
+                                  }`}>
                                   {task.collector_team}
                                 </div>
                               )}
@@ -1580,11 +1575,10 @@ export default function TaskManagement() {
                           </td>
                           <td className="px-2 py-1">{task.truck}</td>
                           <td className="px-2 py-1">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                              task.assignment_type === 'Priority Assignment' 
-                                ? 'bg-blue-100 text-blue-800' 
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${task.assignment_type === 'Priority Assignment'
+                                ? 'bg-blue-100 text-blue-800'
                                 : 'bg-purple-100 text-purple-800'
-                            }`}>
+                              }`}>
                               {task.assignment_type}
                             </span>
                           </td>

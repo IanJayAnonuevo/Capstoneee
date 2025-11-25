@@ -119,7 +119,7 @@ export default function PickupRequest() {
   const [loading, setLoading] = useState(true);
 
   // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
   const [form, setForm] = useState({
     name: '',
     barangay: '',
@@ -143,10 +143,10 @@ export default function PickupRequest() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const userDataLocal = JSON.parse(storedUser);
-          
+
           // Get user_id and role, checking all possible properties
           const userId = userDataLocal.user_id || userDataLocal.id || userDataLocal.userId;
-          
+
           // Fetch fresh data from database using the user ID
           if (userId) {
             const response = await authService.getUserData(userId);
@@ -232,7 +232,7 @@ export default function PickupRequest() {
     e.preventDefault();
     setError('');
     setSuccess(false);
-    
+
     if (!form.contact || !form.date || !form.type) {
       setError('Please fill in all required fields.');
       return;
@@ -248,7 +248,7 @@ export default function PickupRequest() {
       waste_type: form.type,
       notes: form.notes || ''
     });
-    
+
     // Show confirmation modal
     setShowConfirmModal(true);
   }
@@ -264,15 +264,15 @@ export default function PickupRequest() {
 
     try {
       const response = await authService.submitPickupRequest(pendingSubmission);
-      
+
       if (response.status === 'success') {
         setShowConfirmModal(false);
         setShowSuccessModal(true);
         // Reset form but keep name, barangay, and contact
-        setForm(prevForm => ({ 
-          ...prevForm, 
+        setForm(prevForm => ({
+          ...prevForm,
           date: today,
-          type: '', 
+          type: '',
           notes: ''
         }));
       } else {
@@ -319,7 +319,7 @@ export default function PickupRequest() {
         style={{ fontFamily: 'inherit' }}
       >
         <h2 className="text-2xl font-bold text-green-800 mb-2 text-center tracking-tight">Special Pick-up Request</h2>
-        
+
         {/* Display barangay head info if available */}
         {barangayHeadData && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
@@ -349,12 +349,12 @@ export default function PickupRequest() {
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
             <FiUser className="text-green-500" /> Name
           </label>
-          <input 
-            type="text" 
-            name="name" 
-            value={form.name} 
-            disabled 
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base" 
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            disabled
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base"
           />
         </div>
 
@@ -363,12 +363,12 @@ export default function PickupRequest() {
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
             <FiMapPin className="text-green-500" /> Barangay
           </label>
-          <input 
-            type="text" 
-            name="barangay" 
-            value={form.barangay || 'Not assigned'} 
-            disabled 
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base" 
+          <input
+            type="text"
+            name="barangay"
+            value={form.barangay || 'Not assigned'}
+            disabled
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base"
           />
         </div>
         {/* Contact Number */}
@@ -433,16 +433,15 @@ export default function PickupRequest() {
         <button
           type="submit"
           disabled={loading || isSubmitting}
-          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition-colors ${
-            loading || isSubmitting
+          className={`w-full px-4 py-2 rounded-lg font-medium text-white transition-colors ${loading || isSubmitting
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
-          }`}
+            }`}
         >
           {loading || isSubmitting ? 'Processing...' : 'Submit Request'}
         </button>
       </form>
-      
+
       <ConfirmationModal
         isOpen={showConfirmModal}
         onConfirm={confirmSubmission}
@@ -450,7 +449,7 @@ export default function PickupRequest() {
         isSubmitting={isSubmitting}
         formData={form}
       />
-      
+
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}

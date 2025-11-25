@@ -128,25 +128,40 @@ try {
 
     $relativePath = 'uploads/attendance/' . $fileName;
 
-    // Prevent creating a new attendance request if an attendance record for today
-    // already exists and has been verified (approved) by the foreman. This is
-    // a server-side safeguard to avoid duplicated approved attendance.
+    // Prevent creating a new attendance request if the SPECIFIC action for today
+    // already exists and has been verified (approved) by the foreman.
     $today = date('Y-m-d');
-    // Determine session from current time (AM/PM)
+    
+    // Determine session: use provided session if available, otherwise infer from current time
     $hour = (int)date('H');
     $sessionNow = $hour >= 12 ? 'PM' : 'AM';
+    $sessionToCheck = $sessionField ? $sessionField : $sessionNow;
 
+    // Check for existing verified record
     $checkStmt = $pdo->prepare(
-        "SELECT attendance_id FROM attendance WHERE user_id = ? AND attendance_date = ? AND session = ? AND verification_status = 'verified' LIMIT 1"
+        "SELECT attendance_id, time_in, time_out FROM attendance WHERE user_id = ? AND attendance_date = ? AND session = ? AND verification_status = 'verified' LIMIT 1"
     );
-    $checkStmt->execute([$personnel['user_id'], $today, $sessionNow]);
-    $alreadyVerified = (bool)$checkStmt->fetchColumn();
+    $checkStmt->execute([$personnel['user_id'], $today, $sessionToCheck]);
+    $existingVerified = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($alreadyVerified) {
-        kolektrash_respond_json(400, [
-            'status' => 'error',
-            'message' => 'Attendance for today has already been approved. You cannot submit another request.'
-        ]);
+    if ($existingVerified) {
+        if ($intent === 'time_out') {
+            // If intent is time_out, block only if time_out is already recorded
+            if (!empty($existingVerified['time_out'])) {
+                kolektrash_respond_json(400, [
+                    'status' => 'error',
+                    'message' => 'Time out for this session has already been approved.'
+                ]);
+            }
+            // If time_out is empty, we allow the request (it will be a new request row for the foreman to approve)
+        } else {
+            // Default intent is time_in
+            // If record exists and is verified, time_in is definitely done
+            kolektrash_respond_json(400, [
+                'status' => 'error',
+                'message' => 'Attendance (Time In) for today has already been approved. You cannot submit another request.'
+            ]);
+        }
     }
 
     // If intent provided, store it (and provided attendance_date/session) inside remarks as JSON for review-time processing.

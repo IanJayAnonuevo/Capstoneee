@@ -59,12 +59,12 @@ export default function TruckDriverCollectionSchedule() {
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('asc');
-  const today = new Date().toISOString().split('T')[0];
+  const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   // Handle marking complete
   const handleMarkComplete = (id) => {
-    setSchedules(prev => 
-      prev.map(schedule => 
+    setSchedules(prev =>
+      prev.map(schedule =>
         schedule.id === id ? { ...schedule, status: 'completed' } : schedule
       )
     );
@@ -75,12 +75,12 @@ export default function TruckDriverCollectionSchedule() {
     return [...data].sort((a, b) => {
       let compareA = a[sortField];
       let compareB = b[sortField];
-      
+
       if (sortField === 'date') {
         compareA = new Date(a.date + ' ' + a.time);
         compareB = new Date(b.date + ' ' + b.time);
       }
-      
+
       if (compareA < compareB) return sortDirection === 'asc' ? -1 : 1;
       if (compareA > compareB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -117,7 +117,7 @@ export default function TruckDriverCollectionSchedule() {
     // Apply search
     if (search) {
       const searchLower = search.toLowerCase();
-      filtered = filtered.filter(s => 
+      filtered = filtered.filter(s =>
         s.barangay.toLowerCase().includes(searchLower) ||
         s.route.toLowerCase().includes(searchLower)
       );
