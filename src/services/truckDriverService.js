@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://kolektrash.systemproj.com/backend/api'; // Replace kolektrash.systemproj.com with your actual Hostinger domain
+const API_BASE_URL = 'http://localhost/Capstoneee/backend/api'; // Replace kolektrash.systemproj.com with your actual Hostinger domain
 
 export const truckDriverService = {
   async getTruckDriver(userId) {

@@ -125,7 +125,7 @@ export default function ResidentSettings() {
     }
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await authService.updateProfile(userId, {
         firstname: formData.firstname,
@@ -133,13 +133,13 @@ export default function ResidentSettings() {
         email: formData.email,
         phone: formData.phone
       });
-      
+
       if (response.status === 'success') {
         // Update localStorage with new user data
         localStorage.setItem('user', JSON.stringify(response.data));
         setUserData(response.data);
-  setLastCompletedAction('profile');
-  setShowSuccessModal(true);
+        setLastCompletedAction('profile');
+        setShowSuccessModal(true);
       } else {
         setError(response.message || 'Failed to update profile');
       }
@@ -166,14 +166,14 @@ export default function ResidentSettings() {
     }
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await authService.changePassword(
         userId,
         formData.currentPassword,
         formData.newPassword
       );
-      
+
       if (response.status === 'success') {
         setFormData(prev => ({
           ...prev,
@@ -181,8 +181,8 @@ export default function ResidentSettings() {
           newPassword: '',
           confirmPassword: ''
         }));
-  setLastCompletedAction('password');
-  setShowSuccessModal(true);
+        setLastCompletedAction('password');
+        setShowSuccessModal(true);
       } else {
         setError(response.message || 'Failed to change password');
       }
@@ -203,7 +203,7 @@ export default function ResidentSettings() {
         return;
       }
       const userId = userData.user_id || userData.id;
-  const response = await fetch('https://kolektrash.systemproj.com/backend/api/delete_account.php', {
+      const response = await fetch('http://localhost/Capstoneee/backend/api/delete_account.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
@@ -386,9 +386,8 @@ export default function ResidentSettings() {
         </header>
 
         {(error || success) && (
-          <div className={`flex items-start gap-3 rounded-lg border p-4 text-sm ${
-            error ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          }`}>
+          <div className={`flex items-start gap-3 rounded-lg border p-4 text-sm ${error ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            }`}>
             <div className="mt-0.5">
               {error ? <FiAlertCircle className="h-5 w-5" /> : <FiCheckCircle className="h-5 w-5" />}
             </div>

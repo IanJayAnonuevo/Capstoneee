@@ -1,118 +1,79 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdReportProblem, MdArrowForward } from 'react-icons/md';
+import { MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdReportProblem, MdNotificationImportant } from 'react-icons/md';
 
 export default function ForemanHome() {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const foremanName = user.first_name || 'Foreman';
 
-  const quickActions = [
-    {
-      title: 'Monitor Attendance',
-      description: 'Track team presence',
-      icon: MdPeople,
-      actionLabel: 'Check Now',
-      to: '/foreman/attendance',
-      gradient: 'from-emerald-500 to-emerald-700'
-    },
-    {
-      title: 'Manage Schedule',
-      description: 'Organize shifts',
-      icon: MdCalendarToday,
-      actionLabel: 'Update',
-      to: '/foreman/schedule',
-      gradient: 'from-blue-500 to-blue-700'
-    },
-    {
-      title: 'Task Management',
-      description: 'Assign duties',
-      icon: MdAssignment,
-      actionLabel: 'View Tasks',
-      to: '/foreman/tasks',
-      gradient: 'from-violet-500 to-violet-700'
-    },
-    {
-      title: 'Truck Status',
-      description: 'Vehicle health',
-      icon: MdLocalShipping,
-      actionLabel: 'Inspect',
-      to: '/foreman/trucks',
-      gradient: 'from-orange-500 to-orange-700'
-    },
-    {
-      title: 'Special Pick-up',
-      description: 'Ad-hoc requests',
-      icon: MdReportProblem,
-      actionLabel: 'Review',
-      to: '/foreman/special-pickup',
-      gradient: 'from-amber-500 to-amber-700'
-    },
-    {
-      title: 'Manage Issues',
-      description: 'Team concerns',
-      icon: MdReportProblem,
-      actionLabel: 'Resolve',
-      to: '/foreman/issues',
-      gradient: 'from-red-500 to-red-700'
-    },
-  ];
+    const quickActions = [
+        {
+            title: 'Manage Users',
+            description: 'Check attendance of truck drivers and collectors',
+            icon: MdPeople,
+            to: '/foreman/attendance',
+            color: 'bg-blue-500'
+        },
+        {
+            title: 'Manage Schedule',
+            description: 'View and update collection schedules',
+            icon: MdCalendarToday,
+            to: '/foreman/schedule',
+            color: 'bg-green-500'
+        },
+        {
+            title: 'Task Management',
+            description: 'Assign and monitor tasks',
+            icon: MdAssignment,
+            to: '/foreman/tasks',
+            color: 'bg-purple-500'
+        },
+        {
+            title: 'Special Pickup',
+            description: 'Manage special pickup requests',
+            icon: MdNotificationImportant,
+            to: '/foreman/special-pickup',
+            color: 'bg-indigo-500'
+        },
+        {
+            title: 'Truck Status',
+            description: 'Check status of garbage trucks',
+            icon: MdLocalShipping,
+            to: '/foreman/trucks',
+            color: 'bg-orange-500'
+        },
+        {
+            title: 'Issues & Reports',
+            description: 'View reported issues and concerns',
+            icon: MdReportProblem,
+            to: '/foreman/issues',
+            color: 'bg-red-500'
+        }
+    ];
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Section with Gradient */}
-      <div className="bg-white border-b border-gray-200 px-6 py-8 mb-6 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
-            Welcome Back!
-          </h1>
-          <p className="text-lg text-gray-500">
-            Manage your team and operations efficiently.
-          </p>
-        </div>
-      </div>
+    return (
+        <div className="p-6 bg-gray-50 min-h-full">
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-gray-800">Welcome back, {foremanName}!</h1>
+                <p className="text-gray-600">Here's an overview of your operations today.</p>
+            </div>
 
-      <div className="px-6 max-w-7xl mx-auto pb-12">
-        {/* Stats Overview */}
-
-
-        {/* Quick Actions Section */}
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-            Quick Actions
-            <span className="ml-3 text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Dashboard</span>
-          </h2>
-
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => navigate(action.to)}
-                className={`relative overflow-hidden rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-left group bg-gradient-to-br ${action.gradient}`}
-              >
-                {/* Background Decoration */}
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between min-h-[140px]">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
-                      <action.icon className="w-6 h-6 text-white" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {quickActions.map((action, index) => (
+                    <div
+                        key={index}
+                        onClick={() => navigate(action.to)}
+                        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all p-4 cursor-pointer border border-gray-200 flex flex-col items-center text-center h-full justify-center"
+                    >
+                        <div className={`${action.color} w-10 h-10 rounded-full flex items-center justify-center text-white mb-3 shadow-sm`}>
+                            <action.icon className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-gray-800 mb-1 leading-tight">{action.title}</h3>
+                        <p className="text-xs text-gray-500 line-clamp-2">{action.description}</p>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1 tracking-tight">{action.title}</h3>
-                    <p className="text-white/80 text-xs mb-4 font-medium">{action.description}</p>
-
-                    <div className="inline-flex items-center bg-white/20 backdrop-blur-md rounded-lg px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wide group-hover:bg-white group-hover:text-gray-900 transition-colors duration-300">
-                      {action.actionLabel}
-                      <MdArrowForward className="ml-1 w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                ))}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

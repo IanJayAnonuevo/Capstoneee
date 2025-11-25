@@ -140,7 +140,7 @@ export default function Feedback() {
             throw new Error('User ID missing.');
           }
 
-          const response = await fetch(`https://kolektrash.systemproj.com/backend/api/get_user_details.php?user_id=${userId}`);
+          const response = await fetch(`http://localhost/Capstoneee/backend/api/get_user_details.php?user_id=${userId}`);
           const userDetails = await response.json();
 
           if (userDetails.status === 'success' && userDetails.data) {
@@ -149,7 +149,7 @@ export default function Feedback() {
 
             if (barangayId && !barangayName) {
               try {
-                const barangayResponse = await fetch(`https://kolektrash.systemproj.com/backend/api/get_barangay_details.php?barangay_id=${barangayId}`);
+                const barangayResponse = await fetch(`http://localhost/Capstoneee/backend/api/get_barangay_details.php?barangay_id=${barangayId}`);
                 const barangayData = await barangayResponse.json();
                 if (barangayData.status === 'success' && barangayData.data?.barangay_name) {
                   barangayName = barangayData.data.barangay_name;
@@ -204,8 +204,8 @@ export default function Feedback() {
         user_name: `${user.firstname} ${user.lastname}`,
         barangay: user.barangay_name,
         rating: parseInt(rating, 10),
-  message: feedbackMessage.trim(),
-  feedback_type: 'general',
+        message: feedbackMessage.trim(),
+        feedback_type: 'general',
         status: 'active',
       };
 
@@ -302,9 +302,8 @@ export default function Feedback() {
                         className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center focus:outline-none transition-colors"
                       >
                         <FaStar
-                          className={`text-xl sm:text-2xl ${
-                            (hoverRating || rating) >= star ? 'text-yellow-400' : 'text-gray-300'
-                          } hover:text-yellow-400 transition-colors`}
+                          className={`text-xl sm:text-2xl ${(hoverRating || rating) >= star ? 'text-yellow-400' : 'text-gray-300'
+                            } hover:text-yellow-400 transition-colors`}
                         />
                       </button>
                     ))}
@@ -317,11 +316,10 @@ export default function Feedback() {
                         return (
                           <li
                             key={legend.rating}
-                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                              isActive
+                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${isActive
                                 ? 'border-green-400 bg-green-50'
                                 : 'border-transparent bg-white'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-1 pt-0.5">
                               {Array.from({ length: legend.rating }).map((_, index) => (
@@ -363,11 +361,10 @@ export default function Feedback() {
                 <button
                   type="submit"
                   disabled={isSubmitting || !feedbackMessage.trim()}
-                  className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 text-white font-medium transition-colors ${
-                    isSubmitting || !feedbackMessage.trim()
+                  className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 text-white font-medium transition-colors ${isSubmitting || !feedbackMessage.trim()
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-green-600 hover:bg-green-700'
-                  }`}
+                    }`}
                 >
                   {isSubmitting ? (
                     <>

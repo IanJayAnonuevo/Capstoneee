@@ -10,7 +10,7 @@ const inferDefaultBaseUrl = () => {
 		const host = window.location.hostname.toLowerCase();
 
 		if (host === 'localhost' || host === '127.0.0.1') {
-			return 'http://localhost/kolektrash/backend/api';
+			return 'http://localhost/Capstoneee/backend/api';
 		}
 
 		if (host.includes('kolektrash.systemproj.com')) {
@@ -43,7 +43,7 @@ axios.interceptors.response.use(
 	(error) => {
 		if (error.response?.status === 401 && !isRedirecting) {
 			isRedirecting = true;
-			
+
 			// Clear expired token
 			try {
 				localStorage.removeItem('access_token');
@@ -52,7 +52,7 @@ axios.interceptors.response.use(
 			} catch (e) {
 				console.error('Failed to clear tokens:', e);
 			}
-			
+
 			// Redirect to login
 			if (typeof window !== 'undefined') {
 				window.location.href = '/login';

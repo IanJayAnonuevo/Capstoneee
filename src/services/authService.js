@@ -33,7 +33,7 @@ const handleAuthError = (response) => {
     } catch (e) {
       console.error('Failed to clear tokens:', e);
     }
-    
+
     // Redirect to login
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
       window.location.href = '/login';
@@ -73,7 +73,7 @@ export const authService = {
   },
   async signup(userData) {
     try {
-  const response = await fetch(buildApiUrl('register.php'), {
+      const response = await fetch(buildApiUrl('register.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export const authService = {
 
   async login({ username, password }) {
     try {
-  const response = await fetch(buildApiUrl('login.php'), {
+      const response = await fetch(buildApiUrl('login.php'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ export const authService = {
 
   async getUserData(userId) {
     try {
-  const response = await fetch(buildApiUrl(`get_user.php?id=${userId}`), {
+      const response = await fetch(buildApiUrl(`get_user.php?id=${userId}`), {
         method: 'GET',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export const authService = {
 
   async updateProfile(userId, profileData) {
     try {
-  const response = await fetch(buildApiUrl('update_profile.php'), {
+      const response = await fetch(buildApiUrl('update_profile.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ export const authService = {
 
   async changePassword(userId, currentPassword, newPassword) {
     try {
-  const response = await fetch(buildApiUrl('change_password.php'), {
+      const response = await fetch(buildApiUrl('change_password.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ export const authService = {
 
   async getBarangayHead(barangay) {
     try {
-  const response = await fetch(buildApiUrl(`get_barangay_head.php?barangay=${encodeURIComponent(barangay)}`), {
+      const response = await fetch(buildApiUrl(`get_barangay_head.php?barangay=${encodeURIComponent(barangay)}`), {
         method: 'GET',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ export const authService = {
 
   async submitIssueReport(reportData) {
     try {
-  const response = await fetch(buildApiUrl('submit_issue_report.php'), {
+      const response = await fetch(buildApiUrl('submit_issue_report.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ export const authService = {
 
   async submitPickupRequest(requestData) {
     try {
-  const response = await fetch(buildApiUrl('submit_pickup_request.php'), {
+      const response = await fetch(buildApiUrl('submit_pickup_request.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ export const authService = {
 
   async getUserDetails(userId) {
     try {
-  const response = await fetch(buildApiUrl(`get_user_details.php?user_id=${userId}`), {
+      const response = await fetch(buildApiUrl(`get_user_details.php?user_id=${userId}`), {
         method: 'GET',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -290,7 +290,7 @@ export const authService = {
         }
       });
 
-  const response = await fetch(buildApiUrl(`get_pickup_requests.php?${params}`), {
+      const response = await fetch(buildApiUrl(`get_pickup_requests.php?${params}`), {
         method: 'GET',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -316,10 +316,10 @@ export const authService = {
         status: status,
         ...additionalData
       };
-      
+
       console.log('Sending to API:', requestBody);
-      
-  const response = await fetch(buildApiUrl('update_pickup_request_status.php'), {
+
+      const response = await fetch(buildApiUrl('update_pickup_request_status.php'), {
         method: 'POST',
         headers: withAuthHeaders({
           'Content-Type': 'application/json',
@@ -341,7 +341,7 @@ export const authService = {
 
   async uploadProfileImage(formData) {
     try {
-  const response = await fetch(buildApiUrl('upload_profile_image.php'), {
+      const response = await fetch(buildApiUrl('upload_profile_image.php'), {
         method: 'POST',
         headers: withAuthHeaders(),
         body: formData,
@@ -384,6 +384,76 @@ export const authService = {
       // Silently fail - still proceed with logout
       console.warn('Logout API call error:', error);
       return { status: 'error', message: error.message };
+    }
+  },
+
+  async getNotifications() {
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+
+      const response = await fetch(buildApiUrl(`get_notifications.php?recipient_id=${userId}`), {
+        method: 'GET',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch notifications');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async markNotificationAsRead(notificationId) {
+    try {
+      const response = await fetch(buildApiUrl('mark_notification_read.php'), {
+        method: 'POST',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ notification_id: notificationId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to mark notification as read');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deleteNotification(notificationId) {
+    try {
+      const response = await fetch(buildApiUrl('delete_notification.php'), {
+        method: 'POST',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ notification_id: notificationId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete notification');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
     }
   },
 };

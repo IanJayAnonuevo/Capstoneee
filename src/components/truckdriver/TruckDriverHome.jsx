@@ -188,7 +188,7 @@ export default function TruckDriverHome() {
         session = 'AM';
       }
 
-      const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
+      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ export default function TruckDriverHome() {
       const hour = currentDate.getHours();
       const session = hour < 12 ? 'AM' : 'PM';
 
-      const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
+      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -76,7 +76,7 @@ export default function SignUp({ onLoginClick } = {}) {
     address: '',
     barangay_id: ''
   })
-  
+
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
   const [loading, setLoading] = useState(false)
@@ -127,7 +127,7 @@ export default function SignUp({ onLoginClick } = {}) {
   const totalSteps = steps.length
 
   const handleGoToLogin = useCallback(() => {
-  const base = window.location.pathname.startsWith('/kolektrash') ? '/kolektrash' : ''
+    const base = window.location.pathname.startsWith('/Capstoneee') ? '/Capstoneee' : ''
     const loginUrl = `${base}/login`
 
     setFeedbackModal(prev => ({ ...prev, open: false }))
@@ -256,7 +256,7 @@ export default function SignUp({ onLoginClick } = {}) {
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }))
@@ -276,7 +276,7 @@ export default function SignUp({ onLoginClick } = {}) {
   const handleBlur = (e) => {
     const { name, value } = e.target
     setTouched(prev => ({ ...prev, [name]: true }))
-    
+
     const error = validateField(name, value)
     setErrors(prev => ({ ...prev, [name]: error }))
 
@@ -382,7 +382,7 @@ export default function SignUp({ onLoginClick } = {}) {
     setError('')
     setLoading(true)
     setLoadingState('sending-code')
-  const startTime = Date.now()
+    const startTime = Date.now()
 
     try {
       if (!isResend && form.email !== verifiedEmail && verificationSent) {
@@ -639,7 +639,7 @@ export default function SignUp({ onLoginClick } = {}) {
   const getFieldClasses = (name) => {
     const baseClasses = "pl-12 w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
     const status = getFieldStatus(name)
-    
+
     switch (status) {
       case 'error':
         return `${baseClasses} border-red-300 focus:ring-red-500`
@@ -663,13 +663,13 @@ export default function SignUp({ onLoginClick } = {}) {
             <p className="text-sm text-gray-600 mt-2">{loadingCopy.subtitle}</p>
             <div className="mt-4 flex justify-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Feedback modal */}
       {feedbackModal.open && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
@@ -686,11 +686,10 @@ export default function SignUp({ onLoginClick } = {}) {
             )}
             <div className="flex flex-col items-center text-center space-y-4 mt-2">
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-inner ${
-                  feedbackModal.type === 'success'
+                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-inner ${feedbackModal.type === 'success'
                     ? 'bg-green-100 text-green-600'
                     : 'bg-red-100 text-red-600'
-                }`}
+                  }`}
               >
                 {feedbackModal.type === 'success' ? (
                   <FiCheckCircle size={36} />
@@ -756,7 +755,7 @@ export default function SignUp({ onLoginClick } = {}) {
               <p className="text-green-100 text-lg font-medium">MENRO Waste Collection System</p>
             </div>
           </div>
-          
+
           {/* Mobile header - visible only on mobile */}
           <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-6 px-6 border-b border-white/10">
             <div className="flex items-center justify-center mb-3">
@@ -769,14 +768,14 @@ export default function SignUp({ onLoginClick } = {}) {
             <h1 className="text-2xl font-bold tracking-[0.25em] uppercase">KOLEKTRASH</h1>
             <p className="text-green-100 text-sm mt-1 font-medium">MENRO Waste Collection System</p>
           </div>
-          
+
           {/* Right side: SignUp form */}
           <div className="w-full md:w-3/5 p-5 sm:p-6 md:p-10 flex flex-col justify-center max-h-[90vh] md:max-h-none overflow-y-auto">
             <div className="text-center mb-6">
               <h2 className="text-xl sm:text-3xl font-bold text-gray-800 mb-2">Create Account</h2>
               <p className="text-gray-600 text-sm sm:text-base">Fill in your details to get started</p>
             </div>
-            
+
             {/* Error Message */}
             {error && !feedbackModal.open && (
               <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-4 py-3 rounded-r-md mb-4 shadow-sm">
@@ -806,29 +805,26 @@ export default function SignUp({ onLoginClick } = {}) {
                     <div key={step.key} className="flex items-center">
                       <div className="flex flex-col items-center min-w-[4.5rem]">
                         <div
-                          className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors duration-200 ${
-                            isCompleted
+                          className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors duration-200 ${isCompleted
                               ? 'bg-green-500 border-green-500 text-white'
                               : isActive
                                 ? 'bg-green-50 border-green-500 text-green-600'
                                 : 'bg-white border-gray-200 text-gray-400'
-                          }`}
+                            }`}
                         >
                           {index + 1}
                         </div>
                         <span
-                          className={`mt-2 text-xs font-medium text-center ${
-                            isCompleted || isActive ? 'text-green-600' : 'text-gray-500'
-                          }`}
+                          className={`mt-2 text-xs font-medium text-center ${isCompleted || isActive ? 'text-green-600' : 'text-gray-500'
+                            }`}
                         >
                           {step.title}
                         </span>
                       </div>
                       {index < totalSteps - 1 && (
                         <div
-                          className={`hidden sm:block w-16 h-0.5 mx-2 ${
-                            index < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                          }`}
+                          className={`hidden sm:block w-16 h-0.5 mx-2 ${index < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                            }`}
                         ></div>
                       )}
                     </div>

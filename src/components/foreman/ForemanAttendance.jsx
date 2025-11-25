@@ -165,73 +165,63 @@ export default function ForemanAttendance() {
   // --- Views ---
 
   const renderMenu = () => (
-    <div className="space-y-4 p-4">
+    <div className="p-4 h-full flex flex-col">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-green-800">Attendance Monitoring</h1>
         <p className="text-gray-600">Monitor drivers and collectors attendance.</p>
       </div>
 
-      {/* Today's Attendance */}
-      <div className="bg-[#008F53] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-xl font-bold mb-1">Today's Attendance</h2>
-          <p className="text-green-100 mb-4 text-sm">Track who's here today.</p>
-          <button
-            onClick={() => {
-              setSelectedDate(getLocalDate());
-              setView('today');
-            }}
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 rounded-xl transition-colors backdrop-blur-sm"
-          >
-            View Today
-          </button>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Today's Attendance */}
+        <div
+          onClick={() => {
+            setSelectedDate(getLocalDate());
+            setView('today');
+          }}
+          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+        >
+          <div className="bg-white/20 p-3 rounded-full mb-2">
+            <MdAccessTime className="w-6 h-6" />
+          </div>
+          <h2 className="font-bold text-sm leading-tight mb-1">Today's Attendance</h2>
+          <p className="text-green-100 text-[10px] leading-tight">Track who's here today</p>
         </div>
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-      </div>
 
-      {/* Attendance Verification (New) */}
-      <div className="bg-[#008F53] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-xl font-bold mb-1">Attendance Verification</h2>
-          <p className="text-green-100 mb-4 text-sm">Verify time-in photos.</p>
-          <button
-            onClick={() => setView('verification')}
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 rounded-xl transition-colors backdrop-blur-sm"
-          >
-            Verify Requests
-          </button>
+        {/* Attendance Verification */}
+        <div
+          onClick={() => setView('verification')}
+          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+        >
+          <div className="bg-white/20 p-3 rounded-full mb-2">
+            <MdFactCheck className="w-6 h-6" />
+          </div>
+          <h2 className="font-bold text-sm leading-tight mb-1">Verification Requests</h2>
+          <p className="text-green-100 text-[10px] leading-tight">Verify time-in photos</p>
         </div>
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-      </div>
 
-      {/* Past Attendance */}
-      <div className="bg-[#008F53] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-xl font-bold mb-1">Past Attendance</h2>
-          <p className="text-green-100 mb-4 text-sm">Browse attendance history.</p>
-          <button
-            onClick={() => setView('history_months')}
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 rounded-xl transition-colors backdrop-blur-sm"
-          >
-            View Records
-          </button>
+        {/* Past Attendance */}
+        <div
+          onClick={() => setView('history_months')}
+          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+        >
+          <div className="bg-white/20 p-3 rounded-full mb-2">
+            <MdDateRange className="w-6 h-6" />
+          </div>
+          <h2 className="font-bold text-sm leading-tight mb-1">Past Attendance</h2>
+          <p className="text-green-100 text-[10px] leading-tight">Browse history</p>
         </div>
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-      </div>
 
-      {/* Requests and Approvals (Leave) */}
-      <div className="bg-[#008F53] rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-xl font-bold mb-1">Requests and Approvals</h2>
-          <p className="text-green-100 mb-4 text-sm">Manage leave requests</p>
-          <button
-            onClick={() => setView('leave_requests')}
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 rounded-xl transition-colors backdrop-blur-sm"
-          >
-            Manage requests
-          </button>
+        {/* Requests and Approvals */}
+        <div
+          onClick={() => setView('leave_requests')}
+          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+        >
+          <div className="bg-white/20 p-3 rounded-full mb-2">
+            <MdEventNote className="w-6 h-6" />
+          </div>
+          <h2 className="font-bold text-sm leading-tight mb-1">Leave Requests</h2>
+          <p className="text-green-100 text-[10px] leading-tight">Manage approvals</p>
         </div>
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
       </div>
     </div>
   );
