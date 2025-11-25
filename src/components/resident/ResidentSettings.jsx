@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../config/api';
 import { FiUser, FiLock, FiShield, FiAlertCircle, FiCheckCircle, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 
@@ -203,7 +204,7 @@ export default function ResidentSettings() {
         return;
       }
       const userId = userData.user_id || userData.id;
-      const response = await fetch('http://localhost/Capstoneee/backend/api/delete_account.php', {
+      const response = await fetch('${API_BASE_URL}/delete_account.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })

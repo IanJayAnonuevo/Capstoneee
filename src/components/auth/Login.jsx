@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiUser, FiLock, FiAlertCircle, FiX } from 'react-icons/fi'
+import { FiUser, FiLock, FiAlertCircle, FiX, FiEye, FiEyeOff } from 'react-icons/fi'
 import SignUp from './SignUp'
 import ForgotPassword from './ForgotPassword'
 import logo from '../../assets/logo/logo.png'
+import Skeleton from '../shared/Skeleton'
 
 const MIN_LOADING_DURATION_MS = 2000
 
@@ -27,22 +28,34 @@ function Login() {
   const [errorTitle, setErrorTitle] = useState('Sign-in Error')
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [errorField, setErrorField] = useState('') // Track which field has error: 'username' or 'password'
+  const [isMounting, setIsMounting] = useState(true)
+
+  useEffect(() => {
+    // Simulate initial loading for skeleton
+    const timer = setTimeout(() => {
+      setIsMounting(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const openErrorModal = (message, title = 'Sign-in Error') => {
     setErrorTitle(title)
     setErrorMessage(message)
     setShowErrorModal(true)
   }
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorMessage('')
     setShowErrorModal(false)
+    setErrorField('') // Clear error field
     setLoading(true)
 
     const startTime = Date.now()
     let redirectPath = null
-    let shouldReloadAfterRedirect = false
+
 
     try {
       console.log('Sending login request...', { username: formData.username, password: formData.password })
@@ -109,10 +122,17 @@ function Login() {
             openErrorModal('Invalid user role: ' + data.data.role, 'Role Not Supported')
         }
 
-        if (redirectPath) {
-          shouldReloadAfterRedirect = true
-        }
+
       } else {
+        // Determine which field has error based on message
+        const msg = (data.message || '').toLowerCase()
+        if (msg.includes('username') || msg.includes('user not found')) {
+          setErrorField('username')
+        } else if (msg.includes('password')) {
+          setErrorField('password')
+        } else {
+          setErrorField('both') // If unclear, mark both
+        }
         openErrorModal(data.message || 'Login failed. Please check your credentials.', 'Invalid Credentials')
       }
     } catch (err) {
@@ -131,11 +151,6 @@ function Login() {
 
     if (redirectPath) {
       navigate(redirectPath, { replace: true })
-      if (shouldReloadAfterRedirect) {
-        setTimeout(() => {
-          window.location.reload()
-        }, 100)
-      }
     }
   }
 
@@ -153,7 +168,57 @@ function Login() {
   if (showForgot) {
     return <ForgotPassword onBackToLogin={() => setShowForgot(false)} />
   }
-  
+
+  if (isMounting) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-green-100 px-4 py-6">
+        <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Left side skeleton */}
+          <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-green-500 to-green-600 items-center justify-center relative overflow-hidden p-8">
+            <div className="flex flex-col items-center w-full">
+              <Skeleton variant="circular" className="w-20 h-20 mb-6 bg-white/20" />
+              <Skeleton className="h-10 w-3/4 mb-3 bg-white/20" />
+              <Skeleton className="h-6 w-1/2 bg-white/20" />
+            </div>
+          </div>
+
+          {/* Mobile header skeleton - visible only on mobile */}
+          <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 py-8 px-6 flex flex-col items-center">
+            <Skeleton variant="circular" className="w-14 h-14 mb-4 bg-white/20" />
+            <Skeleton className="h-8 w-48 mb-2 bg-white/20" />
+            <Skeleton className="h-4 w-64 bg-white/20" />
+          </div>
+
+          {/* Right side skeleton */}
+          <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center">
+            <div className="text-center mb-8">
+              <Skeleton className="h-8 w-48 mx-auto mb-2" />
+              <Skeleton className="h-4 w-64 mx-auto" />
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </div>
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <Skeleton className="h-14 w-full rounded-xl" />
+            </div>
+            <div className="mt-8 text-center">
+              <Skeleton className="h-4 w-64 mx-auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Enhanced loading overlay */}
@@ -165,8 +230,8 @@ function Login() {
             <p className="text-sm text-gray-600 mt-2">Please wait while we verify your credentials</p>
             <div className="mt-4 flex justify-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
           </div>
         </div>
@@ -204,7 +269,7 @@ function Login() {
           </div>
         </div>
       )}
-      
+
       <div className="w-full min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-green-100 px-4 py-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Left side: Branding or image placeholder */}
@@ -221,7 +286,7 @@ function Login() {
               <p className="text-green-100 text-lg font-medium">MENRO Waste Collection System</p>
             </div>
           </div>
-          
+
           {/* Mobile header - visible only on mobile */}
           <div className="md:hidden bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-8 px-6">
             <div className="flex items-center justify-center mb-4">
@@ -234,7 +299,7 @@ function Login() {
             <h1 className="text-2xl font-bold tracking-[0.25em] uppercase">KOLEKTRASH</h1>
             <p className="text-green-100 text-sm mt-2 font-medium">MENRO Waste Collection System</p>
           </div>
-          
+
           {/* Right side: Login form */}
           <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center">
             <div className="text-center mb-8">
@@ -257,12 +322,15 @@ function Login() {
                     required
                     value={formData.username}
                     onChange={handleChange}
-                    className="pl-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                    className={`pl-12 w-full px-4 py-3 border ${errorField === 'username' || errorField === 'both'
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-green-500'
+                      } rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white`}
                     placeholder="Enter your username"
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
                   Password
@@ -274,16 +342,27 @@ function Login() {
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-12 w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
+                    className={`pl-12 pr-12 w-full px-4 py-3 border ${errorField === 'password' || errorField === 'both'
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-green-500'
+                      } rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white`}
                     placeholder="Enter your password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm -mt-3 pt-0">
                 <button
                   type="button"
@@ -300,7 +379,7 @@ function Login() {
                   Create account
                 </button>
               </div>
-              
+
               <button
                 type="submit"
                 disabled={loading}
@@ -316,7 +395,7 @@ function Login() {
                 )}
               </button>
             </form>
-            
+
             {/* Additional info section */}
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-500">

@@ -5,11 +5,12 @@ import { MdLogout, MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdR
 import logo from '../../assets/logo/logo.png';
 import { useLoader } from '../../contexts/LoaderContext';
 import { authService } from '../../services/authService';
+import Skeleton from '../shared/Skeleton';
 
 export default function ForemanDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { showLoader } = useLoader();
@@ -19,6 +20,7 @@ export default function ForemanDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const foremanName = user.first_name && user.last_name
@@ -80,6 +82,7 @@ export default function ForemanDashboard() {
 
   // Fetch notifications
   const fetchNotifications = async () => {
+    setIsNotificationsLoading(true);
     try {
       const notifRes = await authService.getNotifications();
       const standardNotifs = notifRes.data || [];
@@ -124,13 +127,23 @@ export default function ForemanDashboard() {
       setUnreadCount(allNotifs.filter(n => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+    } finally {
+      setIsNotificationsLoading(false);
     }
   };
 
   useEffect(() => {
+    // Simulate initial loading for skeleton
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleNotificationClick = async (notif) => {
@@ -312,7 +325,19 @@ export default function ForemanDashboard() {
                   )}
 
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {isNotificationsLoading ? (
+                      <div className="p-4 space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="flex gap-3">
+                            <Skeleton variant="circular" className="w-8 h-8 flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-full" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : notifications.length === 0 ? (
                       <div className="p-8 text-center text-gray-500 text-sm">
                         <FiBell className="w-8 h-8 mx-auto mb-2 opacity-20" />
                         No notifications
@@ -369,7 +394,26 @@ export default function ForemanDashboard() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <Outlet />
+          {isLoading ? (
+            <div className="p-6 h-full flex flex-col">
+              <div className="mb-8">
+                <Skeleton className="h-8 w-64 mb-2" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl shadow-md p-4 border border-gray-100 flex flex-col items-center justify-center aspect-square">
+                    <Skeleton variant="circular" className="w-12 h-12 mb-3" />
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </div>
       </div>
 
@@ -414,17 +458,6 @@ export default function ForemanDashboard() {
               >
                 Clear All
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 shadow-2xl">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-              <p className="text-gray-700 font-medium">Loading...</p>
             </div>
           </div>
         </div>

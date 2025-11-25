@@ -45,7 +45,7 @@ const materials = {
       type: 'pdf',
       size: '2.5 MB',
       description: 'Learn how to properly segregate your household waste',
-      pdfUrl: 'http://localhost:5173/materials/pdf/proper-waste-management-guide.pdf',
+      pdfUrl: '/materials/pdf/proper-waste-management-guide.pdf',
     },
     {
       title: 'Waste Segregation Tutorial',

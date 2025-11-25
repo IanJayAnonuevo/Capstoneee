@@ -1,11 +1,30 @@
 <?php
 class Database {
-    // Database Parameters
-    private $host = 'localhost'; // Local XAMPP MySQL
-    private $db_name = 'kolektrash_db'; // Local database name
-    private $username = 'root'; // Default XAMPP username
-    private $password = ''; // Default XAMPP password (empty)
+    // Database Parameters - Auto-detect environment
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $conn;
+
+    public function __construct() {
+        // Detect if we're on production (Hostinger) or localhost
+        $isProduction = !in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1', 'localhost:5173']);
+        
+        if ($isProduction) {
+            // PRODUCTION (Hostinger)
+            $this->host = 'localhost';
+            $this->db_name = 'u366677621_kolektrash_db';
+            $this->username = 'u366677621_kolektrash';
+            $this->password = 'Kolektrash2025';
+        } else {
+            // LOCALHOST (XAMPP)
+            $this->host = 'localhost';
+            $this->db_name = 'kolektrash_db';
+            $this->username = 'root';
+            $this->password = '';
+        }
+    }
 
     /**
      * Returns the host values we should try when establishing a connection.

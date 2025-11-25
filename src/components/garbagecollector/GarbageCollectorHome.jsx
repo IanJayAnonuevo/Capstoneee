@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../config/api';
 import React from 'react';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -112,13 +113,13 @@ function GarbageCollectorHome() {
         const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         // 1) Check attendance table
-        const attendanceUrl = `http://localhost/Capstoneee/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
+        const attendanceUrl = `${API_BASE_URL}/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
         const attendanceResp = await fetch(attendanceUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const attendanceData = await attendanceResp.json();
         console.log('get_attendance API response:', attendanceData);
 
         // 2) Check requests table
-        const reqUrl = `http://localhost/Capstoneee/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
+        const reqUrl = `${API_BASE_URL}/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
         const reqResp = await fetch(reqUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const reqData = await reqResp.json();
         console.log('list_attendance_requests API response:', reqData);
@@ -229,7 +230,7 @@ function GarbageCollectorHome() {
         session = 'AM';
       }
 
-      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+      const response = await fetch('${API_BASE_URL}/personnel_time_in.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -302,7 +303,7 @@ function GarbageCollectorHome() {
       const hour = currentDate.getHours();
       const session = hour < 12 ? 'AM' : 'PM';
 
-      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+      const response = await fetch('${API_BASE_URL}/personnel_time_in.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

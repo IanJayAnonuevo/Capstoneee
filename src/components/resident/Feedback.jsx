@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../config/api';
 import { FiSend, FiUser, FiMapPin, FiAlertCircle, FiCheckCircle, FiX } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 import { feedbackService } from '../../services/feedbackService';
@@ -140,7 +141,7 @@ export default function Feedback() {
             throw new Error('User ID missing.');
           }
 
-          const response = await fetch(`http://localhost/Capstoneee/backend/api/get_user_details.php?user_id=${userId}`);
+          const response = await fetch(`${API_BASE_URL}/get_user_details.php?user_id=${userId}`);
           const userDetails = await response.json();
 
           if (userDetails.status === 'success' && userDetails.data) {
@@ -149,7 +150,7 @@ export default function Feedback() {
 
             if (barangayId && !barangayName) {
               try {
-                const barangayResponse = await fetch(`http://localhost/Capstoneee/backend/api/get_barangay_details.php?barangay_id=${barangayId}`);
+                const barangayResponse = await fetch(`${API_BASE_URL}/get_barangay_details.php?barangay_id=${barangayId}`);
                 const barangayData = await barangayResponse.json();
                 if (barangayData.status === 'success' && barangayData.data?.barangay_name) {
                   barangayName = barangayData.data.barangay_name;
@@ -317,8 +318,8 @@ export default function Feedback() {
                           <li
                             key={legend.rating}
                             className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${isActive
-                                ? 'border-green-400 bg-green-50'
-                                : 'border-transparent bg-white'
+                              ? 'border-green-400 bg-green-50'
+                              : 'border-transparent bg-white'
                               }`}
                           >
                             <div className="flex items-center gap-1 pt-0.5">
@@ -362,8 +363,8 @@ export default function Feedback() {
                   type="submit"
                   disabled={isSubmitting || !feedbackMessage.trim()}
                   className={`w-full py-3 rounded-lg flex items-center justify-center gap-2 text-white font-medium transition-colors ${isSubmitting || !feedbackMessage.trim()
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
                     }`}
                 >
                   {isSubmitting ? (

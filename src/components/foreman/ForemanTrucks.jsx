@@ -5,6 +5,7 @@ import { MdLocalShipping, MdCheckCircle, MdWarning, MdBuild, MdSearch } from 're
 import { FiFilter } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import { API_BASE_URL } from '../../config/api';
+import Skeleton from '../shared/Skeleton';
 
 export default function ForemanTrucks() {
   const navigate = useNavigate();
@@ -88,10 +89,53 @@ export default function ForemanTrucks() {
 
   if (loading) {
     return (
-      <div className="p-4 flex justify-center items-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-          <p className="text-gray-600">Loading trucks...</p>
+      <div className="p-4 max-w-7xl mx-auto">
+        <div className="mb-4">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="mb-4 flex gap-2">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-10 w-24 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-6 w-10" />
+                </div>
+                <Skeleton variant="circular" className="w-10 h-10" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-md p-4 border border-gray-200">
+              <div className="flex justify-between mb-3">
+                <div className="flex gap-3">
+                  <Skeleton className="w-12 h-12 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2 mb-3">
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-24 rounded-lg" />
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -146,8 +190,8 @@ export default function ForemanTrucks() {
                   setShowFilterMenu(false);
                 }}
                 className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${statusFilter === status
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})

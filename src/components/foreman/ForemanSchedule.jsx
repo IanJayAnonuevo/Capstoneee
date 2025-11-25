@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import { FiPlus, FiCalendar, FiClock, FiMapPin, FiMoreVertical, FiEdit2, FiTrash2, FiRefreshCw, FiFilter } from 'react-icons/fi';
 import { buildApiUrl } from '../../config/api';
+import Skeleton from '../shared/Skeleton';
 
 const getAuthToken = () => localStorage.getItem('access_token');
 const getAuthHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
@@ -313,8 +314,28 @@ export default function ForemanSchedule() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-6 w-32 mb-3 rounded-full" />
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, j) => (
+                    <div key={j} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2 w-full">
+                          <Skeleton variant="circular" className="w-4 h-4 flex-shrink-0" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                        <Skeleton variant="circular" className="w-6 h-6" />
+                      </div>
+                      <div className="ml-6">
+                        <Skeleton className="h-4 w-1/3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="text-center text-red-600 py-8">{error}</div>

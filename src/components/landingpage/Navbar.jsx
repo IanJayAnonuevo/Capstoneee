@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaBars, FaTimes } from "react-icons/fa";
 import logo from "../../assets/logo/logo.png";
 
-const LOGIN_LOADING_DURATION_MS = 2000;
+const LOGIN_LOADING_DURATION_MS = 500;
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -13,7 +13,7 @@ const Navbar = () => {
   const handlePreLogin = () => {
     try {
       localStorage.removeItem('user');
-    } catch {}
+    } catch { }
     setOpen(false);
   };
 
@@ -54,7 +54,7 @@ const Navbar = () => {
             <a href="#about" onClick={(e) => { e.preventDefault(); const el = document.querySelector('#about'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="text-white hover:text-gray-200 transition-colors duration-200 cursor-pointer">About Us</a>
             <a href="#contact" onClick={(e) => { e.preventDefault(); const el = document.querySelector('#contact'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="text-white hover:text-gray-200 transition-colors duration-200 cursor-pointer">Contact</a>
           </div>
-          <button 
+          <button
             type="button"
             onClick={handleLoginClick}
             disabled={loadingLogin}
@@ -93,7 +93,7 @@ const Navbar = () => {
           <a href="#services" onClick={(e) => { e.preventDefault(); handleMenuItemClick('#services'); }} className="block text-green-700 hover:text-green-600 transition-colors duration-200">Services</a>
           <a href="#about" onClick={(e) => { e.preventDefault(); handleMenuItemClick('#about'); }} className="block text-green-700 hover:text-green-600 transition-colors duration-200">About Us</a>
           <a href="#contact" onClick={(e) => { e.preventDefault(); handleMenuItemClick('#contact'); }} className="block text-green-700 hover:text-green-600 transition-colors duration-200">Contact</a>
-          <button 
+          <button
             type="button"
             onClick={handleLoginClick}
             disabled={loadingLogin}

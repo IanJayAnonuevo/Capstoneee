@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/api';
 
 function MyAssignments({ userId }) {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost/Capstoneee/backend/api/get_my_assignments.php?user_id=${userId}&role=collector`)
+    fetch(`${API_BASE_URL}/get_my_assignments.php?user_id=${userId}&role=collector`)
       .then(res => res.json())
       .then(data => {
         if (data.success) setAssignments(data.assignments);
@@ -14,7 +15,7 @@ function MyAssignments({ userId }) {
   }, [userId]);
 
   const respond = (assignment_id, response_status) => {
-    fetch('http://localhost/Capstoneee/backend/api/respond_assignment.php', {
+    fetch('${API_BASE_URL}/respond_assignment.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignment_id, user_id: userId, response_status, role: 'collector' }),

@@ -4,6 +4,7 @@ import { IoChevronBack } from 'react-icons/io5';
 import { FiEye, FiClock, FiCheckCircle, FiXCircle, FiAlertCircle, FiFilter, FiRefreshCw, FiImage, FiCalendar, FiUser, FiMapPin, FiSearch, FiExternalLink, FiX, FiCamera } from 'react-icons/fi';
 import axios from 'axios';
 import { buildApiUrl } from '../../config/api';
+import Skeleton from '../shared/Skeleton';
 
 const getAuthToken = () => {
   if (typeof window === 'undefined') return null;
@@ -494,8 +495,33 @@ export default function ForemanIssues() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton variant="circular" className="w-8 h-8 flex-shrink-0" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-lg" />
+                </div>
+                <div className="mb-3 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
+                  <Skeleton className="h-3 w-24" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-8 w-20 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3">

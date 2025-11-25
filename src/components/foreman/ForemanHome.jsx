@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdReportProblem, MdNotificationImportant } from 'react-icons/md';
+import Skeleton from '../shared/Skeleton';
 
 export default function ForemanHome() {
     const navigate = useNavigate();

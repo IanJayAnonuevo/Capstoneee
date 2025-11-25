@@ -4,6 +4,7 @@ import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { MdPrint, MdFileDownload, MdCheckCircle, MdCancel, MdPending, MdAccessTime, MdImage, MdRefresh, MdDateRange, MdEventNote, MdFactCheck } from 'react-icons/md';
 import { API_BASE_URL } from '../../config/api';
 import { authService } from '../../services/authService';
+import Skeleton from '../shared/Skeleton';
 
 export default function ForemanAttendance() {
   const navigate = useNavigate();
@@ -94,7 +95,11 @@ export default function ForemanAttendance() {
   // --- Effects ---
 
   useEffect(() => {
-    if (view === 'today' || view === 'daily_detail') {
+    if (view === 'menu') {
+      setLoading(true);
+      const timer = setTimeout(() => setLoading(false), 500);
+      return () => clearTimeout(timer);
+    } else if (view === 'today' || view === 'daily_detail') {
       fetchAttendanceSheet(selectedDate);
     } else if (view === 'verification') {
       fetchVerificationRequests('pending');
@@ -167,61 +172,82 @@ export default function ForemanAttendance() {
   const renderMenu = () => (
     <div className="p-4 h-full flex flex-col">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-green-800">Attendance Monitoring</h1>
-        <p className="text-gray-600">Monitor drivers and collectors attendance.</p>
+        {loading ? (
+          <>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-green-800">Attendance Monitoring</h1>
+            <p className="text-gray-600">Monitor drivers and collectors attendance.</p>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Today's Attendance */}
-        <div
-          onClick={() => {
-            setSelectedDate(getLocalDate());
-            setView('today');
-          }}
-          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
-        >
-          <div className="bg-white/20 p-3 rounded-full mb-2">
-            <MdAccessTime className="w-6 h-6" />
-          </div>
-          <h2 className="font-bold text-sm leading-tight mb-1">Today's Attendance</h2>
-          <p className="text-green-100 text-[10px] leading-tight">Track who's here today</p>
-        </div>
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl p-4 shadow-md border border-gray-100 flex flex-col items-center justify-center aspect-square">
+              <Skeleton variant="circular" className="w-12 h-12 mb-3" />
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))
+        ) : (
+          <>
+            {/* Today's Attendance */}
+            <div
+              onClick={() => {
+                setSelectedDate(getLocalDate());
+                setView('today');
+              }}
+              className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+            >
+              <div className="bg-white/20 p-3 rounded-full mb-2">
+                <MdAccessTime className="w-6 h-6" />
+              </div>
+              <h2 className="font-bold text-sm leading-tight mb-1">Today's Attendance</h2>
+              <p className="text-green-100 text-[10px] leading-tight">Track who's here today</p>
+            </div>
 
-        {/* Attendance Verification */}
-        <div
-          onClick={() => setView('verification')}
-          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
-        >
-          <div className="bg-white/20 p-3 rounded-full mb-2">
-            <MdFactCheck className="w-6 h-6" />
-          </div>
-          <h2 className="font-bold text-sm leading-tight mb-1">Verification Requests</h2>
-          <p className="text-green-100 text-[10px] leading-tight">Verify time-in photos</p>
-        </div>
+            {/* Attendance Verification */}
+            <div
+              onClick={() => setView('verification')}
+              className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+            >
+              <div className="bg-white/20 p-3 rounded-full mb-2">
+                <MdFactCheck className="w-6 h-6" />
+              </div>
+              <h2 className="font-bold text-sm leading-tight mb-1">Verification Requests</h2>
+              <p className="text-green-100 text-[10px] leading-tight">Verify time-in photos</p>
+            </div>
 
-        {/* Past Attendance */}
-        <div
-          onClick={() => setView('history_months')}
-          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
-        >
-          <div className="bg-white/20 p-3 rounded-full mb-2">
-            <MdDateRange className="w-6 h-6" />
-          </div>
-          <h2 className="font-bold text-sm leading-tight mb-1">Past Attendance</h2>
-          <p className="text-green-100 text-[10px] leading-tight">Browse history</p>
-        </div>
+            {/* Past Attendance */}
+            <div
+              onClick={() => setView('history_months')}
+              className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+            >
+              <div className="bg-white/20 p-3 rounded-full mb-2">
+                <MdDateRange className="w-6 h-6" />
+              </div>
+              <h2 className="font-bold text-sm leading-tight mb-1">Past Attendance</h2>
+              <p className="text-green-100 text-[10px] leading-tight">Browse history</p>
+            </div>
 
-        {/* Requests and Approvals */}
-        <div
-          onClick={() => setView('leave_requests')}
-          className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
-        >
-          <div className="bg-white/20 p-3 rounded-full mb-2">
-            <MdEventNote className="w-6 h-6" />
-          </div>
-          <h2 className="font-bold text-sm leading-tight mb-1">Leave Requests</h2>
-          <p className="text-green-100 text-[10px] leading-tight">Manage approvals</p>
-        </div>
+            {/* Requests and Approvals */}
+            <div
+              onClick={() => setView('leave_requests')}
+              className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
+            >
+              <div className="bg-white/20 p-3 rounded-full mb-2">
+                <MdEventNote className="w-6 h-6" />
+              </div>
+              <h2 className="font-bold text-sm leading-tight mb-1">Leave Requests</h2>
+              <p className="text-green-100 text-[10px] leading-tight">Manage approvals</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -285,34 +311,70 @@ export default function ForemanAttendance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {personnel.map(person => {
-                    const amRecord = getRecord(person.user_id, 'AM');
-                    const pmRecord = getRecord(person.user_id, 'PM');
 
-                    return (
-                      <tr key={person.user_id} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 p-2 font-medium">
-                          {person.firstname} {person.lastname}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center text-gray-600">
-                          {person.designation}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center">
-                          {amRecord?.time_in ? formatTime(amRecord.time_in) : ''}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center">
-                          {amRecord?.time_out ? formatTime(amRecord.time_out) : ''}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center">
-                          {pmRecord?.time_in ? formatTime(pmRecord.time_in) : ''}
-                        </td>
-                        <td className="border border-gray-300 p-2 text-center">
-                          {pmRecord?.time_out ? formatTime(pmRecord.time_out) : ''}
-                        </td>
+                  {loading ? (
+                    [...Array(5)].map((_, i) => (
+                      <tr key={i}>
+                        <td className="border border-gray-300 p-2"><Skeleton className="h-4 w-3/4" /></td>
+                        <td className="border border-gray-300 p-2"><Skeleton className="h-4 w-1/2 mx-auto" /></td>
+                        <td className="border border-gray-300 p-2"><Skeleton variant="circular" className="w-4 h-4 mx-auto" /></td>
+                        <td className="border border-gray-300 p-2"><Skeleton variant="circular" className="w-4 h-4 mx-auto" /></td>
+                        <td className="border border-gray-300 p-2"><Skeleton variant="circular" className="w-4 h-4 mx-auto" /></td>
+                        <td className="border border-gray-300 p-2"><Skeleton variant="circular" className="w-4 h-4 mx-auto" /></td>
                       </tr>
-                    );
-                  })}
-                  {personnel.length === 0 && (
+                    ))
+                  ) : personnel.length > 0 ? (
+                    personnel.map(person => {
+                      const amRecord = getRecord(person.user_id, 'AM');
+                      const pmRecord = getRecord(person.user_id, 'PM');
+
+                      // Color coding helper - returns dot HTML
+                      const getStatusDot = (record, isTimeOut = false) => {
+                        if (!record) return null;
+                        const status = record.status?.toLowerCase();
+
+                        // Check if absent
+                        if (status === 'absent') {
+                          return <span className="inline-block w-4 h-4 rounded-full bg-red-500"></span>;
+                        }
+
+                        // Check if on-leave
+                        if (status === 'on-leave' || status === 'on_leave') {
+                          return <span className="inline-block w-4 h-4 rounded-full bg-yellow-400"></span>;
+                        }
+
+                        // Check if present (has time_in or time_out)
+                        if (isTimeOut ? record.time_out : record.time_in) {
+                          return <span className="inline-block w-4 h-4 rounded-full bg-green-500"></span>;
+                        }
+
+                        return null;
+                      };
+
+                      return (
+                        <tr key={person.user_id} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 p-2 font-medium">
+                            {person.firstname} {person.lastname}
+                          </td>
+                          <td className="border border-gray-300 p-2 text-center text-gray-600">
+                            {person.designation}
+                          </td>
+                          <td className="border border-gray-300 p-2 text-center">
+                            {getStatusDot(amRecord)}
+                          </td>
+                          <td className="border border-gray-300 p-2 text-center">
+                            {getStatusDot(amRecord, true)}
+                          </td>
+                          <td className="border border-gray-300 p-2 text-center">
+                            {getStatusDot(pmRecord)}
+                          </td>
+                          <td className="border border-gray-300 p-2 text-center">
+                            {getStatusDot(pmRecord, true)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
                     <tr>
                       <td colSpan="6" className="border border-gray-300 p-4 text-center text-gray-500">
                         No personnel found.
@@ -350,10 +412,18 @@ export default function ForemanAttendance() {
                         <td className="border border-gray-800 p-2 font-medium text-left pl-4">
                           Total {statusLabel}
                         </td>
-                        <td className="border border-gray-800 p-2">{s?.driver?.am?.[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s?.driver?.pm?.[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s?.collector?.am?.[key] || 0}</td>
-                        <td className="border border-gray-800 p-2">{s?.collector?.pm?.[key] || 0}</td>
+                        <td className="border border-gray-800 p-2">
+                          {loading ? <Skeleton className="h-4 w-8 mx-auto" /> : (s?.driver?.am?.[key] || 0)}
+                        </td>
+                        <td className="border border-gray-800 p-2">
+                          {loading ? <Skeleton className="h-4 w-8 mx-auto" /> : (s?.driver?.pm?.[key] || 0)}
+                        </td>
+                        <td className="border border-gray-800 p-2">
+                          {loading ? <Skeleton className="h-4 w-8 mx-auto" /> : (s?.collector?.am?.[key] || 0)}
+                        </td>
+                        <td className="border border-gray-800 p-2">
+                          {loading ? <Skeleton className="h-4 w-8 mx-auto" /> : (s?.collector?.pm?.[key] || 0)}
+                        </td>
                       </tr>
                     );
                   })}
@@ -480,7 +550,22 @@ export default function ForemanAttendance() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-3">
-        {verificationData.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                <div className="w-full">
+                  <Skeleton className="h-4 w-1/3 mb-2" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : verificationData.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-sm">
             <MdFactCheck className="w-12 h-12 text-gray-300 mx-auto mb-2" />
             No pending verification requests
@@ -576,7 +661,16 @@ export default function ForemanAttendance() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-3">
-        {leaveData.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-3">
+                <Skeleton className="h-4 w-1/3 mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : leaveData.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-sm">
             <MdEventNote className="w-12 h-12 text-gray-300 mx-auto mb-2" />
             No pending leave requests

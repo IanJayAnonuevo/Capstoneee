@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import { MdPerson, MdLock, MdEmail, MdPhone, MdBadge, MdSave, MdCancel, MdEdit } from 'react-icons/md';
 import { authService } from '../../services/authService';
+import Skeleton from '../shared/Skeleton';
 
 export default function ForemanSettings() {
   const navigate = useNavigate();
@@ -122,8 +123,33 @@ export default function ForemanSettings() {
 
   if (loading) {
     return (
-      <div className="p-4 flex justify-center items-center h-64">
-        <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <div className="mb-6">
+          <Skeleton className="h-4 w-16 mb-3" />
+          <Skeleton className="h-8 w-32 mb-1" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex justify-between items-center mb-6">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-9 w-20 rounded-lg" />
+          </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i}>
+                  <Skeleton className="h-4 w-24 mb-1" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -148,8 +174,8 @@ export default function ForemanSettings() {
         <button
           onClick={() => setActiveTab('profile')}
           className={`px-4 py-2 font-medium transition-colors ${activeTab === 'profile'
-              ? 'text-green-600 border-b-2 border-green-600'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'text-green-600 border-b-2 border-green-600'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           Profile
@@ -157,8 +183,8 @@ export default function ForemanSettings() {
         <button
           onClick={() => setActiveTab('password')}
           className={`px-4 py-2 font-medium transition-colors ${activeTab === 'password'
-              ? 'text-green-600 border-b-2 border-green-600'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'text-green-600 border-b-2 border-green-600'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           Password
@@ -166,8 +192,8 @@ export default function ForemanSettings() {
         <button
           onClick={() => setActiveTab('account')}
           className={`px-4 py-2 font-medium transition-colors ${activeTab === 'account'
-              ? 'text-green-600 border-b-2 border-green-600'
-              : 'text-gray-600 hover:text-gray-900'
+            ? 'text-green-600 border-b-2 border-green-600'
+            : 'text-gray-600 hover:text-gray-900'
             }`}
         >
           Account
@@ -178,8 +204,8 @@ export default function ForemanSettings() {
       {message.text && (
         <div
           className={`mb-4 p-3 rounded-lg ${message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
+            ? 'bg-green-50 text-green-800 border border-green-200'
+            : 'bg-red-50 text-red-800 border border-red-200'
             }`}
         >
           {message.text}

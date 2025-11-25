@@ -4,6 +4,7 @@ import { IoChevronBack } from 'react-icons/io5';
 import { FiSearch, FiRefreshCw, FiPlus, FiUser, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiX, FiAlertCircle, FiTruck, FiFilter } from 'react-icons/fi';
 import Select from 'react-select';
 import { buildApiUrl } from '../../config/api';
+import Skeleton from '../shared/Skeleton';
 
 const getAuthToken = () => localStorage.getItem('access_token');
 const getAuthHeaders = () => ({ Authorization: `Bearer ${getAuthToken()}` });
@@ -392,8 +393,8 @@ export default function ForemanTasks() {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${statusFilter === status
-                    ? 'bg-green-600 text-white shadow-md'
-                    : 'bg-white border border-gray-200 text-gray-600'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-white border border-gray-200 text-gray-600'
                   }`}
               >
                 {status}
@@ -406,8 +407,35 @@ export default function ForemanTasks() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {loading && assignments.length === 0 ? (
-          <div className="flex justify-center py-12">
-            <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3 w-full">
+                    <Skeleton variant="circular" className="w-10 h-10 flex-shrink-0" />
+                    <div className="w-full pr-4">
+                      <Skeleton className="h-4 w-3/4 mb-2" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-lg" />
+                </div>
+                <div className="space-y-2 mb-3">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-1/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-1/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                </div>
+                <div className="pt-3 border-t border-gray-50 flex justify-between items-center">
+                  <Skeleton className="h-3 w-1/4" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3">

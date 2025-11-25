@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../../config/api';
 import { FiSend, FiUser, FiMapPin, FiAlertCircle, FiCheckCircle, FiX } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 import { feedbackService } from '../../services/feedbackService';
@@ -140,7 +141,7 @@ export default function Feedback() {
             throw new Error('User ID missing.');
           }
 
-          const response = await fetch(`http://localhost/Capstoneee/backend/api/get_user_details.php?user_id=${userId}`);
+          const response = await fetch(`${API_BASE_URL}/get_user_details.php?user_id=${userId}`);
           const userDetails = await response.json();
 
           if (userDetails.status === 'success' && userDetails.data) {
