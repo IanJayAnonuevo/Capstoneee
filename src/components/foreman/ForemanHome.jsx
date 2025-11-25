@@ -72,40 +72,7 @@ export default function ForemanHome() {
 
       <div className="px-6 max-w-7xl mx-auto pb-12">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Team Members</h3>
-              <p className="text-4xl font-bold text-gray-900">24</p>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-green-600 font-medium bg-green-50 w-fit px-2 py-1 rounded-full">
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-              Active today
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Tasks Completed</h3>
-              <p className="text-4xl font-bold text-gray-900">18<span className="text-xl text-gray-400 font-normal">/25</span></p>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-blue-600 font-medium bg-blue-50 w-fit px-2 py-1 rounded-full">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              72% Progress
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition-shadow">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Trucks Active</h3>
-              <p className="text-4xl font-bold text-gray-900">5<span className="text-xl text-gray-400 font-normal">/6</span></p>
-            </div>
-            <div className="mt-4 flex items-center text-sm text-orange-600 font-medium bg-orange-50 w-fit px-2 py-1 rounded-full">
-              <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-              On the road
-            </div>
-          </div>
-        </div>
 
         {/* Quick Actions Section */}
         <div className="mb-6">
