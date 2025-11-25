@@ -46,6 +46,7 @@ return [
             'log_task_event.php',
             'mark_notification_read.php',
             'post_gps.php',
+            'report_route_emergency.php',
             'report_truck_full.php',
             'respond_assignment.php',
             'set_route_active.php',

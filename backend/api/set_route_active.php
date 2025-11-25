@@ -38,7 +38,7 @@ try {
         mkdir($storageDir, 0755, true);
     }
     
-    // Read existing data
+    // Read and sanitize existing data (remove stale/duplicate records)
     $existingData = [];
     if (file_exists($filePath)) {
         $content = file_get_contents($filePath);
@@ -46,12 +46,40 @@ try {
             $existingData = json_decode($content, true) ?? [];
         }
     }
-    
-    // Add new active route
-    $existingData[] = $activeRouteData;
+
+    $nowTs = time();
+    $staleCutoff = $nowTs - (12 * 60 * 60); // keep last 12 hours only
+    $filtered = [];
+    foreach ($existingData as $entry) {
+        if (!is_array($entry)) {
+            continue;
+        }
+
+        $entryRouteId = isset($entry['route_id']) ? (int)$entry['route_id'] : null;
+        $entryTeamId = isset($entry['team_id']) ? (int)$entry['team_id'] : null;
+
+        // Drop duplicates for the same route or team
+        if ($entryRouteId === (int)$route_id) {
+            continue;
+        }
+        if ($team_id && $entryTeamId === (int)$team_id) {
+            continue;
+        }
+
+        // Drop stale entries
+        $startedAtTs = isset($entry['started_at']) ? strtotime($entry['started_at']) : null;
+        if ($startedAtTs && $startedAtTs < $staleCutoff) {
+            continue;
+        }
+
+        $filtered[] = $entry;
+    }
+
+    // Prepend the newest route so it's quick to find
+    array_unshift($filtered, $activeRouteData);
     
     // Write back to file
-    file_put_contents($filePath, json_encode($existingData));
+    file_put_contents($filePath, json_encode($filtered, JSON_PRETTY_PRINT));
     
     echo json_encode([
         'success' => true,

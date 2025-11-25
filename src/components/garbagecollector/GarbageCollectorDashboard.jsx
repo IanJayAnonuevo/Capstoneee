@@ -31,6 +31,7 @@ export default function GarbageCollectorDashboard() {
   const [loading, setLoading] = useState(true);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [resolvedUserId, setResolvedUserId] = useState(null);
+  const [assignmentTeamIds, setAssignmentTeamIds] = useState([]);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState('');
@@ -49,6 +50,25 @@ export default function GarbageCollectorDashboard() {
   };
 
   const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
+  const AUTO_ROUTE_KEY_PREFIX = 'collector:autoRoute:v1:';
+
+  const authHeaders = React.useCallback(() => {
+    try {
+      const token = localStorage.getItem('access_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch (_) {
+      return {};
+    }
+  }, []);
+
+  const parseServerTime = React.useCallback((value) => {
+    if (!value || typeof value !== 'string') return null;
+    const normalized = value.replace(' ', 'T');
+    const msWithZ = Date.parse(`${normalized}Z`);
+    if (!Number.isNaN(msWithZ)) return msWithZ;
+    const msLocal = Date.parse(normalized);
+    return Number.isNaN(msLocal) ? null : msLocal;
+  }, []);
 
   const parseServerTimestamp = (value) => {
     if (!value || typeof value !== 'string') return null;
@@ -306,6 +326,138 @@ export default function GarbageCollectorDashboard() {
 
     fetchUserData();
   }, []);
+
+  // Fetch collector assignments (team IDs) for auto-start routing
+  useEffect(() => {
+    if (!resolvedUserId) return;
+    let cancelled = false;
+
+    const loadAssignments = async () => {
+      try {
+        const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${resolvedUserId}&role=collector`), {
+          headers: { ...authHeaders() }
+        });
+        const data = await res.json().catch(() => null);
+        if (cancelled || !data?.success || !Array.isArray(data.schedules)) return;
+        const ids = Array.from(
+          new Set(
+            data.schedules
+              .map((schedule) => {
+                const raw = schedule?.team_id ?? schedule?.teamId ?? schedule?.assignment_id;
+                if (raw === undefined || raw === null || raw === '') return null;
+                const num = Number(raw);
+                return Number.isFinite(num) && num > 0 ? num : null;
+              })
+              .filter(Boolean)
+          )
+        );
+        setAssignmentTeamIds(ids);
+        try {
+          localStorage.setItem(`collector:teamIds:${resolvedUserId}`, JSON.stringify(ids));
+        } catch (_) {}
+      } catch (error) {
+        console.error('Failed to load collector assignments for auto-start:', error);
+        try {
+          const cached = JSON.parse(localStorage.getItem(`collector:teamIds:${resolvedUserId}`) || '[]');
+          if (Array.isArray(cached) && cached.length) {
+            setAssignmentTeamIds((prev) => (prev.length ? prev : cached));
+          }
+        } catch (_) {}
+      }
+    };
+
+    loadAssignments();
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedUserId, authHeaders]);
+
+  // Poll active routes; auto-redirect collectors when their driver starts a task
+  useEffect(() => {
+    if (!resolvedUserId || !assignmentTeamIds.length) return;
+    let cancelled = false;
+    let timeoutId = null;
+    const RECENT_WINDOW_MS = 6 * 60 * 60 * 1000;
+    const autoKey = `${AUTO_ROUTE_KEY_PREFIX}${resolvedUserId}`;
+
+    const readAutoRecord = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem(autoKey) || 'null');
+        if (stored && typeof stored === 'object') return stored;
+        if (stored && Number.isFinite(stored)) {
+          return { routeId: Number(stored), startedAt: null };
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    const writeAutoRecord = (routeId, startedAt) => {
+      try {
+        localStorage.setItem(autoKey, JSON.stringify({ routeId, startedAt }));
+      } catch (_) {}
+    };
+
+    const pollActiveRoutes = async () => {
+      try {
+        const res = await fetch(buildApiUrl(`get_active_routes.php?user_id=${resolvedUserId}`), {
+          headers: { ...authHeaders() }
+        });
+        const data = await res.json().catch(() => null);
+        if (!data?.success || cancelled) return;
+        const now = Date.now();
+        const activeRoutes = Array.isArray(data.active_routes) ? data.active_routes : [];
+        const normalized = activeRoutes
+          .map((route) => {
+            const routeId = Number(route?.route_id ?? route?.id ?? 0);
+            const teamId = Number(route?.team_id ?? route?.assignment_id ?? route?.teamId ?? 0);
+            const startedAt = route?.started_at || null;
+            const startedMs = startedAt ? parseServerTime(startedAt) : null;
+            return { routeId, teamId, startedAt, startedMs, raw: route };
+          })
+          .filter((entry) => entry.routeId > 0 && entry.teamId > 0)
+          .filter((entry) => assignmentTeamIds.some((id) => Number(id) === entry.teamId))
+          .filter((entry) => {
+            if (!entry.startedMs) return true;
+            return now - entry.startedMs <= RECENT_WINDOW_MS;
+          })
+          .sort((a, b) => (b.startedMs || 0) - (a.startedMs || 0));
+
+        if (!normalized.length) return;
+
+        const candidate = normalized[0];
+        const lastRecord = readAutoRecord();
+        const alreadyHandled =
+          lastRecord &&
+          lastRecord.routeId === candidate.routeId &&
+          (candidate.startedAt ? lastRecord.startedAt === candidate.startedAt : true);
+
+        if (alreadyHandled) return;
+
+        const onRoutePage = location.pathname.startsWith(`/garbagecollector/route/${candidate.routeId}`);
+        writeAutoRecord(candidate.routeId, candidate.startedAt || null);
+        if (!onRoutePage) {
+          navigate(`/garbagecollector/route/${candidate.routeId}`, {
+            state: {
+              autoStarted: true,
+              barangay: candidate.raw?.barangay || candidate.raw?.barangay_name || ''
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to poll active routes for auto-start:', error);
+      } finally {
+        if (!cancelled) {
+          timeoutId = setTimeout(pollActiveRoutes, 10000);
+        }
+      }
+    };
+
+    pollActiveRoutes();
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [resolvedUserId, assignmentTeamIds, authHeaders, navigate, location.pathname, parseServerTime]);
 
 
   // Fetch unread notifications count periodically

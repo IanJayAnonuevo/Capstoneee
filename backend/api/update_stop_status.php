@@ -13,14 +13,24 @@ try {
   $stopId = isset($input['stop_id']) ? (int)$input['stop_id'] : 0;
   $status = isset($input['status']) ? $input['status'] : '';
   $userId = $input['user_id'] ?? null;
+  $proofPhotoUrl = isset($input['proof_photo_url']) ? trim($input['proof_photo_url']) : null;
+  $clearProof = !empty($input['clear_proof']);
   if ($stopId <= 0 || !in_array($status, ['pending','visited','skipped'])) {
     throw new Exception('Invalid stop_id or status');
   }
 
   $db = (new Database())->connect();
   // Update stop status
-  $stmt = $db->prepare("UPDATE daily_route_stop SET status = :status, updated_at = NOW() WHERE id = :id");
-  $stmt->execute([':status' => $status, ':id' => $stopId]);
+  $fields = "status = :status, updated_at = NOW()";
+  $params = [':status' => $status, ':id' => $stopId];
+  if ($proofPhotoUrl !== null && $proofPhotoUrl !== '') {
+    $fields .= ", proof_photo_url = :proof_photo_url";
+    $params[':proof_photo_url'] = $proofPhotoUrl;
+  } elseif ($clearProof) {
+    $fields .= ", proof_photo_url = NULL";
+  }
+  $stmt = $db->prepare("UPDATE daily_route_stop SET {$fields} WHERE id = :id");
+  $stmt->execute($params);
 
   // Log task event if available
   try {

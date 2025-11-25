@@ -15,7 +15,7 @@ function generateDailyRoutes(PDO $db, string $date, string $policy = 'preserve_m
                             b.barangay_name, b.cluster_id
                       FROM collection_schedule cs
                       INNER JOIN barangay b ON cs.barangay_id = b.barangay_id
-                      WHERE cs.status IN ('scheduled','pending') AND cs.scheduled_date = :dt";
+                      WHERE cs.status IN ('scheduled','pending','approved') AND cs.scheduled_date = :dt";
     $schedulesStmt = $db->prepare($schedulesSql);
     $schedulesStmt->execute([':dt' => $date]);
     $schedules = $schedulesStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -45,6 +45,26 @@ function generateDailyRoutes(PDO $db, string $date, string $policy = 'preserve_m
         // ignore if table not present
       }
     }
+
+    // Remove previously generated routes for this date/scope so the new run
+    // mirrors the current schedule exactly. Manual routes are untouched.
+    $cleanupConditions = ["date = ?", "source = 'generated'"];
+    $cleanupParams = [$date];
+    if ($scope === 'cluster' && $scopeId) {
+      $cleanupConditions[] = "cluster_id = ?";
+      $cleanupParams[] = $scopeId;
+    } else if ($scope === 'barangay' && $scopeId) {
+      $cleanupConditions[] = "barangay_id = ?";
+      $cleanupParams[] = $scopeId;
+    }
+    $stopWhere = array_map(fn($c) => 'dr.' . $c, $cleanupConditions);
+    $stopCleanupSql = "DELETE drs FROM daily_route_stop drs INNER JOIN daily_route dr ON drs.daily_route_id = dr.id WHERE " . implode(' AND ', $stopWhere);
+    $stopCleanupStmt = $db->prepare($stopCleanupSql);
+    $stopCleanupStmt->execute($cleanupParams);
+
+    $routeCleanupSql = "DELETE FROM daily_route WHERE " . implode(' AND ', $cleanupConditions);
+    $routeCleanupStmt = $db->prepare($routeCleanupSql);
+    $routeCleanupStmt->execute($cleanupParams);
 
     // Trucks and teams (basic round-robin). Only use existing columns.
     $trucks = $db->query("SELECT truck_id, plate_num FROM truck WHERE status='Available'")->fetchAll(PDO::FETCH_ASSOC);

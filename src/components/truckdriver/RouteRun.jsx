@@ -43,6 +43,27 @@ function createTruckIcon(rotation = 0) {
 import { buildApiUrl } from '../../config/api';
 const MAPBOX_TOKEN = (import.meta && import.meta.env && import.meta.env.VITE_MAPBOX_TOKEN) || null
 
+const EMERGENCY_TYPES = [
+  { value: 'breakdown', label: 'Breakdown' },
+  { value: 'flat_tire', label: 'Flat Tire' },
+  { value: 'accident', label: 'Accident' },
+  { value: 'medical', label: 'Medical' },
+  { value: 'weather', label: 'Weather' },
+  { value: 'other', label: 'Other' },
+]
+
+const EMERGENCY_IMPACTS = [
+  { value: 'delay', label: 'Delay', caption: 'Collection resumes after the issue is fixed' },
+  { value: 'cancel', label: 'Cancel', caption: 'Collection is cancelled for today' },
+]
+
+const createEmergencyFormState = () => ({
+  type: 'breakdown',
+  impact: 'delay',
+  notes: '',
+  file: null,
+})
+
 export default function RouteRun(){
   const { id } = useParams()
   const navigate = useNavigate()
@@ -71,6 +92,12 @@ export default function RouteRun(){
   const [truckFull, setTruckFull] = React.useState(false) // Flag for truck full status
   const [isAtMantila, setIsAtMantila] = React.useState(false) // Check if near Mantila
   const [originalTargetStop, setOriginalTargetStop] = React.useState(null) // Store original target before reroute
+  const [emergencyState, setEmergencyState] = React.useState(null)
+  const [showEmergencyForm, setShowEmergencyForm] = React.useState(false)
+  const [emergencyForm, setEmergencyForm] = React.useState(() => createEmergencyFormState())
+  const [emergencySubmitting, setEmergencySubmitting] = React.useState(false)
+  const [emergencyError, setEmergencyError] = React.useState(null)
+  const emergencyFileInputRef = React.useRef(null)
 
   const MIN_INTERVAL_MS = 5000
 
@@ -172,6 +199,18 @@ export default function RouteRun(){
     const m = Math.round(s/60)
     if (m >= 60) return `${Math.floor(m/60)}h ${m%60}m`
     return `${m} min`
+  }
+
+  function formatTimestamp(value){
+    if (!value) return ''
+    const ts = new Date(value)
+    if (Number.isNaN(ts.getTime())) return value
+    return ts.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   async function fetchSuggestedRoute(here, dest){
@@ -290,17 +329,22 @@ export default function RouteRun(){
         setStops(ordered)
         setRouteName(`${routeInfo.cluster_id || ''} ${routeInfo.barangay_name || ''}`.trim())
         
-        // Check for truck_full flag in notes
+        // Check for truck_full flag & emergency details in notes
         let truckFullFlag = false
+        let emergencyDetails = null
         if (routeInfo.notes) {
           try {
             const notesData = JSON.parse(routeInfo.notes)
             truckFullFlag = notesData.truck_full === true
+            if (notesData.emergency && notesData.emergency.active) {
+              emergencyDetails = notesData.emergency
+            }
           } catch (e) {
             // Notes is not JSON, ignore
           }
         }
         setTruckFull(truckFullFlag)
+        setEmergencyState(emergencyDetails)
         
         return { stops: ordered, route: routeInfo }
       }
@@ -590,6 +634,15 @@ export default function RouteRun(){
   const progressPercent = totalStops ? Math.round((visitedCount / totalStops) * 100) : 0
   const allVisited = totalStops > 0 && visitedCount === totalStops
   const nextStop = React.useMemo(() => stops.find(s => (s.status || 'pending') !== 'visited') || null, [stops])
+  const emergencyActive = Boolean(emergencyState?.active)
+  const emergencyImpactLabel = React.useMemo(() => {
+    if (!emergencyState?.impact) return null
+    return EMERGENCY_IMPACTS.find(opt => opt.value === emergencyState.impact)?.label || emergencyState.impact
+  }, [emergencyState])
+  const emergencyAttachmentUrl = React.useMemo(() => {
+    if (!emergencyState?.attachment) return null
+    return buildApiUrl(`../${emergencyState.attachment}`)
+  }, [emergencyState])
   
   // Handler to continue collection after disposal at Mantila
   const handleContinueCollection = async () => {
@@ -634,8 +687,86 @@ export default function RouteRun(){
     }
   }
 
+  const updateEmergencyForm = React.useCallback((field, value) => {
+    setEmergencyForm(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const resetEmergencyForm = React.useCallback(() => {
+    setEmergencyForm(createEmergencyFormState())
+    setEmergencyError(null)
+    if (emergencyFileInputRef.current) {
+      emergencyFileInputRef.current.value = ''
+    }
+  }, [])
+
+  const closeEmergencyForm = React.useCallback(() => {
+    setShowEmergencyForm(false)
+    resetEmergencyForm()
+  }, [resetEmergencyForm])
+
+  const handleEmergencyFileChange = React.useCallback((event) => {
+    const file = event?.target?.files && event.target.files[0] ? event.target.files[0] : null
+    setEmergencyForm(prev => ({ ...prev, file }))
+  }, [])
+
+  const clearEmergencyAttachment = React.useCallback(() => {
+    setEmergencyForm(prev => ({ ...prev, file: null }))
+    if (emergencyFileInputRef.current) {
+      emergencyFileInputRef.current.value = ''
+    }
+  }, [])
+
+  const submitEmergencyReport = React.useCallback(async () => {
+    if (emergencySubmitting) return
+    setEmergencyError(null)
+    setEmergencySubmitting(true)
+    try {
+      const formData = new FormData()
+      formData.append('route_id', id)
+      const userId = getCurrentUserId()
+      if (userId) {
+        formData.append('reported_by', userId)
+      }
+      formData.append('type', emergencyForm.type)
+      formData.append('impact', emergencyForm.impact)
+      if (emergencyForm.notes) {
+        formData.append('notes', emergencyForm.notes)
+      }
+      if (emergencyForm.file) {
+        formData.append('evidence', emergencyForm.file)
+      }
+      const headers = { ...authHeaders() }
+      if (headers['Content-Type']) {
+        delete headers['Content-Type']
+      }
+      const res = await fetch(buildApiUrl('report_route_emergency.php'), {
+        method: 'POST',
+        headers,
+        body: formData
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to send emergency alert')
+      }
+      closeEmergencyForm()
+      await loadStops(id)
+      if (data?.emergency) {
+        setEmergencyState(data.emergency)
+      }
+      alert('Emergency alert sent. Residents and officials have been notified.')
+    } catch (e) {
+      setEmergencyError(e?.message || 'Failed to send emergency alert')
+    } finally {
+      setEmergencySubmitting(false)
+    }
+  }, [authHeaders, closeEmergencyForm, emergencyForm, emergencySubmitting, getCurrentUserId, id, loadStops])
+
   async function handleCompleteRoute(){
     if (submitting) return
+    if (emergencyActive) {
+      alert('Route submission is disabled while an emergency alert is active. Please resolve or coordinate with your foreman before completing the route.')
+      return
+    }
     try {
       const latest = await loadStops(id)
       const snapshot = latest?.stops?.length ? latest.stops : stops
@@ -708,6 +839,7 @@ export default function RouteRun(){
   }
 
   return (
+    <>
     <div className="fixed inset-0">
       <style>{`
         .custom-truck-icon {
@@ -777,48 +909,103 @@ export default function RouteRun(){
       </MapContainer>
 
       {/* Overlay panel for route status */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(680px,92vw)] bg-white/20 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-lg">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold text-base truncate flex items-center gap-2">
-            <span>{routeName || 'Route'}</span>
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(720px,92vw)] bg-white/10 backdrop-blur-[30px] border border-white/30 rounded-[26px] px-5 py-4 shadow-[0_18px_35px_rgba(15,23,42,0.2)]">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-700/70 font-semibold">Route status</p>
+            <p className="text-lg font-semibold text-slate-900 truncate max-w-[280px]">{routeName || 'Route'}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-              onClick={() => setTargetStop(stops.find(s => (s.status || 'pending') !== 'visited') || stops[0])}
-            >Re-route</button>
+              className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs tracking-wide transition ${emergencyActive ? 'bg-red-600 text-white border-red-600 shadow shadow-red-200/70 animate-pulse' : 'bg-white/25 text-red-600 border-white/50 hover:bg-white/40'}`}
+              aria-label={emergencyActive ? 'Emergency active' : 'Report emergency'}
+              title={emergencyActive ? 'Emergency active' : 'Report emergency'}
+              onClick={() => setShowEmergencyForm(true)}
+            >
+              ▲
+            </button>
             <button
-              className={`px-2 py-1 text-xs rounded ${follow ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+              className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-blue-600 border-white/50 hover:bg-white/40 transition"
+              aria-label="Re-route"
+              title="Re-route"
+              onClick={() => setTargetStop(stops.find(s => (s.status || 'pending') !== 'visited') || stops[0])}
+            >
+              ↺
+            </button>
+            <button
+              className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs transition ${follow ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-200' : 'bg-white/20 text-gray-600 border-white/50 hover:bg-white/40'}`}
+              aria-label={follow ? 'Disable follow' : 'Enable follow'}
+              title={follow ? 'Disable follow' : 'Enable follow'}
               onClick={() => setFollow(v => !v)}
             >
-              {follow ? 'Following' : 'Follow'}
+              {follow ? '◉' : '◎'}
             </button>
-            <button className="px-2 py-1 text-xs bg-gray-200 rounded" onClick={() => navigate(-1)}>Back</button>
+            <button
+              className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-gray-600 border-white/50 hover:bg-white/40 transition"
+              aria-label="Go back"
+              title="Go back"
+              onClick={() => navigate(-1)}
+            >
+              ↩
+            </button>
           </div>
         </div>
-        <div className="text-[11px] text-gray-700 mb-2">
+        <div className="text-[11px] text-gray-700 mb-3 flex flex-wrap gap-2">
           {status === 'requesting' && 'Requesting location…'}
           {status === 'tracking' && currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
           {status === 'denied' && 'Location permission denied'}
-          {routeLoading && ' • Calculating route…'}
-          {routeError && routeError !== 'routing failed' && ` • ${routeError}`}
-          {truckFull && ' • Rerouting to Mantila disposal site'}
+          {routeLoading && '• Calculating route…'}
+          {routeError && routeError !== 'routing failed' && `• ${routeError}`}
+          {truckFull && '• Rerouting to Mantila disposal site'}
         </div>
         {routeSummary && (
-          <div className="text-xs text-gray-800 mb-2">
+          <div className="text-xs text-gray-800 mb-4 flex flex-wrap gap-4">
             {formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}
             {truckFull && ' (to Mantila)'}
           </div>
         )}
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-[11px] text-gray-700 mb-2 uppercase tracking-wide">
             <span>Progress</span>
             <span>{visitedCount}/{totalStops} stops</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${progressPercent}%` }} />
+          <div className="w-full bg-emerald-50 rounded-full h-2 overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-full rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
+
+        {emergencyActive && (
+          <div className="mb-4 rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50 p-4 text-sm text-red-800 shadow">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-red-900">Emergency • Not operational</div>
+              {emergencyImpactLabel && (
+                <span className={`text-[11px] font-semibold px-3 py-1 rounded-full shadow ${emergencyState?.impact === 'cancel' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
+                  {emergencyImpactLabel}
+                </span>
+              )}
+            </div>
+            <div className="mt-2 text-lg font-semibold text-red-900">
+              {emergencyState?.type_label || emergencyState?.type || 'Emergency reported'}
+            </div>
+            {emergencyState?.notes && (
+              <p className="mt-1 text-xs text-red-800 whitespace-pre-wrap">{emergencyState.notes}</p>
+            )}
+            <p className="mt-2 text-[11px] text-red-700">
+              {formatTimestamp(emergencyState?.reported_at) || 'Just now'}
+              {emergencyState?.reported_name ? ` • Reporter: ${emergencyState.reported_name}` : ''}
+            </p>
+            {emergencyAttachmentUrl && (
+              <a
+                className="mt-3 inline-flex text-xs font-semibold text-red-900 underline"
+                href={emergencyAttachmentUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View attachment
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3 text-sm">
           {truckFull ? (
@@ -843,18 +1030,15 @@ export default function RouteRun(){
             </div>
           ) : (
             <>
-              <div className="p-3 bg-white/60 rounded-lg border border-white/30 shadow-inner">
-                <div className="font-medium text-gray-800">Next stop</div>
+              <div className="p-4 bg-white/80 rounded-2xl border border-white/60 shadow-inner">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next stop</div>
                 {nextStop ? (
-                  <div className="text-xs text-gray-600">
+                  <div className="text-sm text-gray-800 font-medium mt-1">
                     Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-600">All stops have been marked as visited by the collectors.</div>
+                  <div className="text-sm text-gray-600 mt-1">No pending stops.</div>
                 )}
-              </div>
-              <div className="p-3 bg-white/50 rounded-lg border border-white/20 text-xs text-gray-600 leading-relaxed">
-                Collectors handle stop completion. This screen refreshes automatically as they record each pickup.
               </div>
             </>
           )}
@@ -862,19 +1046,160 @@ export default function RouteRun(){
 
         <div className="mt-4">
           <button
-            className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors ${allVisited ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-200'}`}
+            className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold tracking-wide transition ${emergencyActive ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : allVisited ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200/70' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
             onClick={handleCompleteRoute}
-            disabled={submitting}
+            disabled={submitting || emergencyActive}
           >
-            {submitting ? 'Submitting…' : allVisited ? 'Submit & mark route completed' : 'Waiting for collectors'}
+            {emergencyActive
+              ? 'Emergency active — submission disabled'
+              : submitting
+                ? 'Submitting…'
+                : allVisited
+                  ? 'Submit & mark route completed'
+                  : 'Waiting for collectors'}
           </button>
-        </div>
-        <div className="mt-2 text-[11px] text-gray-600 text-center">
-          {allVisited ? 'Ready to wrap up the route.' : 'Button becomes green once every stop is visited.'}
         </div>
       </div>
 
     </div>
+
+      {showEmergencyForm && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Emergency alert</p>
+                <p className="text-base font-semibold text-gray-900">Report truck emergency</p>
+                <p className="text-xs text-gray-500">Residents, barangay head, and foreman will be notified instantly.</p>
+              </div>
+              <button
+                className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100"
+                onClick={closeEmergencyForm}
+                aria-label="Close emergency modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4 text-sm text-gray-700">
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Reason</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {EMERGENCY_TYPES.map((option) => {
+                    const isActive = emergencyForm.type === option.value
+                    return (
+                      <label
+                        key={option.value}
+                        className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${isActive ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                      >
+                        <input
+                          type="radio"
+                          name="emergency-type"
+                          value={option.value}
+                          checked={isActive}
+                          onChange={() => updateEmergencyForm('type', option.value)}
+                          className="sr-only"
+                        />
+                        {option.label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Impact</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {EMERGENCY_IMPACTS.map((option) => {
+                    const isActive = emergencyForm.impact === option.value
+                    return (
+                      <label
+                        key={option.value}
+                        className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${isActive ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                      >
+                        <input
+                          type="radio"
+                          name="emergency-impact"
+                          value={option.value}
+                          checked={isActive}
+                          onChange={() => updateEmergencyForm('impact', option.value)}
+                          className="sr-only"
+                        />
+                        <div className="font-semibold">{option.label}</div>
+                        <p className="text-[11px] text-gray-500">{option.caption}</p>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">Notes</label>
+                <textarea
+                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  placeholder="Describe what happened and if assistance is needed."
+                  rows={3}
+                  value={emergencyForm.notes}
+                  onChange={(e) => updateEmergencyForm('notes', e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-gray-500">Keep it short so barangay head and foreman can react quickly.</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Evidence (optional)</p>
+                <input
+                  ref={emergencyFileInputRef}
+                  id="emergency-evidence-input"
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={handleEmergencyFileChange}
+                />
+                <label
+                  htmlFor="emergency-evidence-input"
+                  className="flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-3 py-3 text-xs font-semibold text-gray-600 hover:border-emerald-400 hover:text-emerald-600"
+                >
+                  Upload photo or short video
+                </label>
+                {emergencyForm.file && (
+                  <div className="mt-2 flex items-center justify-between rounded border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                    <span className="truncate pr-2">{emergencyForm.file.name}</span>
+                    <button type="button" className="font-semibold text-red-600" onClick={clearEmergencyAttachment}>Remove</button>
+                  </div>
+                )}
+              </div>
+
+              {emergencyError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {emergencyError}
+                </div>
+              )}
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                This alert automatically pauses collection for this route and notifies all affected residents and supervisors.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t px-5 py-4">
+              <button
+                className="w-1/3 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                onClick={closeEmergencyForm}
+                disabled={emergencySubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                className="w-2/3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:opacity-60"
+                onClick={submitEmergencyReport}
+                disabled={emergencySubmitting}
+              >
+                {emergencySubmitting ? 'Sending…' : 'Send emergency alert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

@@ -60,7 +60,7 @@ export default function TruckDriverHome() {
         const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         // 1) Check attendance table for verified/recorded attendance
-        const attendanceUrl = `http://localhost/Capstoneee/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
+        const attendanceUrl = `http://localhost/kolektrash/backend/api/get_attendance.php?date=${todayLocal}&user_id=${userData.user_id}`;
         const attendanceResp = await fetch(attendanceUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const attendanceData = await attendanceResp.json();
         console.log('get_attendance API response:', attendanceData, 'requested_date:', todayLocal);
@@ -88,7 +88,7 @@ export default function TruckDriverHome() {
         if (fetchedAttendanceStatus) setAttendanceStatus(fetchedAttendanceStatus);
 
         // 2) Check attendance_request table for pending requests today
-        const reqUrl = `http://localhost/Capstoneee/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
+        const reqUrl = `http://localhost/kolektrash/backend/api/list_attendance_requests.php?date_from=${todayLocal}&date_to=${todayLocal}`;
         const reqResp = await fetch(reqUrl, { headers: { 'Authorization': `Bearer ${token}` } });
         const reqData = await reqResp.json();
         console.log('list_attendance_requests API response:', reqData);
@@ -163,7 +163,7 @@ export default function TruckDriverHome() {
       // If timing out, prefer the recorded session (AM/PM) if available
       const session = action === 'time_out' && timedInSession ? timedInSession : (hour < 12 ? 'AM' : 'PM');
 
-      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+      const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -236,7 +236,7 @@ export default function TruckDriverHome() {
       const hour = currentDate.getHours();
       const session = hour < 12 ? 'AM' : 'PM';
 
-      const response = await fetch('http://localhost/Capstoneee/backend/api/personnel_time_in.php', {
+      const response = await fetch('http://localhost/kolektrash/backend/api/personnel_time_in.php', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
