@@ -37,7 +37,7 @@ mysql -u root kolektrash_db < update_attendance_verification.sql
 ```
 
 ### Step 2: Test Personnel Time In
-1. Open: `http://localhost/Capstoneee/personnel-time-in.html`
+1. Open: `http://localhost/kolektrash/personnel-time-in.html`
 2. Enter Personnel ID: `16` (Paul Bermal - Driver)
 3. Select Session: **AM**
 4. Click **✅ Time In**
@@ -127,7 +127,7 @@ Shows for each record:
 
 ### Access
 ```
-http://localhost/Capstoneee/personnel-time-in.html
+http://localhost/kolektrash/personnel-time-in.html
 ```
 
 ### Features

@@ -11,10 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../includes/schedule_history_helper.php';
+
 $database = new Database();
 $db = $database->connect();
 
 try {
+    // Get current user for history logging
+    $currentUser = kolektrash_current_user();
+    $actorUserId = $currentUser ? (int)$currentUser['user_id'] : null;
+    
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         throw new Exception('Invalid JSON body');
@@ -53,6 +59,19 @@ try {
         $params[] = $weekOfMonthFilter;
     }
 
+    // Get schedule_template_id and before payload for history logging
+    $scheduleTemplateId = null;
+    $beforePayload = null;
+    if ($actorUserId) {
+        $findQuery = $db->prepare("SELECT schedule_template_id FROM predefined_schedules $where LIMIT 1");
+        $findQuery->execute($params);
+        $found = $findQuery->fetch(PDO::FETCH_ASSOC);
+        if ($found) {
+            $scheduleTemplateId = (int)$found['schedule_template_id'];
+            $beforePayload = get_schedule_before_payload($db, $scheduleTemplateId);
+        }
+    }
+
     // Determine fields to update
     $setParts = [];
     $setParams = [];
@@ -67,6 +86,12 @@ try {
         throw new Exception('No fields to update');
     }
 
+    // Add updated_by to the update
+    if ($actorUserId) {
+        $setParts[] = 'updated_by = ?';
+        $setParams[] = $actorUserId;
+    }
+
     $sql = 'UPDATE predefined_schedules SET ' . implode(', ', $setParts) . ', updated_at = NOW() ' . $where . ' LIMIT 1';
     $stmt = $db->prepare($sql);
     $stmt->execute(array_merge($setParams, $params));
@@ -74,6 +99,21 @@ try {
     if ($stmt->rowCount() < 1) {
         echo json_encode(['success' => false, 'message' => 'No matching schedule found to update']);
         exit();
+    }
+
+    // Log history if user is authenticated and we found the schedule
+    if ($actorUserId && $scheduleTemplateId && $beforePayload) {
+        $afterPayload = get_schedule_after_payload($db, $scheduleTemplateId);
+        
+        log_schedule_history(
+            $db,
+            $scheduleTemplateId,
+            'update',
+            $actorUserId,
+            $beforePayload,
+            $afterPayload,
+            'Schedule updated by fields'
+        );
     }
 
     echo json_encode(['success' => true, 'message' => 'Schedule updated by fields']);

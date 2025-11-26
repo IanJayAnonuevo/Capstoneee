@@ -736,45 +736,68 @@ const ManageRoute = () => {
   };
 
   // Function to handle barangay click
-  const handleBarangayClick = (route, e) => {
+  const handleBarangayClick = async (route, e) => {
     e.stopPropagation(); // Prevent triggering the row click
 
-    // Use actual coordinates from collection_point table if available
-    if (route.latitude && route.longitude) {
-      const actualCoords = [parseFloat(route.latitude), parseFloat(route.longitude)];
-      setSelectedRoute(route);
-      setMapCenter(actualCoords);
-      setMapZoom(16); // Higher zoom level for specific location
+    let routeToUse = route;
 
-      // Optional: Add a timeout to allow the map to settle
-      setTimeout(() => {
-        if (route.collectionPoints?.length > 0) {
-          const pointsWithRealCoords = route.collectionPoints.filter(pt =>
-            pt.coordinates && Array.isArray(pt.coordinates) && pt.coordinates.length === 2
-          );
+    // If route has ID but no collection points, fetch them
+    if (route.id && (!route.collectionPoints || route.collectionPoints.length === 0)) {
+      try {
+        // Show loading indicator if possible, or just wait
+        const full = await fetchRouteDetails(route.id);
+        // Map backend stops to collectionPoints expected by UI
+        const points = (full.stops || [])
+          .filter(s => s.lat !== null && s.lng !== null)
+          .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+          .map((s, idx) => ({
+            name: s.name || `Stop ${s.seq || idx + 1}`,
+            time: s.window_start ? String(s.window_start).slice(0, 5) : '',
+            volume: s.planned_volume_kg ? (Number(s.planned_volume_kg) / 1000).toFixed(1) + ' tons' : '0.0 tons',
+            coordinates: [parseFloat(s.lat), parseFloat(s.lng)]
+          }));
 
-          if (pointsWithRealCoords.length > 0) {
-            const bounds = L.latLngBounds(pointsWithRealCoords.map(pt => pt.coordinates));
-            setMapBounds(bounds);
-          }
-        }
-      }, 500);
-    } else {
-      // Fallback to barangay coordinates
-      const barangayCoords = BARANGAY_COORDINATES[route.barangay];
-      if (barangayCoords) {
-        setSelectedRoute(route);
-        setMapCenter(barangayCoords);
-        setMapZoom(16); // Higher zoom level for barangay view
-
-        // Optional: Add a timeout to allow the map to settle
-        setTimeout(() => {
-          if (route.collectionPoints?.length > 0) {
-            const bounds = L.latLngBounds(route.collectionPoints.map(pt => pt.coordinates));
-            setMapBounds(bounds);
-          }
-        }, 500);
+        routeToUse = {
+          ...route,
+          collectionPoints: points,
+        };
+      } catch (err) {
+        console.error("Failed to fetch details for barangay click", err);
+        // Fallback to original route if fetch fails
       }
+    }
+
+    setSelectedRoute(routeToUse);
+
+    // 1. Try to use collection points to set bounds
+    if (routeToUse.collectionPoints && routeToUse.collectionPoints.length > 0) {
+      const validPoints = routeToUse.collectionPoints
+        .filter(pt => pt.coordinates && Array.isArray(pt.coordinates) && pt.coordinates.length === 2)
+        .map(pt => pt.coordinates);
+
+      if (validPoints.length > 0) {
+        const bounds = L.latLngBounds(validPoints);
+        setMapBounds(bounds);
+        // Also set center to the center of bounds
+        setMapCenter(bounds.getCenter());
+        // Zoom will be handled by map fitting bounds
+        return;
+      }
+    }
+
+    // 2. Fallback: Use route specific coordinates if available
+    if (routeToUse.latitude && routeToUse.longitude) {
+      const actualCoords = [parseFloat(routeToUse.latitude), parseFloat(routeToUse.longitude)];
+      setMapCenter(actualCoords);
+      setMapZoom(16);
+      return;
+    }
+
+    // 3. Fallback: Use generic barangay coordinates
+    const barangayCoords = BARANGAY_COORDINATES[routeToUse.barangay];
+    if (barangayCoords) {
+      setMapCenter(barangayCoords);
+      setMapZoom(15);
     }
   };
 
@@ -1032,7 +1055,48 @@ const ManageRoute = () => {
           <option>All</option>
           {DRIVERS.map(d => <option key={d}>{d}</option>)}
         </select>
-        <select value={barangay} onChange={e => setBarangay(e.target.value)} className="w-full px-3 py-2 rounded-md border border-gray-200 text-sm bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800">
+        <select
+          value={barangay}
+          onChange={e => {
+            const selectedBarangay = e.target.value;
+            setBarangay(selectedBarangay);
+
+            // Map update logic
+            if (selectedBarangay !== "All") {
+              const coords = BARANGAY_COORDINATES[selectedBarangay];
+              if (coords) {
+                setMapCenter(coords);
+                setMapZoom(15);
+
+                // Try to find routes for this barangay to set bounds
+                const barangayRoutes = allRoutes.filter(r => r.barangay === selectedBarangay);
+                if (barangayRoutes.length > 0) {
+                  // Collect all points from these routes
+                  let allPoints = [];
+                  barangayRoutes.forEach(r => {
+                    if (r.coordinates) allPoints.push(r.coordinates);
+                    if (r.collectionPoints) {
+                      r.collectionPoints.forEach(pt => {
+                        if (pt.coordinates) allPoints.push(pt.coordinates);
+                      });
+                    }
+                  });
+
+                  if (allPoints.length > 0) {
+                    const bounds = L.latLngBounds(allPoints);
+                    setMapBounds(bounds);
+                  }
+                }
+              }
+            } else {
+              // Reset to default view
+              setMapCenter([13.7766, 122.9826]);
+              setMapZoom(13);
+              setMapBounds(null);
+            }
+          }}
+          className="w-full px-3 py-2 rounded-md border border-gray-200 text-sm bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
+        >
           <option>All</option>
           {BARANGAYS.map(b => <option key={b}>{b}</option>)}
         </select>
@@ -1045,7 +1109,7 @@ const ManageRoute = () => {
       </div>
 
       {/* Summary Cards - Minimal Design */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
         <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
           <div className="text-sm text-gray-600 mb-2">Total Routes</div>
           <div className="text-2xl font-normal text-green-800">
@@ -1064,15 +1128,7 @@ const ManageRoute = () => {
             {isLoading ? '...' : filteredRoutes.filter(r => r.status === "Missed").length}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-lg border border-gray-200 text-center">
-          <div className="text-sm text-gray-600 mb-2">Volume (tons)</div>
-          <div className="text-2xl font-normal text-green-600">
-            {isLoading ? '...' : filteredRoutes.reduce((sum, r) => {
-              const volume = parseFloat(r.volume) || 0;
-              return sum + volume;
-            }, 0).toFixed(1)}
-          </div>
-        </div>
+
       </div>
 
       {/* Main Content: Table + Map Panel - Minimal Design */}
@@ -1090,9 +1146,8 @@ const ManageRoute = () => {
                       <th className="p-3 text-left font-medium text-gray-800 text-xs w-[15%] min-w-[120px]">Driver</th>
                       <th className="p-3 text-left font-medium text-gray-800 text-xs w-[15%] min-w-[120px]">Barangay</th>
                       <th className="p-3 text-left font-medium text-gray-800 text-xs w-[18%] min-w-[140px]">Date & Time</th>
-                      <th className="p-3 text-left font-medium text-gray-800 text-xs w-[10%] min-w-[80px]">Volume</th>
+
                       <th className="p-3 text-left font-medium text-gray-800 text-xs w-[15%] min-w-[110px]">Status</th>
-                      <th className="p-3 text-left font-medium text-gray-800 text-xs w-[10%] min-w-[80px]">Source</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1141,23 +1196,14 @@ const ManageRoute = () => {
                               {route.datetime}
                             </div>
                           </td>
-                          <td className="p-3 text-gray-800 font-medium">
-                            <div className="truncate max-w-[80px]" title={route.volume}>
-                              {route.volume}
-                            </div>
-                          </td>
+
                           <td className="p-3">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${route.status === "Scheduled" ? "bg-green-50 text-green-800" :
-                                route.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
-                                  route.status === "Completed" ? "bg-green-100 text-green-700" :
-                                    "bg-red-100 text-red-700"
+                              route.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
+                                route.status === "Completed" ? "bg-green-100 text-green-700" :
+                                  "bg-red-100 text-red-700"
                               }`}>
                               {route.status}
-                            </span>
-                          </td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${route.source === 'manual' ? 'bg-gray-100 text-gray-700' : 'bg-blue-50 text-blue-700'}`}>
-                              {route.source === 'manual' ? 'Manual' : 'Generated'}
                             </span>
                           </td>
                         </tr>
@@ -1210,8 +1256,8 @@ const ManageRoute = () => {
                     <button
                       onClick={toggleAnimation}
                       className={`px-3 py-1.5 border border-green-200 rounded text-xs cursor-pointer transition-all duration-200 ${showAnimation
-                          ? 'bg-green-600 text-white'
-                          : 'bg-green-50 text-gray-800 hover:bg-green-100'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-green-50 text-gray-800 hover:bg-green-100'
                         }`}
                     >
                       {showAnimation ? 'Stop' : 'Animate'}
@@ -1432,15 +1478,15 @@ const ManageRoute = () => {
               <button
                 onClick={() => setModalTab('details')}
                 className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${modalTab === 'details'
-                    ? 'bg-white text-green-800 border-b-2 border-green-800'
-                    : 'bg-transparent text-gray-500 border-b-2 border-transparent'
+                  ? 'bg-white text-green-800 border-b-2 border-green-800'
+                  : 'bg-transparent text-gray-500 border-b-2 border-transparent'
                   }`}
               >Details</button>
               <button
                 onClick={() => setModalTab('notes')}
                 className={`flex-1 py-3 border-none font-medium text-sm cursor-pointer transition-all duration-200 ${modalTab === 'notes'
-                    ? 'bg-white text-green-800 border-b-2 border-green-800'
-                    : 'bg-transparent text-gray-500 border-b-2 border-transparent'
+                  ? 'bg-white text-green-800 border-b-2 border-green-800'
+                  : 'bg-transparent text-gray-500 border-b-2 border-transparent'
                   }`}
               >Complaints/Notes</button>
             </div>
@@ -1458,9 +1504,9 @@ const ManageRoute = () => {
                     <div>
                       <div className="font-medium mb-1 text-gray-500 text-xs">Status</div>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${modalRoute.status === "Scheduled" ? "bg-green-50 text-green-800" :
-                          modalRoute.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
-                            modalRoute.status === "Completed" ? "bg-green-100 text-green-700" :
-                              "bg-red-100 text-red-700"
+                        modalRoute.status === "In Progress" ? "bg-yellow-100 text-yellow-700" :
+                          modalRoute.status === "Completed" ? "bg-green-100 text-green-700" :
+                            "bg-red-100 text-red-700"
                         }`}>{modalRoute.status}</span>
                     </div>
                     <div>

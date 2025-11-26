@@ -15,6 +15,8 @@ import PickupSimple from './components/admin/PickupSimple'
 import BarangayActivity from './components/admin/BarangayActivity'
 import BarangayActivityNew from './components/admin/BarangayActivityNew'
 import TaskManagement from './components/admin/TaskManagement'
+import TodaysTasks from './components/admin/TodaysTasks'
+import PastTasks from './components/admin/PastTasks'
 import LandingPage from './components/landingpage/LandingPage'
 import Navbar from './components/landingpage/Navbar'
 import Section1 from './components/landingpage/Section1'
@@ -116,14 +118,14 @@ function App() {
 
   const confirmLogout = async () => {
     setShowLogoutModal(false)
-    
+
     // Call logout API to set online_status to offline
     const userId = localStorage.getItem('user_id')
     if (userId) {
       const { authService } = await import('./services/authService')
       await authService.logout(parseInt(userId))
     }
-    
+
     localStorage.removeItem('user')
     localStorage.removeItem('user_id')
     localStorage.removeItem('access_token')
@@ -167,6 +169,9 @@ function App() {
     if (location.pathname.startsWith('/admin/barangay')) return 'Barangay Activity'
     if (location.pathname.startsWith('/admin/feedback')) return 'Feedback'
     if (location.pathname.startsWith('/admin/issues')) return 'Issues'
+    if (location.pathname === '/admin/task-management/today') return "Today's tasks"
+    if (location.pathname === '/admin/task-management/past') return 'Past tasks'
+    if (location.pathname === '/admin/task-management/manual') return 'Task Management'
     if (location.pathname.startsWith('/admin/task-management')) return 'Task Management'
     return 'Admin'
   }
@@ -208,100 +213,103 @@ function App() {
         )}
         <div className="flex-1 overflow-y-auto">
           <Routes>
-          {/* Landing page - default route */}
-          <Route path="/" element={<LandingPage />} />
-          {/* Auth routes (guest only) */}
-          <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
-          <Route path="/signup" element={<GuestOnly><SignUp /></GuestOnly>} />
-          <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
-          {/* Admin routes - protected */}
-          <Route path="/admin" element={<RequireAuth allowedRoles={['admin']}><Navigate to="/admin/dashboard" replace /></RequireAuth>} />
-          <Route path="/admin/dashboard" element={<RequireAuth allowedRoles={['admin']}><Dashboard /></RequireAuth>} />
-          <Route path="/admin/users" element={<RequireAuth allowedRoles={['admin']}><ManageUsers /></RequireAuth>} />
-          <Route path="/admin/routes" element={<RequireAuth allowedRoles={['admin']}><ManageRoute /></RequireAuth>} />
-          <Route path="/admin/schedule" element={<RequireAuth allowedRoles={['admin']}><ManageSchedule /></RequireAuth>} />
-          <Route path="/admin/pickup" element={<RequireAuth allowedRoles={['admin']}><PickupSimple /></RequireAuth>} />
-          <Route path="/admin/barangay" element={<RequireAuth allowedRoles={['admin']}><BarangayActivity /></RequireAuth>} />
-          <Route path="/admin/barangay-new" element={<RequireAuth allowedRoles={['admin']}><BarangayActivityNew /></RequireAuth>} />
-          <Route path="/admin/feedback" element={<RequireAuth allowedRoles={['admin']}><AdminFeedback /></RequireAuth>} />
-          <Route path="/admin/issues" element={<RequireAuth allowedRoles={['admin']}><Issues /></RequireAuth>} />
-          <Route path="/admin/task-management" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
-          {/* Admin catch-all for undefined admin routes */}
-          <Route path="/admin/*" element={<RequireAuth allowedRoles={['admin']}><Placeholder title="Admin Page Not Found" /></RequireAuth>} />
-          {/* Resident routes - protected */}
-          <Route
-            path="/resident"
-            element={<RequireAuth allowedRoles={['resident']}><ResidentDashboard unreadNotifications={unreadCount} /></RequireAuth>}
-          >
-            <Route index element={<ResidentHome />} />
-            <Route path="report" element={<ResidentReport />} />
-            <Route path="issue-status" element={<ResidentIssueStatus />} />
-            <Route path="schedule" element={<ResidentSchedule />} />
-            <Route path="iec" element={<ResidentIEC />} />
-            <Route path="notifications" element={<ResidentNotifications notifications={notifications} setNotifications={setNotifications} />} />
-            <Route path="feedback" element={<ResidentFeedback />} />
-            <Route path="settings" element={<ResidentSettings />} />
-          </Route>
-          {/* Barangay Head routes - protected */}
-          <Route
-            path="/barangayhead"
-            element={<RequireAuth allowedRoles={['barangay_head']}><BarangayHeadDashboard unreadNotifications={unreadCount} /></RequireAuth>}
-          >
-            <Route index element={<Home />} />
-            <Route path="report" element={<ReportIssue />} />
-            <Route path="issue-status" element={<BarangayHeadIssueStatus />} />
-            <Route path="feedback" element={<BarangayHeadFeedback />} />
-            <Route path="pickup" element={<PickupRequest />} />
-            <Route path="schedule" element={<CollectionSchedule />} />
-            <Route path="collection-reports" element={<CollectionReports />} />
-            <Route path="appointments" element={<Appointments />} />
-            <Route path="iec" element={<IEC />} />
-            <Route path="notifications" element={<BarangayHeadNotifications notifications={notifications} setNotifications={setNotifications} />} />
-            <Route path="settings" element={<BarangayHeadSettings />} />
-          </Route>
-          {/* Truck Driver routes - protected */}
-          <Route
-            path="/truckdriver"
-            element={<RequireAuth allowedRoles={['truck_driver']}><TruckDriverDashboard unreadNotifications={unreadCount} /></RequireAuth>}
-          >
-            <Route index element={<TruckDriverHome />} />
-            <Route path="schedule" element={<TruckDriverCollectionSchedule />} />
-            <Route path="tasks" element={<TruckDriverTask />} />
-            <Route path="routes" element={<TruckDriverRoutes />} />
-            <Route path="route/:id" element={<RouteRun />} />
-            <Route path="vehicle" element={<TruckDriverVehicle />} />
-            <Route path="notifications" element={<TruckDriverNotifications notifications={notifications} setNotifications={setNotifications} />} />
-            <Route path="settings" element={<TruckDriverSettings />} />
-          </Route>
-          {/* Garbage Collector routes - protected */}
-          <Route
-            path="/garbagecollector"
-            element={<RequireAuth allowedRoles={['garbage_collector']}><GarbageCollectorDashboard unreadNotifications={unreadCount} /></RequireAuth>}
-          >
-            <Route index element={<GarbageCollectorHome />} />
-            <Route path="schedule" element={<GarbageCollectorSchedule />} />
-            <Route path="tasks" element={<GarbageCollectorTasks />} />
-            <Route path="routes" element={<GarbageCollectorRoutes />} />
-            <Route path="route/:id" element={<CollectorRouteRun />} />
-            <Route path="notifications" element={<GarbageCollectorNotifications notifications={notifications} setNotifications={setNotifications} />} />
-            <Route path="settings" element={<GarbageCollectorSettings />} />
-          </Route>
-          {/* Foreman routes - protected */}
-          <Route
-            path="/foreman"
-            element={<RequireAuth allowedRoles={['foreman']}><ForemanDashboard unreadNotifications={unreadCount} /></RequireAuth>}
-          >
-            <Route index element={<ForemanHome />} />
-            <Route path="attendance" element={<ForemanAttendance />} />
-            <Route path="schedule" element={<ForemanSchedule />} />
-            <Route path="tasks" element={<ForemanTasks />} />
-            <Route path="trucks" element={<ForemanTrucks />} />
-            <Route path="special-pickup" element={<ForemanSpecialPickup />} />
-            <Route path="issues" element={<ForemanIssues />} />
-            <Route path="settings" element={<ForemanSettings />} />
-          </Route>
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Landing page - default route */}
+            <Route path="/" element={<LandingPage />} />
+            {/* Auth routes (guest only) */}
+            <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+            <Route path="/signup" element={<GuestOnly><SignUp /></GuestOnly>} />
+            <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
+            {/* Admin routes - protected */}
+            <Route path="/admin" element={<RequireAuth allowedRoles={['admin']}><Navigate to="/admin/dashboard" replace /></RequireAuth>} />
+            <Route path="/admin/dashboard" element={<RequireAuth allowedRoles={['admin']}><Dashboard /></RequireAuth>} />
+            <Route path="/admin/users" element={<RequireAuth allowedRoles={['admin']}><ManageUsers /></RequireAuth>} />
+            <Route path="/admin/routes" element={<RequireAuth allowedRoles={['admin']}><ManageRoute /></RequireAuth>} />
+            <Route path="/admin/schedule" element={<RequireAuth allowedRoles={['admin']}><ManageSchedule /></RequireAuth>} />
+            <Route path="/admin/pickup" element={<RequireAuth allowedRoles={['admin']}><PickupSimple /></RequireAuth>} />
+            <Route path="/admin/barangay" element={<RequireAuth allowedRoles={['admin']}><BarangayActivity /></RequireAuth>} />
+            <Route path="/admin/barangay-new" element={<RequireAuth allowedRoles={['admin']}><BarangayActivityNew /></RequireAuth>} />
+            <Route path="/admin/feedback" element={<RequireAuth allowedRoles={['admin']}><AdminFeedback /></RequireAuth>} />
+            <Route path="/admin/issues" element={<RequireAuth allowedRoles={['admin']}><Issues /></RequireAuth>} />
+            <Route path="/admin/task-management" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
+            <Route path="/admin/task-management/today" element={<RequireAuth allowedRoles={['admin']}><TodaysTasks /></RequireAuth>} />
+            <Route path="/admin/task-management/past" element={<RequireAuth allowedRoles={['admin']}><PastTasks /></RequireAuth>} />
+            <Route path="/admin/task-management/manual" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
+            {/* Admin catch-all for undefined admin routes */}
+            <Route path="/admin/*" element={<RequireAuth allowedRoles={['admin']}><Placeholder title="Admin Page Not Found" /></RequireAuth>} />
+            {/* Resident routes - protected */}
+            <Route
+              path="/resident"
+              element={<RequireAuth allowedRoles={['resident']}><ResidentDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            >
+              <Route index element={<ResidentHome />} />
+              <Route path="report" element={<ResidentReport />} />
+              <Route path="issue-status" element={<ResidentIssueStatus />} />
+              <Route path="schedule" element={<ResidentSchedule />} />
+              <Route path="iec" element={<ResidentIEC />} />
+              <Route path="notifications" element={<ResidentNotifications notifications={notifications} setNotifications={setNotifications} />} />
+              <Route path="feedback" element={<ResidentFeedback />} />
+              <Route path="settings" element={<ResidentSettings />} />
+            </Route>
+            {/* Barangay Head routes - protected */}
+            <Route
+              path="/barangayhead"
+              element={<RequireAuth allowedRoles={['barangay_head']}><BarangayHeadDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            >
+              <Route index element={<Home />} />
+              <Route path="report" element={<ReportIssue />} />
+              <Route path="issue-status" element={<BarangayHeadIssueStatus />} />
+              <Route path="feedback" element={<BarangayHeadFeedback />} />
+              <Route path="pickup" element={<PickupRequest />} />
+              <Route path="schedule" element={<CollectionSchedule />} />
+              <Route path="collection-reports" element={<CollectionReports />} />
+              <Route path="appointments" element={<Appointments />} />
+              <Route path="iec" element={<IEC />} />
+              <Route path="notifications" element={<BarangayHeadNotifications notifications={notifications} setNotifications={setNotifications} />} />
+              <Route path="settings" element={<BarangayHeadSettings />} />
+            </Route>
+            {/* Truck Driver routes - protected */}
+            <Route
+              path="/truckdriver"
+              element={<RequireAuth allowedRoles={['truck_driver']}><TruckDriverDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            >
+              <Route index element={<TruckDriverHome />} />
+              <Route path="schedule" element={<TruckDriverCollectionSchedule />} />
+              <Route path="tasks" element={<TruckDriverTask />} />
+              <Route path="routes" element={<TruckDriverRoutes />} />
+              <Route path="route/:id" element={<RouteRun />} />
+              <Route path="vehicle" element={<TruckDriverVehicle />} />
+              <Route path="notifications" element={<TruckDriverNotifications notifications={notifications} setNotifications={setNotifications} />} />
+              <Route path="settings" element={<TruckDriverSettings />} />
+            </Route>
+            {/* Garbage Collector routes - protected */}
+            <Route
+              path="/garbagecollector"
+              element={<RequireAuth allowedRoles={['garbage_collector']}><GarbageCollectorDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            >
+              <Route index element={<GarbageCollectorHome />} />
+              <Route path="schedule" element={<GarbageCollectorSchedule />} />
+              <Route path="tasks" element={<GarbageCollectorTasks />} />
+              <Route path="routes" element={<GarbageCollectorRoutes />} />
+              <Route path="route/:id" element={<CollectorRouteRun />} />
+              <Route path="notifications" element={<GarbageCollectorNotifications notifications={notifications} setNotifications={setNotifications} />} />
+              <Route path="settings" element={<GarbageCollectorSettings />} />
+            </Route>
+            {/* Foreman routes - protected */}
+            <Route
+              path="/foreman"
+              element={<RequireAuth allowedRoles={['foreman']}><ForemanDashboard unreadNotifications={unreadCount} /></RequireAuth>}
+            >
+              <Route index element={<ForemanHome />} />
+              <Route path="attendance" element={<ForemanAttendance />} />
+              <Route path="schedule" element={<ForemanSchedule />} />
+              <Route path="tasks" element={<ForemanTasks />} />
+              <Route path="trucks" element={<ForemanTrucks />} />
+              <Route path="special-pickup" element={<ForemanSpecialPickup />} />
+              <Route path="issues" element={<ForemanIssues />} />
+              <Route path="settings" element={<ForemanSettings />} />
+            </Route>
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </main>

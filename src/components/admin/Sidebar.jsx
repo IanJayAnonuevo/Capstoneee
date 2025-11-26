@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useLoader } from '../../contexts/LoaderContext'
 import {
@@ -11,7 +12,7 @@ import {
   FiAlertCircle,
   FiLogOut
 } from 'react-icons/fi'
-import { FaUsers, FaMapMarkedAlt, FaCalendarAlt, FaTasks, FaTruckMoving, FaBuilding, FaComments, FaExclamationCircle, FaSignOutAlt, FaTachometerAlt } from 'react-icons/fa'
+import { FaUsers, FaMapMarkedAlt, FaCalendarAlt, FaTasks, FaTruckMoving, FaBuilding, FaComments, FaExclamationCircle, FaSignOutAlt, FaTachometerAlt, FaChevronDown, FaChevronRight } from 'react-icons/fa'
 
 // Keep structure simple but allow dynamic icon coloring
 const navItems = [
@@ -20,9 +21,16 @@ const navItems = [
   { to: '/admin/users', label: 'Manage Users', Icon: FaUsers },
   { to: '/admin/schedule', label: 'Manage Schedule', Icon: FaCalendarAlt },
   { to: '/admin/routes', label: 'Manage Routes', Icon: FaMapMarkedAlt },
-  { to: '/admin/task-management', label: 'Task Management', Icon: FaTasks },
+  {
+    label: 'Task Management',
+    Icon: FaTasks,
+    children: [
+      { to: '/admin/task-management/today', label: "Today's tasks" },
+      { to: '/admin/task-management/past', label: 'Past tasks' },
+      { to: '/admin/task-management/manual', label: 'Manual Assignment' }
+    ]
+  },
   { to: '/admin/pickup', label: 'Special Pickup', Icon: FaTruckMoving },
-  { to: '/admin/barangay', label: 'Barangay Activity', Icon: FaBuilding },
   { divider: true },
   { to: '/admin/feedback', label: 'Feedback', Icon: FaComments },
   { to: '/admin/issues', label: 'Issues', Icon: FaExclamationCircle },
@@ -33,7 +41,7 @@ function getSectionLabel(index) {
   // Sections based on divider positions in navItems
   if (index === 0) return 'Overview'
   if (index === 2) return 'Operations'
-  if (index === 9) return 'Engagement'
+  if (index === 8) return 'Engagement'
   if (index === 12) return 'Account'
   return null
 }
@@ -41,6 +49,14 @@ function getSectionLabel(index) {
 export default function Sidebar({ handleLogout }) {
   const location = useLocation()
   const { showLoader } = useLoader()
+  const [expandedMenus, setExpandedMenus] = useState({})
+
+  const toggleMenu = (label) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }))
+  }
 
   const handleNavClick = (event, targetPath) => {
     if (!targetPath || location.pathname === targetPath) {
@@ -71,8 +87,18 @@ export default function Sidebar({ handleLogout }) {
 
           const section = getSectionLabel(idx)
           const isLogout = !!item.isLogout
-          const isActive = location.pathname === item.to
+          const isActive = item.to ? location.pathname === item.to : false
           const Icon = item.Icon
+          const hasChildren = item.children && item.children.length > 0
+          const isExpanded = expandedMenus[item.label]
+
+          // Check if any child is active to keep menu expanded or highlight parent
+          const isChildActive = hasChildren && item.children.some(child => location.pathname === child.to)
+
+          // Auto-expand if child is active (optional, can be done in useEffect too)
+          // For now, let's rely on manual toggle or initial state if we wanted. 
+          // But to make it nice, let's ensure it's open if active.
+          // We can do this with a useEffect, but let's just use the state.
 
           if (isLogout) {
             return (
@@ -89,28 +115,65 @@ export default function Sidebar({ handleLogout }) {
           }
 
           return (
-            <div key={item.to} className="px-3">
+            <div key={item.label || item.to} className="px-3">
               {section && (
                 <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300/70">
                   {section}
                 </div>
               )}
-              <NavLink
-                to={item.to}
-                onClick={(event) => handleNavClick(event, item.to)}
-                end={item.to === '/admin/dashboard'}
-                className={({ isActive: linkActive }) => {
-                  const active = linkActive || isActive
-                  return [
-                    'relative flex items-center mt-2 px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-150',
-                    active ? 'bg-emerald-700/60 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]' : 'text-emerald-100/90 hover:bg-emerald-700/40 hover:text-white'
-                  ].join(' ')
-                }}
-              >
-                <span className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg bg-emerald-400/0 group-hover:bg-emerald-400/30" />
-                <Icon className="w-5 h-5 mr-3 text-emerald-300" />
-                <span className="truncate">{item.label}</span>
-              </NavLink>
+
+              {hasChildren ? (
+                <div>
+                  <button
+                    onClick={() => toggleMenu(item.label)}
+                    className={[
+                      'w-full relative flex items-center mt-2 px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-150',
+                      (isExpanded || isChildActive) ? 'text-white' : 'text-emerald-100/90 hover:bg-emerald-700/40 hover:text-white'
+                    ].join(' ')}
+                  >
+                    <Icon className="w-5 h-5 mr-3 text-emerald-300" />
+                    <span className="truncate flex-1 text-left">{item.label}</span>
+                    {isExpanded ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-1 ml-4 border-l border-emerald-700/50 pl-2 space-y-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          onClick={(event) => handleNavClick(event, child.to)}
+                          className={({ isActive: childActive }) => {
+                            return [
+                              'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-150',
+                              childActive ? 'bg-emerald-700/60 text-white' : 'text-emerald-200/80 hover:text-white hover:bg-emerald-700/30'
+                            ].join(' ')
+                          }}
+                        >
+                          <span className="truncate">{child.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <NavLink
+                  to={item.to}
+                  onClick={(event) => handleNavClick(event, item.to)}
+                  end={item.to === '/admin/dashboard'}
+                  className={({ isActive: linkActive }) => {
+                    const active = linkActive || isActive
+                    return [
+                      'relative flex items-center mt-2 px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-150',
+                      active ? 'bg-emerald-700/60 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]' : 'text-emerald-100/90 hover:bg-emerald-700/40 hover:text-white'
+                    ].join(' ')
+                  }}
+                >
+                  <span className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg bg-emerald-400/0 group-hover:bg-emerald-400/30" />
+                  <Icon className="w-5 h-5 mr-3 text-emerald-300" />
+                  <span className="truncate">{item.label}</span>
+                </NavLink>
+              )}
             </div>
           )
         })}

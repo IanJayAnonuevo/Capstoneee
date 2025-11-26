@@ -11,10 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../includes/schedule_history_helper.php';
+
 $database = new Database();
 $db = $database->connect();
 
 try {
+    // Get current user for history logging
+    $currentUser = kolektrash_current_user();
+    $actorUserId = $currentUser ? (int)$currentUser['user_id'] : null;
+    
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         throw new Exception('Invalid JSON body');
@@ -31,12 +37,35 @@ try {
     }
 
     if ($id > 0) {
-        $stmt = $db->prepare('UPDATE predefined_schedules SET is_active = 0, updated_at = NOW() WHERE schedule_template_id = ? LIMIT 1');
-        $stmt->execute([$id]);
+        // Get before payload for history logging
+        $beforePayload = null;
+        if ($actorUserId) {
+            $beforePayload = get_schedule_before_payload($db, $id);
+        }
+        
+        // Update with deleted_by and deleted_at
+        $sql = 'UPDATE predefined_schedules SET is_active = 0, deleted_by = ?, deleted_at = NOW(), updated_at = NOW() WHERE schedule_template_id = ? LIMIT 1';
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$actorUserId, $id]);
+        
         if ($stmt->rowCount() < 1) {
             echo json_encode(['success' => false, 'message' => 'No schedule found for given id']);
             exit();
         }
+        
+        // Log history if user is authenticated
+        if ($actorUserId && $beforePayload) {
+            log_schedule_history(
+                $db,
+                $id,
+                'delete',
+                $actorUserId,
+                $beforePayload,
+                null, // No after payload for delete
+                'Schedule deleted'
+            );
+        }
+        
         echo json_encode(['success' => true, 'message' => 'Schedule deleted']);
         exit();
     }
@@ -73,13 +102,39 @@ try {
         $params[] = $weekOfMonthFilter;
     }
 
-    $sql = 'UPDATE predefined_schedules SET is_active = 0, updated_at = NOW() ' . $where . ' LIMIT 1';
+    // Get schedule_template_id and before payload for history logging
+    $scheduleTemplateId = null;
+    $beforePayload = null;
+    if ($actorUserId) {
+        $findQuery = $db->prepare("SELECT schedule_template_id FROM predefined_schedules $where LIMIT 1");
+        $findQuery->execute($params);
+        $found = $findQuery->fetch(PDO::FETCH_ASSOC);
+        if ($found) {
+            $scheduleTemplateId = (int)$found['schedule_template_id'];
+            $beforePayload = get_schedule_before_payload($db, $scheduleTemplateId);
+        }
+    }
+
+    $sql = 'UPDATE predefined_schedules SET is_active = 0, deleted_by = ?, deleted_at = NOW(), updated_at = NOW() ' . $where . ' LIMIT 1';
     $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    $stmt->execute(array_merge([$actorUserId], $params));
 
     if ($stmt->rowCount() < 1) {
         echo json_encode(['success' => false, 'message' => 'No matching schedule found to delete']);
         exit();
+    }
+
+    // Log history if user is authenticated and we found the schedule
+    if ($actorUserId && $scheduleTemplateId && $beforePayload) {
+        log_schedule_history(
+            $db,
+            $scheduleTemplateId,
+            'delete',
+            $actorUserId,
+            $beforePayload,
+            null, // No after payload for delete
+            'Schedule deleted by fields'
+        );
     }
 
     echo json_encode(['success' => true, 'message' => 'Schedule deleted by fields']);

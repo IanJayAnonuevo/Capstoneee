@@ -2,6 +2,20 @@
 // CORS headers MUST be set BEFORE _bootstrap.php to override any wildcard headers from cors.php
 // Must use specific origin, not wildcard, when credentials are included
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+if (empty($origin) && isset($_SERVER['HTTP_REFERER'])) {
+    $referer = parse_url($_SERVER['HTTP_REFERER']);
+    if (isset($referer['scheme']) && isset($referer['host'])) {
+        $origin = $referer['scheme'] . '://' . $referer['host'];
+        if (isset($referer['port'])) {
+            $origin .= ':' . $referer['port'];
+        }
+    }
+}
+// Fallback for local dev if still empty
+if (empty($origin)) {
+    $origin = 'http://localhost:5173';
+}
+
 // Allow any localhost / 127.0.0.1 origins regardless of port (used by Vite/dev servers)
 $allowedIsLocal = ($origin !== '' && preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin) === 1);
 
@@ -13,13 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     @header_remove('Access-Control-Allow-Credentials');
   }
   
-  if ($allowedIsLocal) {
+  if ($origin) {
     header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
   } else {
     header('Access-Control-Allow-Origin: *');
   }
+  
   header('Vary: Origin');
-  header('Access-Control-Allow-Credentials: true');
   header('Access-Control-Allow-Methods: POST, OPTIONS');
   header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
   http_response_code(204);
@@ -32,13 +47,14 @@ if (function_exists('header_remove')) {
   @header_remove('Access-Control-Allow-Credentials');
 }
 
-if ($allowedIsLocal) {
+if ($origin) {
   header('Access-Control-Allow-Origin: ' . $origin);
+  header('Access-Control-Allow-Credentials: true');
 } else {
   header('Access-Control-Allow-Origin: *');
 }
+
 header('Vary: Origin');
-header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
@@ -89,9 +105,17 @@ try {
   $teamId = $assignment['team_id'] ?? null;
   $truckId = $assignment['truck_id'] ?? null;
 
-  // Insert into gps_route_log (create table if you haven't already)
-  $sql = "INSERT INTO gps_route_log (team_id, latitude, longitude, timestamp, speed, accuracy, driver_id, truck_id)
-          VALUES (:team_id, :lat, :lng, NOW(), :speed, :accuracy, :driver_id, :truck_id)";
+  // Calculate truck status based on speed
+  $truckStatus = 'idle'; // default
+  if ($speed !== null) {
+    if ($speed > 5) {
+      $truckStatus = 'moving';
+    }
+  }
+
+  // Insert into gps_route_log with new fields
+  $sql = "INSERT INTO gps_route_log (team_id, latitude, longitude, timestamp, speed, accuracy, heading, battery, driver_id, truck_id, truck_status)
+          VALUES (:team_id, :lat, :lng, NOW(), :speed, :accuracy, :heading, :battery, :driver_id, :truck_id, :truck_status)";
   $stmt = $db->prepare($sql);
   $stmt->execute([
     ':team_id' => $teamId,
@@ -99,8 +123,11 @@ try {
     ':lng' => $lng,
     ':speed' => $speed,
     ':accuracy' => $accuracy,
+    ':heading' => $heading,
+    ':battery' => $battery,
     ':driver_id' => $driverId,
     ':truck_id' => $truckId,
+    ':truck_status' => $truckStatus,
   ]);
 
   echo json_encode([ 'success' => true, 'inserted_id' => $db->lastInsertId(), 'assignment' => $assignment ]);

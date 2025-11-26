@@ -11,10 +11,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once '../config/database.php';
+require_once '../includes/schedule_history_helper.php';
+
 $database = new Database();
 $db = $database->connect();
 
 try {
+    // Get current user for history logging
+    $currentUser = kolektrash_current_user();
+    $actorUserId = $currentUser ? (int)$currentUser['user_id'] : null;
+    
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         throw new Exception('Invalid JSON body');
@@ -45,8 +51,9 @@ try {
     $frequencyPerDay = isset($input['frequency_per_day']) ? intval($input['frequency_per_day']) : 1;
     $isActive = isset($input['is_active']) ? intval($input['is_active']) : 1;
 
-    $sql = 'INSERT INTO predefined_schedules (barangay_id, barangay_name, cluster_id, schedule_type, day_of_week, start_time, end_time, frequency_per_day, week_of_month, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
+    // Insert schedule with created_by tracking
+    $sql = 'INSERT INTO predefined_schedules (barangay_id, barangay_name, cluster_id, schedule_type, day_of_week, start_time, end_time, frequency_per_day, week_of_month, is_active, created_by, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())';
     $stmt = $db->prepare($sql);
     $stmt->execute([
         $barangayId,
@@ -58,10 +65,39 @@ try {
         $input['end_time'],
         $frequencyPerDay,
         $weekOfMonth,
-        $isActive
+        $isActive,
+        $actorUserId
     ]);
 
-    echo json_encode(['success' => true, 'message' => 'Schedule created', 'schedule_template_id' => $db->lastInsertId()]);
+    $scheduleTemplateId = $db->lastInsertId();
+
+    // Log history if user is authenticated
+    if ($actorUserId) {
+        $afterPayload = [
+            'barangay_id' => $barangayId,
+            'barangay_name' => $barangayName,
+            'cluster_id' => $input['cluster_id'],
+            'schedule_type' => $input['schedule_type'],
+            'day_of_week' => $input['day_of_week'],
+            'start_time' => $input['start_time'],
+            'end_time' => $input['end_time'],
+            'frequency_per_day' => $frequencyPerDay,
+            'week_of_month' => $weekOfMonth,
+            'is_active' => $isActive
+        ];
+        
+        log_schedule_history(
+            $db,
+            $scheduleTemplateId,
+            'create',
+            $actorUserId,
+            null, // No before payload for create
+            $afterPayload,
+            'Schedule created'
+        );
+    }
+
+    echo json_encode(['success' => true, 'message' => 'Schedule created', 'schedule_template_id' => $scheduleTemplateId]);
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

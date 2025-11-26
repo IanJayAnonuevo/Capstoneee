@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiCalendar, FiClock, FiCheckCircle, FiTrash2, FiChevronDown, FiCheck, FiSend, FiUsers } from 'react-icons/fi';
+import { FiUser, FiCalendar, FiClock, FiCheckCircle, FiTrash2, FiChevronDown, FiCheck, FiSend, FiUsers, FiTruck } from 'react-icons/fi';
 import { FaUserTie, FaUserFriends, FaTimes } from 'react-icons/fa';
 import Select from 'react-select';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { buildApiUrl } from '../../config/api';
 
 const getAuthToken = () => {
@@ -22,7 +25,23 @@ const getAuthHeaders = (extra = {}) => {
 };
 
 // Fix default marker icon issue with leaflet in React
-// Map removed in minimalist redesign
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Component to fly to selected barangay
+function FlyToBarangay({ position }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, 14, { duration: 1 });
+    }
+  }, [position, map]);
+  return null;
+}
 
 export default function TaskManagement() {
   const [selected, setSelected] = useState(null);
@@ -608,132 +627,155 @@ export default function TaskManagement() {
       {/* Minimal Summary Bar - Tree Palette */}
       <div className="w-full flex items-center justify-between bg-green-50 py-2 px-3 mb-2">
         {/* Left: Info Columns */}
-        <div className="flex flex-1 items-start gap-4">
-          {/* Column 1 */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5">
-              <FiUser className="w-4 h-4 text-green-800" />
-              <div>
-                <div className="text-[10px] text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.driver?.name ? (
-                    <>
-                      {selectedSchedule.driver.name}
-                      {selectedSchedule.driver.status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                      {selectedSchedule.driver.status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                      {selectedSchedule.driver.status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">No driver selected</span>
-                  )}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Truck Driver</div>
+        <div className="grid grid-cols-5 gap-y-2 gap-x-4 flex-1">
+          {/* Column 1 - Driver */}
+          <div className="flex items-center gap-2">
+            <FaUserTie className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.driver?.name ? (
+                  <>
+                    {selectedSchedule.driver.name}
+                    {selectedSchedule.driver.status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
+                    {selectedSchedule.driver.status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
+                    {selectedSchedule.driver.status === 'declined' && <span className="text-red-600"> (Declined)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No driver selected</span>
+                )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <FiUser className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.collectors?.[0] ? (
-                    <>
-                      {selectedSchedule.collectors[0].name}
-                      {selectedSchedule.collectors[0].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                      {selectedSchedule.collectors[0].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                      {selectedSchedule.collectors[0].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">No collector</span>
-                  )}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Garbage Collector 1</div>
-              </div>
+              <div className="text-xs text-green-700 font-normal">Truck Driver</div>
             </div>
           </div>
-          {/* Column 2 */}
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center gap-3">
-              <FiUser className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.collectors?.[1] ? (
-                    <>
-                      {selectedSchedule.collectors[1].name}
-                      {selectedSchedule.collectors[1].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                      {selectedSchedule.collectors[1].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                      {selectedSchedule.collectors[1].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">No collector</span>
-                  )}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Garbage Collector 2</div>
+
+          {/* Column 2 - Collector 1 */}
+          <div className="flex items-center gap-2">
+            <FaUserFriends className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.collectors?.[0] ? (
+                  <>
+                    {selectedSchedule.collectors[0].name}
+                    {selectedSchedule.collectors[0].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
+                    {selectedSchedule.collectors[0].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
+                    {selectedSchedule.collectors[0].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No collector</span>
+                )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <FiUser className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.collectors?.[2] ? (
-                    <>
-                      {selectedSchedule.collectors[2].name}
-                      {selectedSchedule.collectors[2].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                      {selectedSchedule.collectors[2].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                      {selectedSchedule.collectors[2].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">No collector</span>
-                  )}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Garbage Collector 3</div>
-              </div>
+              <div className="text-xs text-green-700 font-normal">Garbage Collector 1</div>
             </div>
           </div>
-          {/* Column 3 */}
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center gap-3">
-              <FiCalendar className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.date || <span className="text-gray-400">No date</span>}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Date Collected</div>
+
+          {/* Column 3 - Collector 2 */}
+          <div className="flex items-center gap-2">
+            <FaUserFriends className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.collectors?.[1] ? (
+                  <>
+                    {selectedSchedule.collectors[1].name}
+                    {selectedSchedule.collectors[1].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
+                    {selectedSchedule.collectors[1].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
+                    {selectedSchedule.collectors[1].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No collector</span>
+                )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <FiClock className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.time || <span className="text-gray-400">No time</span>}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Time Collected</div>
-              </div>
+              <div className="text-xs text-green-700 font-normal">Garbage Collector 2</div>
             </div>
           </div>
-          {/* Column 4 */}
-          <div className="flex flex-col gap-8">
-            <div className="flex items-center gap-3">
-              <FiTrash2 className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.truck_plate ? (
-                    <>
-                      {selectedSchedule.truck_plate} <span className="text-gray-500">|</span> {selectedSchedule.truck_type} <span className="text-gray-500">|</span> {selectedSchedule.truck_capacity}kg
-                    </>
-                  ) : <span className="text-gray-400">No truck assigned</span>}
-                </div>
-                <div className="text-xs text-green-700 font-normal">Truck Details</div>
+
+          {/* Column 4 - Collector 3 */}
+          <div className="flex items-center gap-2">
+            <FaUserFriends className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.collectors?.[2] ? (
+                  <>
+                    {selectedSchedule.collectors[2].name}
+                    {selectedSchedule.collectors[2].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
+                    {selectedSchedule.collectors[2].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
+                    {selectedSchedule.collectors[2].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No collector</span>
+                )}
               </div>
+              <div className="text-xs text-green-700 font-normal">Garbage Collector 3</div>
             </div>
-            <div className="flex items-center gap-3">
-              <FiCheckCircle className="w-6 h-6 text-green-800" />
-              <div>
-                <div className="text-base text-green-900 font-semibold leading-tight">
-                  {selectedSchedule?.status === 'assigned' && <span className="text-yellow-600">Assigned</span>}
-                  {selectedSchedule?.status === 'accepted' && <span className="text-green-600">Accepted</span>}
-                  {selectedSchedule?.status === 'declined' && <span className="text-red-600">Declined</span>}
-                  {!['assigned', 'accepted', 'declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
-                </div>
-                <div className="text-xs text-green-700 font-normal">COLLECTION STATUS</div>
+          </div>
+
+          {/* Column 5 - Collector 4 */}
+          <div className="flex items-center gap-2">
+            <FaUserFriends className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.collectors?.[3] ? (
+                  <>
+                    {selectedSchedule.collectors[3].name}
+                    {selectedSchedule.collectors[3].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
+                    {selectedSchedule.collectors[3].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
+                    {selectedSchedule.collectors[3].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No collector</span>
+                )}
               </div>
+              <div className="text-xs text-green-700 font-normal">Garbage Collector 4</div>
+            </div>
+          </div>
+
+          {/* Column 6 - Date */}
+          <div className="flex items-center gap-2">
+            <FiCalendar className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.date || <span className="text-gray-400">No date</span>}
+              </div>
+              <div className="text-xs text-green-700 font-normal">Date Collected</div>
+            </div>
+          </div>
+
+          {/* Column 7 - Truck */}
+          <div className="flex items-center gap-2">
+            <FiTruck className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.truck_plate ? (
+                  <>
+                    {selectedSchedule.truck_plate} | {selectedSchedule.truck_type} | {selectedSchedule.truck_capacity}kg
+                  </>
+                ) : <span className="text-gray-400">No truck assigned</span>}
+              </div>
+              <div className="text-xs text-green-700 font-normal">Truck Details</div>
+            </div>
+          </div>
+
+          {/* Column 8 - Time */}
+          <div className="flex items-center gap-2">
+            <FiClock className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.time || <span className="text-gray-400">No time</span>}
+              </div>
+              <div className="text-xs text-green-700 font-normal">Time Collected</div>
+            </div>
+          </div>
+
+          {/* Column 9 - Status */}
+          <div className="flex items-center gap-2">
+            <FiCheckCircle className="w-4 h-4 text-green-800" />
+            <div>
+              <div className="text-xs text-green-900 font-semibold leading-tight">
+                {selectedSchedule?.status === 'assigned' && <span className="text-yellow-600">pending</span>}
+                {selectedSchedule?.status === 'accepted' && <span className="text-green-600">Accepted</span>}
+                {selectedSchedule?.status === 'declined' && <span className="text-red-600">Declined</span>}
+                {!['assigned', 'accepted', 'declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
+              </div>
+              <div className="text-xs text-green-700 font-normal">COLLECTION STATUS</div>
             </div>
           </div>
         </div>
@@ -786,8 +828,8 @@ export default function TaskManagement() {
               <div
                 key={b.barangay_id}
                 className={`px-4 py-3 cursor-pointer flex flex-col transition-all duration-200 border-b border-gray-100 last:border-b-0 ${selected && selected.barangay_id === b.barangay_id
-                    ? 'bg-green-800 text-white'
-                    : 'hover:bg-emerald-50 text-gray-700'
+                  ? 'bg-green-800 text-white'
+                  : 'hover:bg-emerald-50 text-gray-700'
                   }`}
                 onClick={() => setSelected(b)}
               >
@@ -801,29 +843,35 @@ export default function TaskManagement() {
           </div>
         </div>
 
-        {/* Insights Panel - Minimal Replacement for Map */}
+        {/* Map Panel - Replaces Assignment Insights */}
         <div className="flex-1 bg-white rounded-md border border-gray-200 p-5">
-          <h2 className="text-lg font-medium text-green-800 mb-4">Assignment Insights</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="border border-gray-200 rounded-md p-4">
-              <div className="text-xs uppercase text-gray-500">Total</div>
-              <div className="text-3xl font-semibold text-green-900 mt-1">{totalCount}</div>
-            </div>
-            <div className="border border-gray-200 rounded-md p-4">
-              <div className="text-xs uppercase text-gray-500">Assigned</div>
-              <div className="text-3xl font-semibold text-green-900 mt-1">{assignedCount}</div>
-            </div>
-            <div className="border border-gray-200 rounded-md p-4">
-              <div className="text-xs uppercase text-gray-500">Accepted</div>
-              <div className="text-3xl font-semibold text-green-900 mt-1">{acceptedCount}</div>
-            </div>
-            <div className="border border-gray-200 rounded-md p-4">
-              <div className="text-xs uppercase text-gray-500">Completed</div>
-              <div className="text-3xl font-semibold text-green-900 mt-1">{completedCount}</div>
-            </div>
+          <h2 className="text-lg font-medium text-green-800 mb-4">Barangay Map</h2>
+          <div className="w-full h-[500px] rounded-md overflow-hidden border border-gray-200">
+            <MapContainer
+              center={[14.5995, 120.9842]} // Manila coordinates as default
+              zoom={12}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {selected && selected.latitude && selected.longitude && (
+                <>
+                  <FlyToBarangay position={[parseFloat(selected.latitude), parseFloat(selected.longitude)]} />
+                  <Marker position={[parseFloat(selected.latitude), parseFloat(selected.longitude)]}>
+                    <Popup>
+                      <div className="text-sm">
+                        <strong>{selected.barangay_name}</strong>
+                      </div>
+                    </Popup>
+                  </Marker>
+                </>
+              )}
+            </MapContainer>
           </div>
           <div className="mt-4 text-sm text-gray-600">
-            Tip: Use filters below to narrow down the list, then perform bulk actions.
+            Tip: Click on a barangay from the list to view its location on the map.
           </div>
         </div>
       </div>
@@ -907,8 +955,8 @@ export default function TaskManagement() {
                       <td className="px-4 py-2">{sched.end_time}</td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${sched.status === 'scheduled' ? 'bg-green-100 text-green-800' :
-                            sched.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
+                          sched.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
                           }`}>
                           {sched.status}
                         </span>
@@ -1565,8 +1613,8 @@ export default function TaskManagement() {
                               {task.collectors ? task.collectors.join(', ') : 'N/A'}
                               {task.collector_team && (
                                 <div className={`font-semibold mt-1 px-2 py-1 rounded text-xs ${task.collector_team.includes('Priority')
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-green-100 text-green-800'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-green-100 text-green-800'
                                   }`}>
                                   {task.collector_team}
                                 </div>
@@ -1576,8 +1624,8 @@ export default function TaskManagement() {
                           <td className="px-2 py-1">{task.truck}</td>
                           <td className="px-2 py-1">
                             <span className={`px-2 py-1 rounded text-xs font-semibold ${task.assignment_type === 'Priority Assignment'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
                               }`}>
                               {task.assignment_type}
                             </span>

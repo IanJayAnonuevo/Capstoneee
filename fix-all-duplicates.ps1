@@ -1,6 +1,6 @@
 # Fix all duplicate imports in one go
 
-$allFiles = Get-ChildItem -Path "c:\xampp\htdocs\Capstoneee\src" -Recurse -Filter "*.jsx" 
+$allFiles = Get-ChildItem -Path "c:\xampp\htdocs\kolektrash\src" -Recurse -Filter "*.jsx" 
 
 foreach ($file in $allFiles) {
     $content = Get-Content $file.FullName -Raw

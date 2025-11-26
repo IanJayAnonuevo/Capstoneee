@@ -19,7 +19,7 @@ setup-attendance.bat
 ### Step 2: Verify API
 Open in browser:
 ```
-http://localhost/Capstoneee/test-attendance-api.html
+http://localhost/kolektrash/test-attendance-api.html
 ```
 Click each "Test" button to verify APIs are working.
 

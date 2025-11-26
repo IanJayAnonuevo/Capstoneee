@@ -20,7 +20,15 @@ try {
            g.longitude  AS lng,
            g.speed,
            g.accuracy,
-           g.timestamp  AS ts
+           g.heading,
+           g.truck_status,
+           g.route_id,
+           g.timestamp  AS ts,
+           CASE 
+             WHEN g.truck_status = 'full_load' THEN 'full_load'
+             WHEN g.speed > 5 THEN 'moving'
+             ELSE 'idle'
+           END AS calculated_status
     FROM (
       SELECT truck_id, MAX(timestamp) AS max_ts
       FROM gps_route_log

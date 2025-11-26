@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { buildApiUrl } from '../../config/api.js';
-import { FiMoreVertical, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiMoreVertical, FiEdit2, FiTrash2, FiClock } from 'react-icons/fi';
 
 const scheduleViewOptions = [
   { value: 'priority', label: 'Priority Barangays', type: 'priority', clusterId: '1C-PB' },
@@ -80,6 +80,13 @@ export default function ManageSchedule() {
   const [addError, setAddError] = useState(null);
   const [addSaving, setAddSaving] = useState(false);
   const [addForm, setAddForm] = useState({ date: '', start_time: '', end_time: '', barangay_id: '' });
+  
+  // History modal state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
   // Ctrl-based multi-select state
   const [ctrlPressed, setCtrlPressed] = useState(false);
@@ -228,6 +235,31 @@ export default function ManageSchedule() {
     fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedView, currentWeek]);
+
+  // Fetch schedule history
+  const fetchScheduleHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      const url = `${buildApiUrl('get_schedule_history.php')}?limit=100&offset=0`;
+      const res = await fetch(url, {
+        headers: getAuthHeaders()
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHistoryData(Array.isArray(data.history) ? data.history : []);
+        setHistoryTotal(data.total || 0);
+      } else {
+        setHistoryError(data.message || 'Failed to fetch schedule history.');
+        setHistoryData([]);
+      }
+    } catch (err) {
+      setHistoryError('Failed to fetch schedule history.');
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // Fetch barangays for mapping
   useEffect(() => {
@@ -563,6 +595,19 @@ export default function ManageSchedule() {
               </option>
             ))}
           </select>
+          <button
+            onClick={async () => {
+              setHistoryOpen(true);
+              setHistoryError(null);
+              setHistoryData([]);
+              await fetchScheduleHistory();
+            }}
+            className="ml-1 px-2 py-0.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+            title="View schedule history"
+          >
+            <FiClock className="w-3 h-3" />
+            History
+          </button>
           <button
             onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '' }); setAddError(null); setAddOpen(true); }}
             className="ml-1 px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700"
@@ -1368,6 +1413,166 @@ export default function ManageSchedule() {
                     Delete Schedule
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] relative overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+              <button
+                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
+                onClick={() => {
+                  setHistoryOpen(false);
+                  setHistoryError(null);
+                  setHistoryData([]);
+                }}
+                aria-label="Close"
+                title="Close"
+              >✕</button>
+              <div className="flex items-center gap-2">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <FiClock className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">Schedule History</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Track all schedule changes by admin and foreman</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-4 py-3 flex-1 overflow-y-auto">
+              {historyLoading && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Loading history...</p>
+                </div>
+              )}
+
+              {historyError && (
+                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                  {historyError}
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyData.length === 0 && (
+                <div className="text-center py-8">
+                  <FiClock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">No history records found</p>
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyData.length > 0 && (
+                <div className="space-y-3">
+                  {historyData.map((record) => {
+                    const actionColors = {
+                      create: 'bg-green-100 text-green-800 border-green-200',
+                      update: 'bg-blue-100 text-blue-800 border-blue-200',
+                      delete: 'bg-red-100 text-red-800 border-red-200',
+                      restore: 'bg-purple-100 text-purple-800 border-purple-200'
+                    };
+                    const actionColor = actionColors[record.action] || 'bg-gray-100 text-gray-800 border-gray-200';
+                    
+                    return (
+                      <div key={record.history_id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold border uppercase ${actionColor}`}>
+                              {record.action}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(record.changed_at).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 mb-2">
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 mb-1">Actor</p>
+                            <p className="text-sm text-gray-800 font-semibold">
+                              {record.actor.name || record.actor.username}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {record.actor.role || 'Unknown Role'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-gray-600 mb-1">Schedule</p>
+                            <p className="text-sm text-gray-800 font-semibold">
+                              {record.schedule_info?.barangay_name || 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {record.schedule_info?.day_of_week} • {record.schedule_info?.start_time?.substring(0,5)} - {record.schedule_info?.end_time?.substring(0,5)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {record.action === 'update' && record.before_payload && record.after_payload && (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <p className="text-xs font-medium text-gray-600 mb-1">Changes:</p>
+                            <div className="text-xs space-y-1">
+                              {Object.keys(record.after_payload).map((key) => {
+                                if (key === 'updated_at' || key === 'created_at' || key === 'deleted_at' || 
+                                    key === 'created_by' || key === 'updated_by' || key === 'deleted_by' ||
+                                    key === 'schedule_template_id' || key === 'is_active') return null;
+                                
+                                const beforeVal = record.before_payload[key];
+                                const afterVal = record.after_payload[key];
+                                
+                                if (beforeVal === afterVal) return null;
+                                
+                                return (
+                                  <div key={key} className="flex items-center gap-2">
+                                    <span className="text-gray-600 font-medium">{key}:</span>
+                                    <span className="text-red-600 line-through">{String(beforeVal || 'N/A')}</span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className="text-green-600 font-semibold">{String(afterVal || 'N/A')}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {record.remarks && (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-600 italic">{record.remarks}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div className="text-xs text-gray-600">
+                Total: {historyTotal} record{historyTotal !== 1 ? 's' : ''}
+              </div>
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                onClick={() => {
+                  setHistoryOpen(false);
+                  setHistoryError(null);
+                  setHistoryData([]);
+                }}
+              >
+                Close
               </button>
             </div>
           </div>

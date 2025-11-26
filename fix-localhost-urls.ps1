@@ -11,7 +11,7 @@ $files = @(
 )
 
 foreach ($file in $files) {
-    $filePath = Join-Path "c:\xampp\htdocs\Capstoneee" $file
+    $filePath = Join-Path "c:\xampp\htdocs\kolektrash" $file
     
     if (Test-Path $filePath) {
         Write-Host "Fixing $file..." -ForegroundColor Yellow
@@ -19,7 +19,7 @@ foreach ($file in $files) {
         $content = Get-Content $filePath -Raw
         
         # Replace localhost URLs
-        $content = $content -replace 'http://localhost/Capstoneee/backend/api', '${API_BASE_URL}'
+        $content = $content -replace 'http://localhost/kolektrash/backend/api', '${API_BASE_URL}'
         $content = $content -replace "http://localhost:5173/materials/", "/materials/"
         
         # Add import if ${API_BASE_URL} is used and import doesn't exist

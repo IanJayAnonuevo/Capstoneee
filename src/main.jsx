@@ -15,7 +15,7 @@ const renderApp = () => {
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <LoaderProvider>
-          <BrowserRouter basename={window.location.pathname.startsWith('/Capstoneee') ? '/Capstoneee' : '/'}>
+          <BrowserRouter basename={window.location.pathname.startsWith('/kolektrash') ? '/kolektrash' : '/'}>
             <App />
           </BrowserRouter>
         </LoaderProvider>

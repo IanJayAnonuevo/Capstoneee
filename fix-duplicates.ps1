@@ -6,7 +6,7 @@ $files = @(
 )
 
 foreach ($file in $files) {
-    $filePath = Join-Path "c:\xampp\htdocs\Capstoneee" $file
+    $filePath = Join-Path "c:\xampp\htdocs\kolektrash" $file
     
     if (Test-Path $filePath) {
         Write-Host "Fixing duplicates in $file..." -ForegroundColor Yellow

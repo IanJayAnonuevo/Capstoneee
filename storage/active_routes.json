@@ -4,27 +4,6 @@
         "barangay": "Impig",
         "team_id": 1320,
         "status": "in_progress",
-        "started_at": "2025-11-25 02:02:20"
-    },
-    {
-        "route_id": 685,
-        "barangay": "North Centro",
-        "team_id": 1322,
-        "status": "in_progress",
-        "started_at": "2025-11-25 01:54:37"
-    },
-    {
-        "route_id": 633,
-        "barangay": "Malubago",
-        "team_id": 1164,
-        "status": "in_progress",
-        "started_at": "2025-11-24 20:39:01"
-    },
-    {
-        "route_id": 689,
-        "barangay": "Mantila",
-        "team_id": 1326,
-        "status": "in_progress",
-        "started_at": "2025-11-24 17:56:13"
+        "started_at": "2025-11-26 06:48:24"
     }
 ]

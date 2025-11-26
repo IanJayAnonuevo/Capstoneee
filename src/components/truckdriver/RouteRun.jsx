@@ -64,12 +64,12 @@ const createEmergencyFormState = () => ({
   file: null,
 })
 
-export default function RouteRun(){
+export default function RouteRun() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [stops, setStops] = React.useState([])
   const [routeName, setRouteName] = React.useState('')
-  
+
   const authHeaders = () => {
     try {
       const t = localStorage.getItem('access_token');
@@ -111,7 +111,7 @@ export default function RouteRun(){
         const value = parsed?.user_id ?? parsed?.id
         if (value && Number(value)) return Number(value)
       }
-    } catch (_) {}
+    } catch (_) { }
     return null
   }, [])
 
@@ -141,10 +141,10 @@ export default function RouteRun(){
     const lat1 = from.lat * Math.PI / 180
     const lat2 = to.lat * Math.PI / 180
     const deltaLng = (to.lng - from.lng) * Math.PI / 180
-    
+
     const y = Math.sin(deltaLng) * Math.cos(lat2)
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng)
-    
+
     let bearing = Math.atan2(y, x) * 180 / Math.PI
     return (bearing + 360) % 360
   }
@@ -158,7 +158,7 @@ export default function RouteRun(){
     setTruckRotation(bearing)
   }, [currentPos, targetStop])
 
-  async function postLocation(coords){
+  async function postLocation(coords) {
     // Try to include driver_id as fallback
     let driverId = null
     try {
@@ -167,8 +167,8 @@ export default function RouteRun(){
         const u = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null')
         driverId = Number(u?.user_id || u?.id)
       }
-    } catch {}
-  const url = driverId ? buildApiUrl(`post_gps.php?driver_id=${driverId}`) : buildApiUrl('post_gps.php')
+    } catch { }
+    const url = driverId ? buildApiUrl(`post_gps.php?driver_id=${driverId}`) : buildApiUrl('post_gps.php')
     const payload = {
       lat: coords.latitude,
       lng: coords.longitude,
@@ -177,31 +177,30 @@ export default function RouteRun(){
       accuracy: Number.isFinite(coords.accuracy) ? coords.accuracy : null,
     }
     try {
-      await fetch(url, { 
-        method:'POST', 
-        headers:{
-          'Content-Type':'application/json',
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
           ...authHeaders()
-        }, 
-        credentials:'include', 
-        body: JSON.stringify(payload) 
+        },
+        body: JSON.stringify(payload)
       })
-    } catch {}
+    } catch { }
   }
 
-  function formatDistance(m){
+  function formatDistance(m) {
     if (!Number.isFinite(m)) return '—'
-    if (m >= 1000) return (m/1000).toFixed(1) + ' km'
+    if (m >= 1000) return (m / 1000).toFixed(1) + ' km'
     return Math.round(m) + ' m'
   }
-  function formatDuration(s){
+  function formatDuration(s) {
     if (!Number.isFinite(s)) return '—'
-    const m = Math.round(s/60)
-    if (m >= 60) return `${Math.floor(m/60)}h ${m%60}m`
+    const m = Math.round(s / 60)
+    if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60}m`
     return `${m} min`
   }
 
-  function formatTimestamp(value){
+  function formatTimestamp(value) {
     if (!value) return ''
     const ts = new Date(value)
     if (Number.isNaN(ts.getTime())) return value
@@ -213,13 +212,13 @@ export default function RouteRun(){
     })
   }
 
-  async function fetchSuggestedRoute(here, dest){
+  async function fetchSuggestedRoute(here, dest) {
     // Validate coordinates
-    if (!here || !dest || 
-        !Number.isFinite(here.lat) || !Number.isFinite(here.lng) ||
-        !Number.isFinite(dest.lat) || !Number.isFinite(dest.lng) ||
-        here.lat < -90 || here.lat > 90 || here.lng < -180 || here.lng > 180 ||
-        dest.lat < -90 || dest.lat > 90 || dest.lng < -180 || dest.lng > 180) {
+    if (!here || !dest ||
+      !Number.isFinite(here.lat) || !Number.isFinite(here.lng) ||
+      !Number.isFinite(dest.lat) || !Number.isFinite(dest.lng) ||
+      here.lat < -90 || here.lat > 90 || here.lng < -180 || here.lng > 180 ||
+      dest.lat < -90 || dest.lat > 90 || dest.lng < -180 || dest.lng > 180) {
       console.warn('Invalid coordinates for routing:', { here, dest })
       throw new Error('Invalid coordinates')
     }
@@ -250,22 +249,22 @@ export default function RouteRun(){
     try {
       // Use a more reliable OSRM endpoint or fallback
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${here.lng},${here.lat};${dest.lng},${dest.lat}?overview=full&alternatives=false&steps=true&geometries=geojson&continue_straight=false`
-      
+
       const r = await fetch(osrmUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
         }
       })
-      
+
       if (!r.ok) {
         const errorText = await r.text().catch(() => 'Unknown error')
         console.error('OSRM HTTP error:', r.status, errorText)
         throw new Error(`OSRM routing failed: HTTP ${r.status}`)
       }
-      
+
       const j = await r.json()
-      
+
       if (j?.code === 'Ok' && j?.routes?.length) {
         const route = j.routes[0]
         const coordsLine = route.geometry?.coordinates || []
@@ -275,7 +274,7 @@ export default function RouteRun(){
         const latlngs = coordsLine.map(([lng, lat]) => [lat, lng])
         return { line: latlngs, summary: { distance: route.distance, duration: route.duration } }
       }
-      
+
       // If OSRM fails, return a straight line as fallback
       console.warn('OSRM routing failed, using straight line fallback:', j?.code || j?.message)
       const fallbackLine = [[here.lat, here.lng], [dest.lat, dest.lng]]
@@ -283,18 +282,18 @@ export default function RouteRun(){
       const R = 6371000 // Earth radius in meters
       const dLat = (dest.lat - here.lat) * Math.PI / 180
       const dLng = (dest.lng - here.lng) * Math.PI / 180
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
       const distance = R * c
       // Estimate duration (assuming 30 km/h average speed)
       const duration = (distance / 8.33) // 8.33 m/s = 30 km/h
-      
-      return { 
-        line: fallbackLine, 
+
+      return {
+        line: fallbackLine,
         summary: { distance, duration },
-        isFallback: true 
+        isFallback: true
       }
     } catch (e) {
       console.error('OSRM routing error:', e)
@@ -303,32 +302,32 @@ export default function RouteRun(){
       const R = 6371000
       const dLat = (dest.lat - here.lat) * Math.PI / 180
       const dLng = (dest.lng - here.lng) * Math.PI / 180
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(here.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
       const distance = R * c
       const duration = (distance / 8.33)
-      
-      return { 
-        line: fallbackLine, 
+
+      return {
+        line: fallbackLine,
         summary: { distance, duration },
-        isFallback: true 
+        isFallback: true
       }
     }
   }
 
-  async function loadStops(routeId){
+  async function loadStops(routeId) {
     try {
-  const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } })
+      const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } })
       const data = await res.json()
       if (data?.success) {
         const routeInfo = data.route || {}
-        const ordered = (routeInfo.stops||[]).sort((a,b)=>(a.seq||0)-(b.seq||0))
+        const ordered = (routeInfo.stops || []).sort((a, b) => (a.seq || 0) - (b.seq || 0))
         setRouteMeta(routeInfo)
         setStops(ordered)
         setRouteName(`${routeInfo.cluster_id || ''} ${routeInfo.barangay_name || ''}`.trim())
-        
+
         // Check for truck_full flag & emergency details in notes
         let truckFullFlag = false
         let emergencyDetails = null
@@ -345,7 +344,7 @@ export default function RouteRun(){
         }
         setTruckFull(truckFullFlag)
         setEmergencyState(emergencyDetails)
-        
+
         return { stops: ordered, route: routeInfo }
       }
     } catch (e) {
@@ -362,7 +361,7 @@ export default function RouteRun(){
         dateKey = normalizeDateKey(new Date())
       }
       const userId = getCurrentUserId()
-  const url = new URL(buildApiUrl('get_routes.php'))
+      const url = new URL(buildApiUrl('get_routes.php'))
       if (dateKey) url.searchParams.set('date', dateKey)
       if (userId) {
         url.searchParams.set('role', 'driver')
@@ -385,22 +384,22 @@ export default function RouteRun(){
         status: r.status,
         start_time: r.start_time
       })))
-      
+
       const sortKey = (route) => {
         const keyDate = normalizeDateKey(route.date || route.scheduled_date || dateKey)
-        const time = route.start_time ? String(route.start_time).slice(0,5) : '99:99'
+        const time = route.start_time ? String(route.start_time).slice(0, 5) : '99:99'
         return `${keyDate}T${time}`
       }
-      const sorted = [...routes].sort((a,b) => sortKey(a).localeCompare(sortKey(b)))
+      const sorted = [...routes].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
       const normalizedCurrentId = Number(currentRouteId)
-      
+
       // Explicit status check - we want routes that are available to work on
       const isAvailable = (route) => {
         const status = String(route.status || '').toLowerCase().trim()
         // Accept: scheduled, in_progress, or any status that's not completed/cancelled/missed
         const availableStatuses = ['scheduled', 'in_progress', 'in-progress', 'pending', 'active']
         const unavailableStatuses = ['completed', 'cancelled', 'missed', 'done', 'finished']
-        
+
         // If status is explicitly in available list, return true
         if (availableStatuses.includes(status)) return true
         // If status is explicitly unavailable, return false
@@ -410,25 +409,25 @@ export default function RouteRun(){
         // Default: if we don't recognize it, assume it's available (safer)
         return true
       }
-      
+
       const availableRoutes = sorted.filter(isAvailable)
       console.log(`[findNextRoute] Available routes (${availableRoutes.length}/${sorted.length}):`, availableRoutes.map(r => ({
         id: r.id,
         name: r.barangay_name || r.name,
         status: r.status || '(null)'
       })))
-      
+
       let candidate = null
       const currentIndex = sorted.findIndex(r => Number(r.id) === normalizedCurrentId)
       console.log(`[findNextRoute] Current route index: ${currentIndex}, Current ID: ${normalizedCurrentId}`)
-      
+
       if (currentIndex >= 0) {
         // Look for next available route after current one
         for (let i = currentIndex + 1; i < sorted.length; i++) {
-          if (isAvailable(sorted[i])) { 
-            candidate = sorted[i]; 
+          if (isAvailable(sorted[i])) {
+            candidate = sorted[i];
             console.log(`[findNextRoute] Found next route after current (index ${i}):`, candidate.id, candidate.barangay_name || candidate.name, 'status:', candidate.status)
-            break 
+            break
           }
         }
       }
@@ -439,7 +438,7 @@ export default function RouteRun(){
           console.log(`[findNextRoute] Found available route (not after current):`, candidate.id, candidate.barangay_name || candidate.name, 'status:', candidate.status)
         }
       }
-      
+
       if (candidate) {
         console.log('[findNextRoute] ✅ Selected next route:', {
           id: candidate.id,
@@ -468,10 +467,10 @@ export default function RouteRun(){
     if (!routeIdNum) return
     const userId = getCurrentUserId()
     try {
-  await fetch(buildApiUrl('update_route_status.php'), {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
+      await fetch(buildApiUrl('update_route_status.php'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
           ...authHeaders()
         },
         body: JSON.stringify({ route_id: routeIdNum, status: 'in_progress', user_id: userId })
@@ -482,10 +481,10 @@ export default function RouteRun(){
     const barangayName = route.barangay_name || route.name || fallbackMeta?.barangay_name || ''
     const teamId = route.team_id || fallbackMeta?.team_id || routeMeta?.team_id || null
     try {
-  await fetch(buildApiUrl('set_route_active.php'), {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
+      await fetch(buildApiUrl('set_route_active.php'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
           ...authHeaders()
         },
         body: JSON.stringify({ route_id: routeIdNum, barangay: barangayName, team_id: teamId })
@@ -503,7 +502,7 @@ export default function RouteRun(){
       }
       localStorage.setItem('active_route', JSON.stringify(activeRouteData))
       sessionStorage.setItem('active_route', JSON.stringify(activeRouteData))
-    } catch (_) {}
+    } catch (_) { }
   }, [getCurrentUserId, routeMeta])
 
   React.useEffect(() => {
@@ -536,10 +535,10 @@ export default function RouteRun(){
     return () => { if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current) }
   }, [])
 
-  const positions = stops.filter(s => s.lat!=null && s.lng!=null).map(s => [parseFloat(s.lat), parseFloat(s.lng)])
+  const positions = stops.filter(s => s.lat != null && s.lng != null).map(s => [parseFloat(s.lat), parseFloat(s.lng)])
   const startCenter = positions[0] || [13.7766, 122.9826]
 
-  function FollowController({ position, enabled }){
+  function FollowController({ position, enabled }) {
     const map = useMap()
     React.useEffect(() => {
       if (!enabled || !position) return
@@ -577,10 +576,10 @@ export default function RouteRun(){
       setTargetStop(mantilaTarget)
     } else {
       // Normal flow: find next unvisited stop
-      if (!stops || stops.length === 0) { 
+      if (!stops || stops.length === 0) {
         setTargetStop(null)
         setOriginalTargetStop(null)
-        return 
+        return
       }
       const next = stops.find(s => (s.status || 'pending') !== 'visited') || stops[0]
       if (next && next.lat != null && next.lng != null) {
@@ -592,14 +591,14 @@ export default function RouteRun(){
       }
     }
   }, [stops, truckFull, originalTargetStop])
-  
+
   // Check if truck is near Mantila (within ~500 meters)
   React.useEffect(() => {
     if (truckFull && currentPos) {
       const mantilaLat = 13.7817000
       const mantilaLng = 123.0203000
       const distance = Math.sqrt(
-        Math.pow(currentPos.lat - mantilaLat, 2) + 
+        Math.pow(currentPos.lat - mantilaLat, 2) +
         Math.pow(currentPos.lng - mantilaLng, 2)
       ) * 111000 // Convert to meters (rough approximation)
       setIsAtMantila(distance < 500) // Within 500 meters
@@ -643,7 +642,7 @@ export default function RouteRun(){
     if (!emergencyState?.attachment) return null
     return buildApiUrl(`../${emergencyState.attachment}`)
   }, [emergencyState])
-  
+
   // Handler to continue collection after disposal at Mantila
   const handleContinueCollection = async () => {
     if (submitting) return
@@ -661,7 +660,7 @@ export default function RouteRun(){
       }
       notesData.truck_full = false
       notesData.truck_full_cleared_at = new Date().toISOString()
-      
+
       await fetch(buildApiUrl('update_route_status.php'), {
         method: 'POST',
         headers: {
@@ -673,7 +672,7 @@ export default function RouteRun(){
           note: JSON.stringify(notesData)
         })
       })
-      
+
       // Reload route to get updated status
       await loadStops(id)
       setTruckFull(false)
@@ -761,7 +760,7 @@ export default function RouteRun(){
     }
   }, [authHeaders, closeEmergencyForm, emergencyForm, emergencySubmitting, getCurrentUserId, id, loadStops])
 
-  async function handleCompleteRoute(){
+  async function handleCompleteRoute() {
     if (submitting) return
     if (emergencyActive) {
       alert('Route submission is disabled while an emergency alert is active. Please resolve or coordinate with your foreman before completing the route.')
@@ -783,10 +782,10 @@ export default function RouteRun(){
         const userId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
         const teamId = nextMeta?.team_id || routeMeta?.team_id || null
         const assignmentId = teamId ? Number(teamId) : null
-        
-  await fetch(buildApiUrl('update_route_status.php'), {
-          method:'POST', headers:{
-            'Content-Type':'application/json',
+
+        await fetch(buildApiUrl('update_route_status.php'), {
+          method: 'POST', headers: {
+            'Content-Type': 'application/json',
             ...authHeaders()
           },
           body: JSON.stringify({ route_id: Number(id), status: 'completed', truck_full: false, note: null, user_id: userId })
@@ -795,28 +794,28 @@ export default function RouteRun(){
         // Only log task event if we have a valid assignment_id (team_id)
         if (assignmentId && assignmentId > 0) {
           await fetch(buildApiUrl('log_task_event.php'), {
-            method: 'POST', headers: { 
+            method: 'POST', headers: {
               'Content-Type': 'application/json',
               ...authHeaders()
             },
-            body: JSON.stringify({ 
-              assignment_id: assignmentId, 
-              event_type: 'route_submitted', 
+            body: JSON.stringify({
+              assignment_id: assignmentId,
+              event_type: 'route_submitted',
               user_id: userId,
-              after: { route_id: id, total_stops: total, visited } 
+              after: { route_id: id, total_stops: total, visited }
             })
           }).catch((e) => {
             console.warn('Failed to log task event (non-critical):', e)
           })
         }
 
-  await fetch(buildApiUrl('clear_route_active.php'), {
-          method: 'POST', headers: { 
+        await fetch(buildApiUrl('clear_route_active.php'), {
+          method: 'POST', headers: {
             'Content-Type': 'application/json',
             ...authHeaders()
           },
           body: JSON.stringify({ route_id: Number(id) })
-        }).catch(()=>{})
+        }).catch(() => { })
 
         stopTracking()
         const nextRoute = await findNextRoute(Number(id), nextMeta)
@@ -840,8 +839,8 @@ export default function RouteRun(){
 
   return (
     <>
-    <div className="fixed inset-0">
-      <style>{`
+      <div className="fixed inset-0">
+        <style>{`
         .custom-truck-icon {
           background: transparent !important;
           border: none !important;
@@ -850,218 +849,218 @@ export default function RouteRun(){
           pointer-events: none;
         }
       `}</style>
-      <MapContainer center={startCenter} zoom={15} className="h-full w-full" style={{ zIndex: 0 }}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-        {positions.length>0 && (
-          <Polyline positions={positions} color="#059669" weight={5} opacity={0.9} />
-        )}
-        {stops.map((s,i)=> (
-          <Marker key={i} position={[parseFloat(s.lat), parseFloat(s.lng)]}>
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium">{s.name || `Stop ${s.seq}`}</div>
-                <div className="text-gray-600">Seq: {s.seq}</div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-        {truckFull && (
-          <Marker position={[13.7817000, 123.0203000]}>
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium">🗑️ Mantila - Disposal Site</div>
-                <div className="text-gray-600">Temporary destination for waste disposal</div>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-        {currentPos && (
-          <Marker 
-            position={[currentPos.lat, currentPos.lng]}
-            icon={createTruckIcon(truckRotation)}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium">🚛 Truck Location</div>
-                <div className="text-gray-600">Heading: {Math.round(truckRotation)}°</div>
-                <div className="text-gray-600">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-        {routeLine.length > 1 ? (
-          <>
-            {/* Emerald green route line */}
-            <Polyline positions={routeLine} color="#059669" weight={10} opacity={0.92} />
-          </>
-        ) : (
-          currentPos && stops.length > 0 && stops[0].lat != null && stops[0].lng != null && (
-            <Polyline
-              positions={[[currentPos.lat, currentPos.lng], [parseFloat(stops[0].lat), parseFloat(stops[0].lng)]]}
-              color="#059669"
-              weight={6}
-              opacity={0.95}
-              dashArray="6,8"
-            />
-          )
-        )}
-        <FollowController position={currentPos} enabled={follow} />
-      </MapContainer>
-
-      {/* Overlay panel for route status */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(720px,92vw)] bg-white/10 backdrop-blur-[30px] border border-white/30 rounded-[26px] px-5 py-4 shadow-[0_18px_35px_rgba(15,23,42,0.2)]">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-700/70 font-semibold">Route status</p>
-            <p className="text-lg font-semibold text-slate-900 truncate max-w-[280px]">{routeName || 'Route'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs tracking-wide transition ${emergencyActive ? 'bg-red-600 text-white border-red-600 shadow shadow-red-200/70 animate-pulse' : 'bg-white/25 text-red-600 border-white/50 hover:bg-white/40'}`}
-              aria-label={emergencyActive ? 'Emergency active' : 'Report emergency'}
-              title={emergencyActive ? 'Emergency active' : 'Report emergency'}
-              onClick={() => setShowEmergencyForm(true)}
-            >
-              ▲
-            </button>
-            <button
-              className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-blue-600 border-white/50 hover:bg-white/40 transition"
-              aria-label="Re-route"
-              title="Re-route"
-              onClick={() => setTargetStop(stops.find(s => (s.status || 'pending') !== 'visited') || stops[0])}
-            >
-              ↺
-            </button>
-            <button
-              className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs transition ${follow ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-200' : 'bg-white/20 text-gray-600 border-white/50 hover:bg-white/40'}`}
-              aria-label={follow ? 'Disable follow' : 'Enable follow'}
-              title={follow ? 'Disable follow' : 'Enable follow'}
-              onClick={() => setFollow(v => !v)}
-            >
-              {follow ? '◉' : '◎'}
-            </button>
-            <button
-              className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-gray-600 border-white/50 hover:bg-white/40 transition"
-              aria-label="Go back"
-              title="Go back"
-              onClick={() => navigate(-1)}
-            >
-              ↩
-            </button>
-          </div>
-        </div>
-        <div className="text-[11px] text-gray-700 mb-3 flex flex-wrap gap-2">
-          {status === 'requesting' && 'Requesting location…'}
-          {status === 'tracking' && currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
-          {status === 'denied' && 'Location permission denied'}
-          {routeLoading && '• Calculating route…'}
-          {routeError && routeError !== 'routing failed' && `• ${routeError}`}
-          {truckFull && '• Rerouting to Mantila disposal site'}
-        </div>
-        {routeSummary && (
-          <div className="text-xs text-gray-800 mb-4 flex flex-wrap gap-4">
-            {formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}
-            {truckFull && ' (to Mantila)'}
-          </div>
-        )}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-[11px] text-gray-700 mb-2 uppercase tracking-wide">
-            <span>Progress</span>
-            <span>{visitedCount}/{totalStops} stops</span>
-          </div>
-          <div className="w-full bg-emerald-50 rounded-full h-2 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-full rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
-          </div>
-        </div>
-
-        {emergencyActive && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50 p-4 text-sm text-red-800 shadow">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-red-900">Emergency • Not operational</div>
-              {emergencyImpactLabel && (
-                <span className={`text-[11px] font-semibold px-3 py-1 rounded-full shadow ${emergencyState?.impact === 'cancel' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
-                  {emergencyImpactLabel}
-                </span>
-              )}
-            </div>
-            <div className="mt-2 text-lg font-semibold text-red-900">
-              {emergencyState?.type_label || emergencyState?.type || 'Emergency reported'}
-            </div>
-            {emergencyState?.notes && (
-              <p className="mt-1 text-xs text-red-800 whitespace-pre-wrap">{emergencyState.notes}</p>
-            )}
-            <p className="mt-2 text-[11px] text-red-700">
-              {formatTimestamp(emergencyState?.reported_at) || 'Just now'}
-              {emergencyState?.reported_name ? ` • Reporter: ${emergencyState.reported_name}` : ''}
-            </p>
-            {emergencyAttachmentUrl && (
-              <a
-                className="mt-3 inline-flex text-xs font-semibold text-red-900 underline"
-                href={emergencyAttachmentUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View attachment
-              </a>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-3 text-sm">
-          {truckFull ? (
-            <div className="p-3 bg-amber-100/80 rounded-lg border border-amber-300 shadow-inner">
-              <div className="font-medium text-amber-900 mb-2">⚠️ Truck Full - Disposal Required</div>
-              <div className="text-xs text-amber-800 mb-3">
-                Route has been rerouted to Mantila disposal site. Please dispose collected waste before continuing.
-                {isAtMantila && <span className="block mt-1 text-emerald-700 font-semibold">✓ You are at Mantila disposal site</span>}
-              </div>
-              <button
-                onClick={handleContinueCollection}
-                disabled={submitting}
-                className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
-              >
-                {submitting ? 'Resuming...' : 'Continue Collection'}
-              </button>
-              {!isAtMantila && (
-                <div className="text-xs text-amber-700 mt-2 text-center">
-                  Proceeding to Mantila disposal site...
+        <MapContainer center={startCenter} zoom={15} className="h-full w-full" style={{ zIndex: 0 }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+          {positions.length > 0 && (
+            <Polyline positions={positions} color="#059669" weight={5} opacity={0.9} />
+          )}
+          {stops.map((s, i) => (
+            <Marker key={i} position={[parseFloat(s.lat), parseFloat(s.lng)]}>
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-medium">{s.name || `Stop ${s.seq}`}</div>
+                  <div className="text-gray-600">Seq: {s.seq}</div>
                 </div>
-              )}
-            </div>
-          ) : (
+              </Popup>
+            </Marker>
+          ))}
+          {truckFull && (
+            <Marker position={[13.7817000, 123.0203000]}>
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-medium">🗑️ Mantila - Disposal Site</div>
+                  <div className="text-gray-600">Temporary destination for waste disposal</div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          {currentPos && (
+            <Marker
+              position={[currentPos.lat, currentPos.lng]}
+              icon={createTruckIcon(truckRotation)}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-medium">🚛 Truck Location</div>
+                  <div className="text-gray-600">Heading: {Math.round(truckRotation)}°</div>
+                  <div className="text-gray-600">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+          {routeLine.length > 1 ? (
             <>
-              <div className="p-4 bg-white/80 rounded-2xl border border-white/60 shadow-inner">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next stop</div>
-                {nextStop ? (
-                  <div className="text-sm text-gray-800 font-medium mt-1">
-                    Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-600 mt-1">No pending stops.</div>
+              {/* Emerald green route line */}
+              <Polyline positions={routeLine} color="#059669" weight={10} opacity={0.92} />
+            </>
+          ) : (
+            currentPos && stops.length > 0 && stops[0].lat != null && stops[0].lng != null && (
+              <Polyline
+                positions={[[currentPos.lat, currentPos.lng], [parseFloat(stops[0].lat), parseFloat(stops[0].lng)]]}
+                color="#059669"
+                weight={6}
+                opacity={0.95}
+                dashArray="6,8"
+              />
+            )
+          )}
+          <FollowController position={currentPos} enabled={follow} />
+        </MapContainer>
+
+        {/* Overlay panel for route status */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(720px,92vw)] bg-white/10 backdrop-blur-[30px] border border-white/30 rounded-[26px] px-5 py-4 shadow-[0_18px_35px_rgba(15,23,42,0.2)]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-700/70 font-semibold">Route status</p>
+              <p className="text-lg font-semibold text-slate-900 truncate max-w-[280px]">{routeName || 'Route'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs tracking-wide transition ${emergencyActive ? 'bg-red-600 text-white border-red-600 shadow shadow-red-200/70 animate-pulse' : 'bg-white/25 text-red-600 border-white/50 hover:bg-white/40'}`}
+                aria-label={emergencyActive ? 'Emergency active' : 'Report emergency'}
+                title={emergencyActive ? 'Emergency active' : 'Report emergency'}
+                onClick={() => setShowEmergencyForm(true)}
+              >
+                ▲
+              </button>
+              <button
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-blue-600 border-white/50 hover:bg-white/40 transition"
+                aria-label="Re-route"
+                title="Re-route"
+                onClick={() => setTargetStop(stops.find(s => (s.status || 'pending') !== 'visited') || stops[0])}
+              >
+                ↺
+              </button>
+              <button
+                className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs transition ${follow ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-200' : 'bg-white/20 text-gray-600 border-white/50 hover:bg-white/40'}`}
+                aria-label={follow ? 'Disable follow' : 'Enable follow'}
+                title={follow ? 'Disable follow' : 'Enable follow'}
+                onClick={() => setFollow(v => !v)}
+              >
+                {follow ? '◉' : '◎'}
+              </button>
+              <button
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-gray-600 border-white/50 hover:bg-white/40 transition"
+                aria-label="Go back"
+                title="Go back"
+                onClick={() => navigate(-1)}
+              >
+                ↩
+              </button>
+            </div>
+          </div>
+          <div className="text-[11px] text-gray-700 mb-3 flex flex-wrap gap-2">
+            {status === 'requesting' && 'Requesting location…'}
+            {status === 'tracking' && currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
+            {status === 'denied' && 'Location permission denied'}
+            {routeLoading && '• Calculating route…'}
+            {routeError && routeError !== 'routing failed' && `• ${routeError}`}
+            {truckFull && '• Rerouting to Mantila disposal site'}
+          </div>
+          {routeSummary && (
+            <div className="text-xs text-gray-800 mb-4 flex flex-wrap gap-4">
+              {formatDistance(routeSummary.distance)} • {formatDuration(routeSummary.duration)}
+              {truckFull && ' (to Mantila)'}
+            </div>
+          )}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[11px] text-gray-700 mb-2 uppercase tracking-wide">
+              <span>Progress</span>
+              <span>{visitedCount}/{totalStops} stops</span>
+            </div>
+            <div className="w-full bg-emerald-50 rounded-full h-2 overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-full rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+            </div>
+          </div>
+
+          {emergencyActive && (
+            <div className="mb-4 rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50 p-4 text-sm text-red-800 shadow">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-red-900">Emergency • Not operational</div>
+                {emergencyImpactLabel && (
+                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-full shadow ${emergencyState?.impact === 'cancel' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
+                    {emergencyImpactLabel}
+                  </span>
                 )}
               </div>
-            </>
+              <div className="mt-2 text-lg font-semibold text-red-900">
+                {emergencyState?.type_label || emergencyState?.type || 'Emergency reported'}
+              </div>
+              {emergencyState?.notes && (
+                <p className="mt-1 text-xs text-red-800 whitespace-pre-wrap">{emergencyState.notes}</p>
+              )}
+              <p className="mt-2 text-[11px] text-red-700">
+                {formatTimestamp(emergencyState?.reported_at) || 'Just now'}
+                {emergencyState?.reported_name ? ` • Reporter: ${emergencyState.reported_name}` : ''}
+              </p>
+              {emergencyAttachmentUrl && (
+                <a
+                  className="mt-3 inline-flex text-xs font-semibold text-red-900 underline"
+                  href={emergencyAttachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View attachment
+                </a>
+              )}
+            </div>
           )}
+
+          <div className="space-y-3 text-sm">
+            {truckFull ? (
+              <div className="p-3 bg-amber-100/80 rounded-lg border border-amber-300 shadow-inner">
+                <div className="font-medium text-amber-900 mb-2">⚠️ Truck Full - Disposal Required</div>
+                <div className="text-xs text-amber-800 mb-3">
+                  Route has been rerouted to Mantila disposal site. Please dispose collected waste before continuing.
+                  {isAtMantila && <span className="block mt-1 text-emerald-700 font-semibold">✓ You are at Mantila disposal site</span>}
+                </div>
+                <button
+                  onClick={handleContinueCollection}
+                  disabled={submitting}
+                  className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+                >
+                  {submitting ? 'Resuming...' : 'Continue Collection'}
+                </button>
+                {!isAtMantila && (
+                  <div className="text-xs text-amber-700 mt-2 text-center">
+                    Proceeding to Mantila disposal site...
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="p-4 bg-white/80 rounded-2xl border border-white/60 shadow-inner">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Next stop</div>
+                  {nextStop ? (
+                    <div className="text-sm text-gray-800 font-medium mt-1">
+                      Seq {nextStop.seq || '—'} • {nextStop.name || `Stop ${nextStop.seq || ''}`}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-600 mt-1">No pending stops.</div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <button
+              className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold tracking-wide transition ${emergencyActive ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : allVisited ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200/70' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              onClick={handleCompleteRoute}
+              disabled={submitting || emergencyActive}
+            >
+              {emergencyActive
+                ? 'Emergency active — submission disabled'
+                : submitting
+                  ? 'Submitting…'
+                  : allVisited
+                    ? 'Submit & mark route completed'
+                    : 'Waiting for collectors'}
+            </button>
+          </div>
         </div>
 
-        <div className="mt-4">
-          <button
-            className={`w-full px-4 py-3 rounded-2xl text-sm font-semibold tracking-wide transition ${emergencyActive ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : allVisited ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200/70' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-            onClick={handleCompleteRoute}
-            disabled={submitting || emergencyActive}
-          >
-            {emergencyActive
-              ? 'Emergency active — submission disabled'
-              : submitting
-                ? 'Submitting…'
-                : allVisited
-                  ? 'Submit & mark route completed'
-                  : 'Waiting for collectors'}
-          </button>
-        </div>
       </div>
-
-    </div>
 
       {showEmergencyForm && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 px-4 py-6">

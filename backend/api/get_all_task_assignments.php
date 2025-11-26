@@ -15,7 +15,7 @@ $database = new Database();
 $db = $database->connect();
 
 try {
-    // Fetch all collection teams with their details
+    // Fetch all collection teams with their details and daily route status
     $query = "SELECT 
         ct.team_id as assignment_id,
         ct.schedule_id,
@@ -30,12 +30,15 @@ try {
         t.truck_type,
         t.capacity as truck_capacity,
         t.status as truck_status,
-        u.username as driver_name
+        u.username as driver_name,
+        dr.id as route_id,
+        dr.status as route_status
     FROM collection_team ct
     LEFT JOIN collection_schedule cs ON ct.schedule_id = cs.schedule_id
     LEFT JOIN barangay b ON cs.barangay_id = b.barangay_id
     LEFT JOIN truck t ON ct.truck_id = t.truck_id
     LEFT JOIN user u ON ct.driver_id = u.user_id
+    LEFT JOIN daily_route dr ON ct.team_id = dr.team_id AND cs.scheduled_date = dr.date
     ORDER BY cs.scheduled_date DESC, cs.start_time DESC";
     
     $stmt = $db->prepare($query);
@@ -74,29 +77,30 @@ try {
             ];
         }
 
-        // Calculate overall assignment status based on all personnel responses
-        $overallStatus = 'pending';
-        $totalPersonnel = count($collectors) + ($driver ? 1 : 0);
-        $acceptedPersonnel = 0;
-        $declinedPersonnel = 0;
+        // Calculate task status based on daily_route data
+        $taskStatus = 'scheduled'; // Default status
         
-        // Count accepted and declined personnel
-        if ($driver && $driver['status'] === 'accepted') $acceptedPersonnel++;
-        if ($driver && $driver['status'] === 'declined') $declinedPersonnel++;
-        
-        foreach ($collectors as $collector) {
-            if ($collector['status'] === 'accepted') $acceptedPersonnel++;
-            if ($collector['status'] === 'declined') $declinedPersonnel++;
-        }
-        
-        // Determine overall status
-        if ($totalPersonnel > 0) {
-            if ($declinedPersonnel > 0) {
-                $overallStatus = 'declined';
-            } elseif ($acceptedPersonnel === $totalPersonnel) {
-                $overallStatus = 'accepted';
-            } else {
-                $overallStatus = 'pending';
+        if ($row['route_status']) {
+            $routeStatus = strtolower($row['route_status']);
+            
+            // Map route status to task status
+            if ($routeStatus === 'emergency') {
+                $taskStatus = 'emergency';
+            }
+            elseif ($routeStatus === 'in_progress') {
+                $taskStatus = 'in_progress';
+            }
+            elseif ($routeStatus === 'completed') {
+                $taskStatus = 'completed';
+            }
+            elseif ($routeStatus === 'cancelled') {
+                $taskStatus = 'cancelled';
+            }
+            elseif ($routeStatus === 'missed') {
+                $taskStatus = 'missed';
+            }
+            elseif ($routeStatus === 'scheduled') {
+                $taskStatus = 'scheduled';
             }
         }
 
@@ -112,7 +116,9 @@ try {
             'truck_type' => $row['truck_type'],
             'truck_capacity' => $row['truck_capacity'],
             'truck_status' => $row['truck_status'],
-            'status' => $overallStatus, // Use the calculated overall status
+            'status' => $taskStatus, // Use the calculated task status from daily_route
+            'route_id' => $row['route_id'],
+            'route_status' => $row['route_status'],
         ];
     }
     

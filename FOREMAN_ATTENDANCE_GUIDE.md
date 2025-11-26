@@ -11,7 +11,7 @@ Run the SQL migration to create the attendance table:
 
 ```sql
 -- Run this in phpMyAdmin or MySQL command line
-SOURCE c:\xampp\htdocs\Capstoneee\add_attendance_table.sql;
+SOURCE c:\xampp\htdocs\kolektrash\add_attendance_table.sql;
 ```
 
 Or manually execute the SQL in phpMyAdmin:

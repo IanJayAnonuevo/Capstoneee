@@ -127,7 +127,7 @@ export default function SignUp({ onLoginClick } = {}) {
   const totalSteps = steps.length
 
   const handleGoToLogin = useCallback(() => {
-    const base = window.location.pathname.startsWith('/Capstoneee') ? '/Capstoneee' : ''
+    const base = window.location.pathname.startsWith('/kolektrash') ? '/kolektrash' : ''
     const loginUrl = `${base}/login`
 
     setFeedbackModal(prev => ({ ...prev, open: false }))
