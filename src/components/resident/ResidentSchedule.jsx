@@ -449,27 +449,29 @@ export default function ResidentSchedule() {
               )}
             </div>
             <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-3">
-              <label className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white text-sm">
-                <FiFilter className="text-green-600" />
-                <select
-                  value={selectedCluster}
-                  onChange={(e) => handleClusterChange(e.target.value)}
-                  className="bg-transparent focus:outline-none text-gray-800"
-                >
-                  {clusters.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
+              <div className="relative">
+                <label className="flex items-center gap-2 border border-gray-300 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-green-500 transition-colors cursor-pointer">
+                  <FiFilter className="text-green-600 flex-shrink-0" />
+                  <select
+                    value={selectedCluster}
+                    onChange={(e) => handleClusterChange(e.target.value)}
+                    className="bg-transparent focus:outline-none text-gray-800 font-medium cursor-pointer pr-2 min-w-[140px]"
+                  >
+                    {clusters.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="text-gray-400 flex-shrink-0" />
+                </label>
+              </div>
               <button
                 type="button"
                 onClick={handleToggleMyBarangay}
                 disabled={!normalizedBarangay}
-                className={`px-3 py-2 sm:px-4 rounded-xl text-sm font-semibold transition-colors border ${
-                  showMyBarangayOnly
+                className={`px-3 py-2 sm:px-4 rounded-xl text-sm font-semibold transition-colors border ${showMyBarangayOnly
                     ? 'bg-green-600 text-white border-green-600 hover:bg-green-700'
                     : 'bg-white text-green-700 border-green-200 hover:bg-green-50'
-                } ${!normalizedBarangay ? 'cursor-not-allowed opacity-60' : ''}`}
+                  } ${!normalizedBarangay ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 {showMyBarangayOnly ? 'Showing My Barangay' : 'Focus on My Barangay'}
               </button>

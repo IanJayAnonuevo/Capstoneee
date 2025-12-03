@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FiMenu, FiX, FiBell } from 'react-icons/fi';
-import {
-  HomeIcon,
-  CalendarIcon,
-  MapIcon,
-  ClipboardDocumentCheckIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
-} from '@heroicons/react/24/outline';
+import { FiMenu, FiX, FiBell, FiClock, FiCalendar, FiMapPin, FiCheckSquare, FiSettings } from 'react-icons/fi';
+import { MdHome, MdLogout } from 'react-icons/md';
+import { IoChevronForward } from 'react-icons/io5';
 import { authService } from '../../services/authService';
 import { StatusProvider } from '../../contexts/StatusContext';
 import { calculateUnreadCount, dispatchNotificationCount } from '../../utils/notificationUtils';
@@ -17,11 +11,13 @@ import BrandedLoader from '../shared/BrandedLoader';
 import { useLoader } from '../../contexts/LoaderContext';
 
 const navigation = [
-  { name: 'Home', href: '/garbagecollector', icon: HomeIcon, showLoading: true },
-  { name: 'Collection Schedule', href: '/garbagecollector/schedule', icon: CalendarIcon, showLoading: true },
-  { name: 'Routes', href: '/garbagecollector/routes', icon: MapIcon, showLoading: true },
-  { name: 'Tasks', href: '/garbagecollector/tasks', icon: ClipboardDocumentCheckIcon, showLoading: true },
-  { name: 'Settings', href: '/garbagecollector/settings', icon: Cog6ToothIcon, showLoading: true },
+  { name: 'Home', icon: <MdHome className="w-6 h-6" />, href: '/garbagecollector', showLoading: true },
+  { name: 'Attendance', icon: <FiClock className="w-6 h-6" />, href: '/garbagecollector/attendance', showLoading: true },
+  { name: 'Collection Schedule', icon: <FiCalendar className="w-6 h-6" />, href: '/garbagecollector/schedule', showLoading: true },
+  { name: 'Routes', icon: <FiMapPin className="w-6 h-6" />, href: '/garbagecollector/routes', showLoading: true },
+  { name: 'Tasks', icon: <FiCheckSquare className="w-6 h-6" />, href: '/garbagecollector/tasks', showLoading: true },
+  { name: 'Settings', icon: <FiSettings className="w-6 h-6" />, href: '/garbagecollector/settings', showLoading: true },
+  { name: 'Logout', icon: <MdLogout className="w-6 h-6 text-red-500" />, action: () => { }, showLoading: false },
 ];
 
 export default function GarbageCollectorDashboard() {
@@ -239,7 +235,7 @@ export default function GarbageCollectorDashboard() {
     const urlParams = new URLSearchParams(window.location.search);
     const routeStarted = urlParams.get('route_started');
     const barangay = urlParams.get('barangay');
-    
+
     if (routeStarted) {
       console.log('Route started detected via URL - Route ID:', routeStarted, 'Barangay:', barangay);
       // Clear URL parameters for clean URL
@@ -354,7 +350,7 @@ export default function GarbageCollectorDashboard() {
         setAssignmentTeamIds(ids);
         try {
           localStorage.setItem(`collector:teamIds:${resolvedUserId}`, JSON.stringify(ids));
-        } catch (_) {}
+        } catch (_) { }
       } catch (error) {
         console.error('Failed to load collector assignments for auto-start:', error);
         try {
@@ -362,7 +358,7 @@ export default function GarbageCollectorDashboard() {
           if (Array.isArray(cached) && cached.length) {
             setAssignmentTeamIds((prev) => (prev.length ? prev : cached));
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     };
 
@@ -387,14 +383,14 @@ export default function GarbageCollectorDashboard() {
         if (stored && Number.isFinite(stored)) {
           return { routeId: Number(stored), startedAt: null };
         }
-      } catch (_) {}
+      } catch (_) { }
       return null;
     };
 
     const writeAutoRecord = (routeId, startedAt) => {
       try {
         localStorage.setItem(autoKey, JSON.stringify({ routeId, startedAt }));
-      } catch (_) {}
+      } catch (_) { }
     };
 
     const pollActiveRoutes = async () => {
@@ -529,14 +525,14 @@ export default function GarbageCollectorDashboard() {
 
   const confirmLogout = async () => {
     setShowLogoutModal(false);
-    
+
     // Call logout API to set online_status to offline
     const userId = localStorage.getItem('user_id');
     if (userId) {
       const { authService } = await import('../../services/authService');
       await authService.logout(parseInt(userId));
     }
-    
+
     // Clear user data from localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('user_id');
@@ -586,163 +582,163 @@ export default function GarbageCollectorDashboard() {
           className="hidden"
           onChange={handleAvatarChange}
         />
-      {/* Loading state */}
-      <BrandedLoader
-        visible={loading}
-        primaryText="Loading your dashboard…"
-        secondaryText="Getting your collector tools ready."
-        variant="login"
-      />
+        {/* Loading state */}
+        <BrandedLoader
+          visible={loading}
+          primaryText="Loading your dashboard…"
+          secondaryText="Getting your collector tools ready."
+          variant="login"
+        />
 
-      {/* Hamburger Menu Drawer (Mobile) */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setSidebarOpen(false)} />
-          <div className="relative bg-white w-[280px] max-w-[85%] h-full shadow-xl z-50 animate-fadeInLeft flex flex-col">
-            {/* Profile Section */}
-            <div className="bg-gradient-to-b from-green-800 to-green-700 px-4 py-6 flex items-center gap-3">
-              <div className="flex flex-col items-center gap-1">
+        {/* Hamburger Menu Drawer (Mobile) */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-40 flex">
+            <div className="fixed inset-0 bg-black bg-opacity-30" onClick={() => setSidebarOpen(false)} />
+            <div className="relative bg-white w-[320px] max-w-[88%] h-full shadow-2xl z-50 animate-fadeInLeft flex flex-col rounded-r-2xl overflow-hidden">
+              {/* Profile Section */}
+              <div className="bg-gradient-to-b from-green-800 to-green-700 px-5 pt-6 pb-5 relative">
                 <button
-                  type="button"
-                  onClick={handleAvatarClick}
-                  title="Change profile picture"
-                  className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-lg overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                  onClick={() => setSidebarOpen(false)}
+                  className="absolute right-3 top-3 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Close menu"
                 >
-                  {isAvatarUploading ? (
-                    <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
-                  ) : userProfile.avatarUrl ? (
-                    <img src={userProfile.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    <span className="text-green-800 font-bold text-lg">{userProfile.avatarInitial}</span>
-                  )}
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Change
-                  </span>
+                  <FiX className="w-5 h-5" />
                 </button>
-                {avatarUploadError ? (
-                  <p className="text-[11px] text-red-100 text-center leading-tight max-w-[6.5rem]">{avatarUploadError}</p>
-                ) : isAvatarUploading ? (
-                  <p className="text-[11px] text-green-100 leading-tight">Uploading…</p>
-                ) : activeCooldownMessage ? (
-                  <p className="text-[11px] text-green-100 text-center leading-tight max-w-[6.5rem]">{activeCooldownMessage}</p>
-                ) : null}
+                <div className="flex items-center text-left gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAvatarClick}
+                    title="Change profile picture"
+                    className="relative w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shrink-0 shadow-xl overflow-hidden group focus:outline-none focus:ring-2 focus:ring-green-200 focus:ring-offset-2 focus:ring-offset-green-700"
+                  >
+                    {isAvatarUploading ? (
+                      <span className="w-6 h-6 rounded-full border-2 border-green-600 border-t-transparent animate-spin" />
+                    ) : userProfile.avatarUrl ? (
+                      <img src={userProfile.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <span className="text-green-800 font-bold text-lg">{userProfile.avatarInitial}</span>
+                    )}
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-white bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">Change</span>
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-white font-semibold text-[15px] leading-tight truncate w-full">{userProfile.name}</h2>
+                    <p className="mt-0.5 text-emerald-50/90 text-[12px]">{userProfile.role}</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-white font-semibold text-base truncate">{userProfile.name}</h2>
-                <p className="text-green-100 text-sm">{userProfile.role}</p>
-              </div>
-              <button 
-                onClick={() => setSidebarOpen(false)}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
-            {/* Navigation Menu */}
-            <nav className="flex-1 overflow-y-auto py-4 px-2">
-              <div className="space-y-1">
-                {navigation.map((item) => {
-                  const isActive = location.pathname === item.href || 
-                    (item.href !== '/garbagecollector' && location.pathname.startsWith(item.href));
-                  return (
-                    <button
-                      key={item.name}
-                      className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
-                        ${isActive ? 'bg-green-50/80 text-green-900 border-2 border-green-700' : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'}
+
+              {/* Navigation Menu */}
+              <nav className="flex-1 overflow-y-auto py-4 px-3 bg-gradient-to-b from-white to-emerald-50/30">
+                <div className="space-y-2">
+                  {navigation.filter(l => l.name !== 'Logout').map((item) => {
+                    const isActive = item.href && location.pathname === item.href;
+                    return (
+                      <button
+                        key={item.name}
+                        className={`group flex items-center w-full px-4 py-3 rounded-xl text-left transition-all border
+                        ${isActive
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow'
+                            : 'bg-white hover:bg-emerald-50 text-emerald-900 border-emerald-100'}
                       `}
-                      onClick={() => handleNavigation(item.href, { closeSidebar: true, skipLoading: item.showLoading === false })}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="ml-3 text-sm font-medium">{item.name}</span>
-                    </button>
-                  );
-                })}
-                
-                {/* Logout Button */}
+                        onClick={() => handleNavigation(item.href, {
+                          closeSidebar: true,
+                          skipLoading: item.showLoading === false,
+                          customAction: item.action
+                        })}
+                      >
+                        <span className={`flex items-center justify-center w-9 h-9 rounded-lg mr-3 ${isActive ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200'}`}>
+                          {item.icon}
+                        </span>
+                        <span className={`text-sm font-semibold flex-1 text-left ${isActive ? 'text-white' : 'text-emerald-900'}`}>{item.name}</span>
+                        <IoChevronForward className={`w-4 h-4 ${isActive ? 'text-white' : 'text-emerald-400 group-hover:text-emerald-600'}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
+
+              {/* Logout */}
+              <div className="px-3 pb-4 pt-2 bg-white border-t border-emerald-100">
                 <button
-                  className="flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 mt-4"
-                  onClick={() => {
-                    handleNavigation(undefined, {
-                      closeSidebar: true,
-                      skipLoading: true,
-                      customAction: () => setShowLogoutModal(true)
-                    });
-                  }}
+                  className="flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors bg-red-50 hover:bg-red-100 text-red-700 border border-red-100"
+                  onClick={() => handleNavigation(undefined, { closeSidebar: true, skipLoading: true, customAction: () => setShowLogoutModal(true) })}
                 >
-                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                  <span className="ml-3 text-sm font-medium">Logout</span>
+                  <span className="flex items-center justify-center w-9 h-9 rounded-lg mr-3 bg-red-100 text-red-600">
+                    {navigation.find(n => n.name === 'Logout')?.icon}
+                  </span>
+                  <span className="text-sm font-semibold">Logout</span>
+                  <IoChevronForward className="w-4 h-4 ml-auto text-red-400" />
                 </button>
               </div>
-            </nav>
-          </div>
-        </div>
-      )}
-      
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full flex flex-col items-center animate-fadeIn">
-            <h2 className="text-2xl font-bold text-emerald-700 mb-4">Confirm Logout</h2>
-            <p className="mb-6 text-gray-700 text-center">Are you sure you want to log out?</p>
-            <div className="flex gap-4 w-full">
-              <button
-                className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition focus:outline-emerald-700 focus:ring-2 focus:ring-red-200"
-                onClick={confirmLogout}
-              >
-                Yes, Logout
-              </button>
-              <button
-                className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-emerald-700 font-semibold shadow hover:bg-gray-50 transition focus:outline-emerald-700 focus:ring-2 focus:ring-emerald-100"
-                onClick={cancelLogout}
-              >
-                Cancel
-              </button>
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Top Bar */}
-      <div className="flex items-center justify-between bg-green-800 px-4 py-3 sticky top-0 z-10">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-          className="p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
-          style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
-        >
-          <FiMenu className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
-        </button>
-        <span 
-          className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
-          onClick={() => handleNavigation('/garbagecollector')}
-        >
-          KolekTrash
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            aria-label="Notifications"
-            className="relative p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
-            style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
-            onClick={() => handleNavigation('/garbagecollector/notifications')}
-          >
-            <FiBell className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
-            {unreadNotifications > 0 && (
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold border border-white">{unreadNotifications}</span>
-            )}
-          </button>
-        </div>
-      </div>
-      
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col w-full">
-        <Outlet />
-      </div>
+        )}
 
-      {/* Footer */}
-      <footer className="mt-auto text-xs text-center text-white bg-green-800 py-2 w-full">
-        © 2025 Municipality of Sipocot – MENRO. All rights reserved.
-      </footer>
+        {/* Logout Confirmation Modal */}
+        {showLogoutModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 max-w-sm w-full flex flex-col items-center animate-fadeIn">
+              <h2 className="text-2xl font-bold text-emerald-700 mb-4">Confirm Logout</h2>
+              <p className="mb-6 text-gray-700 text-center">Are you sure you want to log out?</p>
+              <div className="flex gap-4 w-full">
+                <button
+                  className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold shadow hover:bg-red-700 transition focus:outline-emerald-700 focus:ring-2 focus:ring-red-200"
+                  onClick={confirmLogout}
+                >
+                  Yes, Logout
+                </button>
+                <button
+                  className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-emerald-700 font-semibold shadow hover:bg-gray-50 transition focus:outline-emerald-700 focus:ring-2 focus:ring-emerald-100"
+                  onClick={cancelLogout}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Bar */}
+        <div className="flex items-center justify-between bg-green-800 px-4 py-3 sticky top-0 z-10">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            className="p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
+            style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
+          >
+            <FiMenu className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
+          </button>
+          <span
+            className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
+            onClick={() => handleNavigation('/garbagecollector')}
+          >
+            KolekTrash
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Notifications"
+              className="relative p-2 rounded-full text-white hover:text-green-200 focus:outline-none transition-colors duration-150 group"
+              style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}
+              onClick={() => handleNavigation('/garbagecollector/notifications')}
+            >
+              <FiBell className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
+              {unreadNotifications > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold border border-white">{unreadNotifications}</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col w-full">
+          <Outlet />
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-auto text-xs text-center text-white bg-green-800 py-2 w-full">
+          © 2025 Municipality of Sipocot – MENRO. All rights reserved.
+        </footer>
       </div>
     </StatusProvider>
   );

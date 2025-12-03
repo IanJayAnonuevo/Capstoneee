@@ -319,7 +319,7 @@ export default function RouteRun() {
 
   async function loadStops(routeId) {
     try {
-      const res = await fetch(buildApiUrl(`get_route_details.php?id=${routeId}`), { headers: { ...authHeaders() } })
+      const res = await fetch(buildApiUrl(`get_route_details.php?route_id=${routeId}`), { headers: { ...authHeaders() } })
       const data = await res.json()
       if (data?.success) {
         const routeInfo = data.route || {}
@@ -1055,7 +1055,7 @@ export default function RouteRun() {
                   ? 'Submitting…'
                   : allVisited
                     ? 'Submit & mark route completed'
-                    : 'Waiting for collectors'}
+                    : 'In Progress'}
             </button>
           </div>
         </div>

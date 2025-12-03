@@ -80,6 +80,17 @@ export default function PastTasks() {
         return status.toUpperCase();
     };
 
+    // Get status color
+    const getStatusColor = (status) => {
+        if (!status) return 'bg-gray-400';
+        const s = status.toLowerCase();
+        if (s === 'scheduled') return 'bg-blue-500';
+        if (s === 'in_progress' || s === 'in progress') return 'bg-yellow-500';
+        if (s === 'completed') return 'bg-green-500';
+        if (s === 'emergency') return 'bg-red-600';
+        return 'bg-gray-400';
+    };
+
     // Process data for the main table
     const workerTasks = {};
 
@@ -216,9 +227,35 @@ export default function PastTasks() {
             {/* Printable Area Wrapper */}
             <div id="printable-area">
                 {/* Date Header */}
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm border border-gray-200 w-fit mb-6">
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-md shadow-sm border border-gray-200 w-fit mb-4">
                     <span className="font-bold text-gray-700 text-sm tracking-wide">DATE: {displayDate}</span>
                     <FiCalendar className="text-gray-500 w-4 h-4" />
+                </div>
+
+                {/* Status Legend */}
+                <div className="bg-white px-4 py-3 rounded-md shadow-sm border border-gray-200 mb-6 print:hidden">
+                    <div className="flex items-center gap-6 flex-wrap">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <span className="text-xs text-gray-700">Scheduled</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <span className="text-xs text-gray-700">In Progress</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span className="text-xs text-gray-700">Completed</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-600"></div>
+                            <span className="text-xs text-gray-700">Emergency</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                            <span className="text-xs text-gray-700">Cancelled</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Main Table */}
@@ -251,11 +288,15 @@ export default function PastTasks() {
                                         <td className="p-4 text-center text-gray-600 border-r border-gray-100">{worker.designation}</td>
                                         <td className="p-0">
                                             <div className="flex h-full">
-                                                <div className="w-1/2 p-4 text-center flex items-center justify-center border-r border-gray-100 text-gray-800">
-                                                    {worker.amStatus}
+                                                <div className="w-1/2 p-4 text-center flex items-center justify-center border-r border-gray-100">
+                                                    {worker.amStatus && (
+                                                        <div className={`w-4 h-4 rounded-full ${getStatusColor(worker.amStatus)}`} title={worker.amStatus}></div>
+                                                    )}
                                                 </div>
-                                                <div className="w-1/2 p-4 text-center flex items-center justify-center text-gray-800">
-                                                    {worker.pmStatus}
+                                                <div className="w-1/2 p-4 text-center flex items-center justify-center">
+                                                    {worker.pmStatus && (
+                                                        <div className={`w-4 h-4 rounded-full ${getStatusColor(worker.pmStatus)}`} title={worker.pmStatus}></div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -293,68 +334,105 @@ export default function PastTasks() {
             {/* Summary Section - Hidden in Print */}
             <div className="print:hidden">
                 <h2 className="text-lg font-bold text-gray-800 mb-4">Summary</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    {/* Driver Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="text-gray-600 font-medium mb-4">Driver</div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="border-r border-gray-100 pr-4">
-                                <div className="text-xs text-gray-500 mb-2 text-center">AM</div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                                        <FaUserTie className="w-5 h-5" />
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                                <th className="p-4 text-left font-semibold text-gray-700 border-r border-gray-200">Status</th>
+                                <th className="p-0 text-center font-semibold text-gray-700 border-r border-gray-200" colSpan="2">
+                                    <div className="p-2 border-b border-gray-200">Driver</div>
+                                    <div className="flex">
+                                        <div className="w-1/2 p-2 border-r border-gray-200 text-sm">AM</div>
+                                        <div className="w-1/2 p-2 text-sm">PM</div>
                                     </div>
-                                    <div>
-                                        <div className="text-xl font-bold text-gray-800">{summary.driver.amPending}</div>
-                                        <div className="text-xs text-gray-500">Pending/Tasks</div>
+                                </th>
+                                <th className="p-0 text-center font-semibold text-gray-700" colSpan="2">
+                                    <div className="p-2 border-b border-gray-200">Collector</div>
+                                    <div className="flex">
+                                        <div className="w-1/2 p-2 border-r border-gray-200 text-sm">AM</div>
+                                        <div className="w-1/2 p-2 text-sm">PM</div>
                                     </div>
-                                </div>
-                            </div>
-                            <div className="pl-4">
-                                <div className="text-xs text-gray-500 mb-2 text-center">PM</div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
-                                        <FiCheckCircle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-xl font-bold text-gray-800">{summary.driver.pmCompleted}</div>
-                                        <div className="text-xs text-gray-500">Completed Tasks</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Collector Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="text-gray-600 font-medium mb-4">Collector</div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="border-r border-gray-100 pr-4">
-                                <div className="text-xs text-gray-500 mb-2 text-center">AM</div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                                        <FaUserFriends className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-xl font-bold text-gray-800">{summary.collector.amPending}</div>
-                                        <div className="text-xs text-gray-500">Pending/Tasks</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="pl-4">
-                                <div className="text-xs text-gray-500 mb-2 text-center">PM</div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
-                                        <FiCheckCircle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div className="text-xl font-bold text-gray-800">{summary.collector.pmCompleted}</div>
-                                        <div className="text-xs text-gray-500">Completed Tasks</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="border-b border-gray-100">
+                                <td className="p-4 text-gray-700 font-medium border-r border-gray-200">Total Scheduled</td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.amStatus === 'SCHEDULED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-200">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.pmStatus === 'SCHEDULED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.amStatus === 'SCHEDULED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.pmStatus === 'SCHEDULED').length}
+                                </td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                                <td className="p-4 text-gray-700 font-medium border-r border-gray-200">Total In Progress</td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.amStatus === 'IN PROGRESS').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-200">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.pmStatus === 'IN PROGRESS').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.amStatus === 'IN PROGRESS').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.pmStatus === 'IN PROGRESS').length}
+                                </td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                                <td className="p-4 text-gray-700 font-medium border-r border-gray-200">Total Completed</td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.amStatus === 'COMPLETED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-200">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.pmStatus === 'COMPLETED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.amStatus === 'COMPLETED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.pmStatus === 'COMPLETED').length}
+                                </td>
+                            </tr>
+                            <tr className="border-b border-gray-100">
+                                <td className="p-4 text-gray-700 font-medium border-r border-gray-200">Total Emergency</td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.amStatus === 'EMERGENCY').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-200">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.pmStatus === 'EMERGENCY').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.amStatus === 'EMERGENCY').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.pmStatus === 'EMERGENCY').length}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="p-4 text-gray-700 font-medium border-r border-gray-200">Total Cancelled</td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.amStatus === 'CANCELLED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-200">
+                                    {workerList.filter(w => w.designation === 'Driver' && w.pmStatus === 'CANCELLED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800 border-r border-gray-100">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.amStatus === 'CANCELLED').length}
+                                </td>
+                                <td className="p-4 text-center text-gray-800">
+                                    {workerList.filter(w => w.designation === 'Collector' && w.pmStatus === 'CANCELLED').length}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div className="flex justify-end gap-4">

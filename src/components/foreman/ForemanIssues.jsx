@@ -40,6 +40,12 @@ export default function ForemanIssues() {
   const [photoLoadError, setPhotoLoadError] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  // Multi-select states
+  const [selectedIssues, setSelectedIssues] = useState(new Set());
+  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
   const backendBaseUrl = API_BASE_URL.replace(/\/api\/?$/, '/');
 
   useEffect(() => {
@@ -154,6 +160,9 @@ export default function ForemanIssues() {
       const params = new URLSearchParams();
       if (filterStatus !== 'all') {
         params.append('status', filterStatus);
+      } else {
+        // When showing 'all', exclude closed issues
+        params.append('exclude_closed', 'true');
       }
 
       const response = await axios.get(`${buildApiUrl('get_issues.php')}?${params}`, {
@@ -311,6 +320,95 @@ export default function ForemanIssues() {
     report.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Multi-select handlers
+  const handleLongPressStart = (report) => {
+    const timer = setTimeout(() => {
+      setIsSelectionMode(true);
+      toggleSelection(report.id);
+    }, 500);
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const toggleSelection = (issueId) => {
+    setSelectedIssues(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(issueId)) {
+        newSet.delete(issueId);
+      } else {
+        newSet.add(issueId);
+      }
+      if (newSet.size === 0) {
+        setIsSelectionMode(false);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIssues.size === filteredReports.length) {
+      setSelectedIssues(new Set());
+      setIsSelectionMode(false);
+    } else {
+      const allIds = new Set(filteredReports.map(report => report.id));
+      setSelectedIssues(allIds);
+      setIsSelectionMode(true);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIssues.size === 0) return;
+    setShowBulkDeleteModal(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      setUpdatingStatus(true);
+      setShowBulkDeleteModal(false);
+
+      // Delete from database
+      const deletePromises = Array.from(selectedIssues).map(issueId =>
+        axios.post(
+          buildApiUrl('delete_issue_report.php'),
+          { issue_id: issueId },
+          {
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          }
+        )
+      );
+
+      await Promise.all(deletePromises);
+
+      // Refresh the list
+      await fetchReports();
+
+      setSelectedIssues(new Set());
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+      setError('Failed to delete some issues');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleCardClick = (report, event) => {
+    if (isSelectionMode) {
+      toggleSelection(report.id);
+    } else if (event.ctrlKey || event.metaKey) {
+      setIsSelectionMode(true);
+      toggleSelection(report.id);
+    } else {
+      openPhotoPreview(report);
+    }
+  };
+
   const StatusUpdateModal = () => {
     if (!selectedReport) return null;
 
@@ -373,9 +471,7 @@ export default function ForemanIssues() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                 >
                   <option value="pending">Pending</option>
-                  <option value="active">Active</option>
                   <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
                 </select>
               </div>
 
@@ -476,7 +572,25 @@ export default function ForemanIssues() {
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {['all', 'pending', 'active', 'resolved', 'closed'].map(status => (
+            {isSelectionMode && (
+              <>
+                <button
+                  onClick={handleSelectAll}
+                  className="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors bg-blue-600 text-white shadow-md"
+                >
+                  {selectedIssues.size === filteredReports.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={selectedIssues.size === 0 || updatingStatus}
+                  className="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors bg-red-600 text-white shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <FiX className="w-4 h-4" />
+                  Delete ({selectedIssues.size})
+                </button>
+              </>
+            )}
+            {['all', 'pending', 'resolved'].map(status => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
@@ -541,9 +655,30 @@ export default function ForemanIssues() {
             {filteredReports.map((report) => {
               const statusInfo = getStatusInfo(report.status);
               const StatusIcon = statusInfo.icon;
+              const isSelected = selectedIssues.has(report.id);
 
               return (
-                <div key={report.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
+                <div
+                  key={report.id}
+                  onClick={(e) => handleCardClick(report, e)}
+                  onTouchStart={() => handleLongPressStart(report)}
+                  onTouchEnd={handleLongPressEnd}
+                  onMouseDown={() => handleLongPressStart(report)}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                  className={`bg-white rounded-xl p-4 shadow-sm border-2 flex flex-col cursor-pointer transition-all relative ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-100'
+                    }`}
+                >
+                  {isSelectionMode && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-gray-300'
+                        }`}>
+                        {isSelected && (
+                          <FiCheckCircle className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
@@ -573,25 +708,35 @@ export default function ForemanIssues() {
                       <FiCalendar className="w-3 h-3 mr-1" />
                       {formatDate(report.created_at)}
                     </span>
-                    <div className="flex gap-2">
-                      {(report.photo_url || report.resolvedPhotoUrl) && (
+                    {!isSelectionMode && (
+                      <div className="flex gap-2">
+                        {(report.photo_url || report.resolvedPhotoUrl) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPhotoPreview(report);
+                            }}
+                            className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                          >
+                            <FiImage className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => openPhotoPreview(report)}
-                          className="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedReport(report);
+                            setShowModal(true);
+                          }}
+                          disabled={report.status === 'resolved'}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-lg ${report.status === 'resolved'
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
                         >
-                          <FiImage className="w-4 h-4" />
+                          Manage
                         </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setSelectedReport(report);
-                          setShowModal(true);
-                        }}
-                        className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
-                      >
-                        Manage
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -635,6 +780,38 @@ export default function ForemanIssues() {
       )}
 
       {showModal && <StatusUpdateModal />}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiX className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete {selectedIssues.size} Issue(s)?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete {selectedIssues.size} issue{selectedIssues.size > 1 ? 's' : ''}? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowBulkDeleteModal(false)}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmBulkDelete}
+                  disabled={updatingStatus}
+                  className="flex-1 py-3 px-4 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200 disabled:opacity-50"
+                >
+                  {updatingStatus ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

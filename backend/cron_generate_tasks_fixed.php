@@ -63,7 +63,16 @@ try {
     
     // If running via CLI, use localhost
     if ($isCLI) {
-    $apiUrl = 'http://localhost/kolektrash/backend/api/generate_tasks_from_predefined.php';
+        // Check if we are in production (Hostinger) based on file path or hostname
+        // If the script is running from /home/uXXXX/domains/... then it's likely production
+        // In production (public_html), the path is usually just /backend/api/...
+        
+        // Simple check: if the directory doesn't contain 'xampp', assume production-like structure
+        if (strpos(__DIR__, 'xampp') === false) {
+            $apiUrl = 'http://localhost/backend/api/generate_tasks_from_predefined.php';
+        } else {
+            $apiUrl = 'http://localhost/kolektrash/backend/api/generate_tasks_from_predefined.php';
+        }
     }
     
     writeLog("Calling API: $apiUrl");
@@ -105,18 +114,35 @@ try {
     if ($result['success']) {
         $total = $result['total_generated'] ?? 0;
         $skipped = $result['skipped_duplicates'] ?? 0;
+        $trucksAvailable = $result['trucks_available'] ?? 'N/A';
+        $skippedTrucks = count($result['skipped_insufficient_trucks'] ?? []);
+        $notificationsSent = $result['cancellation_notifications_sent'] ?? 0;
+        
         writeLog("SUCCESS: Generated $total tasks, Skipped $skipped duplicates");
+        writeLog("Trucks Available: $trucksAvailable");
+        if ($skippedTrucks > 0) {
+            writeLog("WARNING: Skipped $skippedTrucks schedules due to insufficient trucks");
+            writeLog("Cancellation notifications sent: $notificationsSent");
+        }
         
         if ($isCLI) {
             echo "Task generation completed successfully!\n";
             echo "Generated: $total tasks\n";
             echo "Skipped: $skipped duplicates\n";
+            echo "Trucks Available: $trucksAvailable\n";
+            if ($skippedTrucks > 0) {
+                echo "⚠️ Skipped (Insufficient Trucks): $skippedTrucks\n";
+                echo "📧 Notifications Sent: $notificationsSent\n";
+            }
         } else {
             echo json_encode([
                 'success' => true,
                 'message' => "Generated $total tasks successfully",
                 'total_generated' => $total,
-                'skipped_duplicates' => $skipped
+                'skipped_duplicates' => $skipped,
+                'trucks_available' => $trucksAvailable,
+                'skipped_insufficient_trucks' => $skippedTrucks,
+                'cancellation_notifications_sent' => $notificationsSent
             ]);
         }
     } else {

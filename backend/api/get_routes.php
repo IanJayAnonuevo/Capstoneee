@@ -1,95 +1,246 @@
 <?php
-require_once __DIR__ . '/_bootstrap.php';
-header('Access-Control-Allow-Origin: *');
+// Suppress all errors and warnings to prevent HTML output
+error_reporting(0);
+ini_set('display_errors', 0);
+
+// Start output buffering to catch any unexpected output
+ob_start();
+
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Max-Age: 86400');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    ob_end_clean();
+    http_response_code(200);
+    exit();
+}
+
 require_once '../config/database.php';
 
 try {
-  $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
-  $role = isset($_GET['role']) ? strtolower(trim($_GET['role'])) : null; // 'driver' | 'collector' | null
-  $userId = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
-  $db = (new Database())->connect();
+    $database = new Database();
+    $db = $database->connect();
 
-  // Check if daily_route table exists
-  $tableCheck = $db->query("SHOW TABLES LIKE 'daily_route'")->fetch();
-  if (!$tableCheck) {
-    echo json_encode([ 'success' => false, 'message' => 'daily_route table does not exist' ]);
-    exit();
-  }
+    // Get filter parameters
+    $status = isset($_GET['status']) && $_GET['status'] !== 'all' ? $_GET['status'] : null;
+    $barangay = isset($_GET['barangay']) && $_GET['barangay'] !== 'all' ? $_GET['barangay'] : null;
+    $team_id = isset($_GET['team_id']) && $_GET['team_id'] !== 'all' ? intval($_GET['team_id']) : null;
+    $date = isset($_GET['date']) && !empty($_GET['date']) ? $_GET['date'] : null;
+    $search = isset($_GET['search']) && !empty($_GET['search']) ? $_GET['search'] : null;
+    $include_counts = isset($_GET['include_counts']) && $_GET['include_counts'] === 'true';
+    $user_id = isset($_GET['user_id']) && !empty($_GET['user_id']) ? $_GET['user_id'] : null;
+    $role = isset($_GET['role']) && !empty($_GET['role']) ? $_GET['role'] : null;
 
-  // Get table columns to avoid selecting non-existent columns
-  $columns = $db->query("SHOW COLUMNS FROM daily_route")->fetchAll(PDO::FETCH_COLUMN);
-  $selectFields = [];
-  if (in_array('id', $columns)) $selectFields[] = 'dr.id';
-  if (in_array('date', $columns)) $selectFields[] = 'dr.date';
-  if (in_array('start_time', $columns)) $selectFields[] = 'dr.start_time';
-  if (in_array('end_time', $columns)) $selectFields[] = 'dr.end_time';
-  if (in_array('barangay_id', $columns)) $selectFields[] = 'dr.barangay_id';
-  if (in_array('barangay_name', $columns)) $selectFields[] = 'dr.barangay_name';
-  if (in_array('cluster_id', $columns)) $selectFields[] = 'dr.cluster_id';
-  if (in_array('truck_id', $columns)) $selectFields[] = 'dr.truck_id';
-  if (in_array('team_id', $columns)) $selectFields[] = 'dr.team_id';
-  if (in_array('status', $columns)) $selectFields[] = 'dr.status';
-  
-  if (empty($selectFields)) {
-    echo json_encode([ 'success' => false, 'message' => 'daily_route table has no recognizable columns' ]);
-    exit();
-  }
+    // Build WHERE clause
+    $where_conditions = [];
+    $params = [];
+    
+    // Determine if we need to join collection_team for user filtering
+    $need_team_join = ($user_id && $role);
 
-  // Base query
-  $selectList = implode(', ', $selectFields);
-  $sql = "SELECT {$selectList}, t.plate_num, ct.team_id,
-                 COUNT(drs.id) AS total_stops,
-                 COALESCE(SUM(CASE WHEN drs.status IN ('visited','completed','done') THEN 1 ELSE 0 END), 0) AS completed_stops
-    FROM daily_route dr
-    LEFT JOIN truck t ON dr.truck_id = t.truck_id
-    LEFT JOIN collection_team ct ON dr.team_id = ct.team_id
-    LEFT JOIN daily_route_stop drs ON drs.daily_route_id = dr.id
-    WHERE dr.date = :d";
-
-  $params = [ ':d' => $date ];
-
-  // Apply optional acceptance filtering for personnel 'My Routes'
-  // Modified: Show routes assigned to driver even if status is pending (so they can see and accept)
-  if ($userId && ($role === 'driver' || $role === 'collector')) {
-    if ($role === 'driver') {
-      // Show routes for this driver (regardless of acceptance status, so they can see pending assignments)
-      // This allows drivers to see routes assigned to them even if not yet accepted
-      $sql .= " AND ct.driver_id = :uid";
-      $params[':uid'] = $userId;
-    } else if ($role === 'collector') {
-      // Show routes for teams where this collector is a member (regardless of acceptance status)
-      $sql .= " AND EXISTS (
-                  SELECT 1 FROM collection_team_member ctm
-                  WHERE ctm.team_id = dr.team_id
-                    AND ctm.collector_id = :uid
-                )";
-      $params[':uid'] = $userId;
+    if ($status) {
+        $where_conditions[] = "dr.status = ?";
+        $params[] = $status;
     }
-  }
 
-  $groupByFields = $selectFields;
-  $groupByFields[] = 't.plate_num';
-  $groupByFields[] = 'ct.team_id';
-  $groupByFields = array_values(array_unique($groupByFields));
-  $sql .= " GROUP BY " . implode(', ', $groupByFields) . " ORDER BY dr.start_time";
+    if ($barangay) {
+        $where_conditions[] = "dr.barangay_name = ?";
+        $params[] = $barangay;
+    }
 
-  // Debug logging (can be removed in production)
-  error_log("get_routes.php - Date: $date, Role: $role, UserId: $userId");
-  error_log("get_routes.php - SQL: " . $sql);
-  error_log("get_routes.php - Params: " . json_encode($params));
-  
-  $stmt = $db->prepare($sql);
-  $stmt->execute($params);
-  $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-  
-  error_log("get_routes.php - Found " . count($routes) . " routes");
+    if ($team_id) {
+        $where_conditions[] = "dr.team_id = ?";
+        $params[] = $team_id;
+    }
 
-  echo json_encode([ 'success' => true, 'date' => $date, 'routes' => $routes ]);
-} catch (Throwable $e) {
-  http_response_code(500);
-  echo json_encode([ 'success' => false, 'message' => $e->getMessage() ]);
+    if ($date) {
+        $where_conditions[] = "dr.date = ?";
+        $params[] = $date;
+    }
+
+    $search_param = null;
+    if ($search) {
+        $search_param = "%{$search}%";
+        $where_conditions[] = "(dr.id LIKE ? OR dr.barangay_name LIKE ?)";
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+
+    // Add user/role filtering conditions
+    if ($need_team_join) {
+        if ($role === 'driver') {
+            $where_conditions[] = "ct.driver_id = ?";
+            $params[] = $user_id;
+            $where_conditions[] = "ct.status IN ('accepted', 'confirmed', 'approved')";
+        } elseif ($role === 'collector') {
+            $where_conditions[] = "ctm.collector_id = ?";
+            $params[] = $user_id;
+            $where_conditions[] = "ctm.response_status IN ('accepted', 'confirmed', 'approved')";
+        }
+    }
+    
+    $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
+
+    // Build JOIN clause based on whether we need team filtering
+    $team_join = "";
+    if ($need_team_join) {
+        if ($role === 'driver') {
+            $team_join = "INNER JOIN collection_team ct ON dr.team_id = ct.team_id";
+        } elseif ($role === 'collector') {
+            $team_join = "INNER JOIN collection_team ct ON dr.team_id = ct.team_id
+                          INNER JOIN collection_team_member ctm ON ct.team_id = ctm.team_id";
+        }
+    }
+
+    // Get routes with stop count and barangays passed through
+    $query = "SELECT 
+                dr.id,
+                dr.date,
+                dr.cluster_id,
+                dr.barangay_id,
+                dr.barangay_name,
+                dr.truck_id,
+                dr.team_id,
+                dr.start_time,
+                dr.end_time,
+                dr.status,
+                dr.source,
+                dr.version,
+                dr.distance_km,
+                dr.duration_min,
+                dr.capacity_used_kg,
+                dr.notes,
+                dr.created_at,
+                dr.updated_at,
+                COUNT(DISTINCT drs.id) as stop_count,
+                COUNT(DISTINCT CASE WHEN drs.status = 'visited' THEN drs.id END) as completed_stops,
+                GROUP_CONCAT(DISTINCT b.barangay_name ORDER BY drs.seq SEPARATOR ', ') as barangays_passed
+              FROM daily_route dr
+              {$team_join}
+              LEFT JOIN daily_route_stop drs ON dr.id = drs.daily_route_id
+              LEFT JOIN collection_point cp ON drs.collection_point_id = cp.point_id
+              LEFT JOIN barangay b ON cp.barangay_id = b.barangay_id
+              {$where_clause}
+              GROUP BY dr.id, dr.date, dr.cluster_id, dr.barangay_id, dr.barangay_name, 
+                       dr.truck_id, dr.team_id, dr.start_time, dr.end_time, dr.status, 
+                       dr.source, dr.version, dr.distance_km, dr.duration_min, 
+                       dr.capacity_used_kg, dr.notes, dr.created_at, dr.updated_at
+              ORDER BY dr.date DESC, dr.start_time ASC";
+
+    $stmt = $db->prepare($query);
+    $stmt->execute($params);
+    $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format routes
+    $formatted_routes = array_map(function($route) {
+        return [
+            'id' => intval($route['id']),
+            'date' => $route['date'],
+            'cluster_id' => $route['cluster_id'],
+            'barangay_id' => $route['barangay_id'],
+            'barangay_name' => $route['barangay_name'],
+            'barangays_passed' => $route['barangays_passed'] ?: $route['barangay_name'], // Fallback to main barangay
+            'truck_id' => intval($route['truck_id']),
+            'team_id' => intval($route['team_id']),
+            'start_time' => $route['start_time'],
+            'end_time' => $route['end_time'],
+            'status' => $route['status'],
+            'source' => $route['source'],
+            'version' => intval($route['version']),
+            'distance_km' => $route['distance_km'] ? floatval($route['distance_km']) : null,
+            'duration_min' => $route['duration_min'] ? intval($route['duration_min']) : null,
+            'capacity_used_kg' => $route['capacity_used_kg'] ? intval($route['capacity_used_kg']) : null,
+            'notes' => $route['notes'],
+            'stop_count' => intval($route['stop_count']),
+            'total_stops' => intval($route['stop_count']),
+            'completed_stops' => intval($route['completed_stops'] ?? 0),
+            'created_at' => $route['created_at'],
+            'updated_at' => $route['updated_at']
+        ];
+    }, $routes);
+
+    $response = [
+        'success' => true,
+        'routes' => $formatted_routes,
+        'total' => count($formatted_routes)
+    ];
+
+    // Get status summary if requested
+    if ($include_counts) {
+        // Build WHERE clause for summary (without status filter)
+        $summary_where_conditions = [];
+        $summary_params = [];
+
+        if ($barangay) {
+            $summary_where_conditions[] = "barangay_name = ?";
+            $summary_params[] = $barangay;
+        }
+
+        if ($team_id) {
+            $summary_where_conditions[] = "team_id = ?";
+            $summary_params[] = $team_id;
+        }
+
+        if ($date) {
+            $summary_where_conditions[] = "date = ?";
+            $summary_params[] = $date;
+        }
+
+        if ($search) {
+            $summary_where_conditions[] = "(id LIKE ? OR barangay_name LIKE ?)";
+            $summary_params[] = $search_param;
+            $summary_params[] = $search_param;
+        }
+
+        $summary_where_clause = !empty($summary_where_conditions) ? "WHERE " . implode(" AND ", $summary_where_conditions) : "";
+
+        $summary_query = "SELECT 
+                            status,
+                            COUNT(*) as count
+                          FROM daily_route
+                          {$summary_where_clause}
+                          GROUP BY status";
+
+        $summary_stmt = $db->prepare($summary_query);
+        $summary_stmt->execute($summary_params);
+        $summary_results = $summary_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Initialize summary with all statuses
+        $summary = [
+            'scheduled' => 0,
+            'in_progress' => 0,
+            'completed' => 0,
+            'missed' => 0,
+            'cancelled' => 0
+        ];
+
+        // Fill in actual counts
+        foreach ($summary_results as $row) {
+            $summary[$row['status']] = intval($row['count']);
+        }
+
+        $response['summary'] = $summary;
+    }
+
+    // Clean any unexpected output
+    ob_end_clean();
+    
+    echo json_encode($response);
+
+} catch (PDOException $e) {
+    ob_end_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database error: ' . $e->getMessage()
+    ]);
+} catch (Exception $e) {
+    ob_end_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error: ' . $e->getMessage()
+    ]);
 }
 ?>
-
-

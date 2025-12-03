@@ -123,15 +123,20 @@ function handleSendVerificationCode($pdo, $input)
     $deliveryStatus = 'sent';
     $transportUsed = null;
 
+    error_log("Attempting to send verification email to: $email");
+    
     try {
         $mailer = new EmailHelper();
         $sendResult = $mailer->sendSignupVerificationCode($email, $name, $verificationCode, $expiryTime);
         $transportUsed = $sendResult['transport'] ?? null;
+        error_log("Email sent successfully to $email via transport: $transportUsed");
     } catch (Exception $e) {
         error_log('Failed to send signup verification email: ' . $e->getMessage());
         $emailError = $e->getMessage();
         $deliveryStatus = 'failed';
     }
+
+    error_log("Email delivery status for $email: $deliveryStatus" . ($emailError ? " | Error: $emailError" : ""));
 
     echo json_encode([
         'status' => 'success',

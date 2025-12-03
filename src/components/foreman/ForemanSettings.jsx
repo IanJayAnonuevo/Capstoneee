@@ -41,13 +41,14 @@ export default function ForemanSettings() {
       }
 
       const response = await authService.getUserData(userId);
-      if (response.success) {
-        setUser(response.user);
+      if (response.status === 'success' && response.data) {
+        const userData = response.data;
+        setUser(userData);
         setProfileData({
-          first_name: response.user.first_name || '',
-          last_name: response.user.last_name || '',
-          email: response.user.email || '',
-          phone: response.user.phone || ''
+          first_name: userData.firstname || '',
+          last_name: userData.lastname || '',
+          email: userData.email || '',
+          phone: userData.phone || ''
         });
       }
     } catch (error) {
@@ -189,15 +190,6 @@ export default function ForemanSettings() {
         >
           Password
         </button>
-        <button
-          onClick={() => setActiveTab('account')}
-          className={`px-4 py-2 font-medium transition-colors ${activeTab === 'account'
-            ? 'text-green-600 border-b-2 border-green-600'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
-        >
-          Account
-        </button>
       </div>
 
       {/* Message Banner */}
@@ -313,8 +305,8 @@ export default function ForemanSettings() {
                   onClick={() => {
                     setEditMode(false);
                     setProfileData({
-                      first_name: user.first_name || '',
-                      last_name: user.last_name || '',
+                      first_name: user.firstname || '',
+                      last_name: user.lastname || '',
                       email: user.email || '',
                       phone: user.phone || ''
                     });
@@ -395,53 +387,7 @@ export default function ForemanSettings() {
         </div>
       )}
 
-      {/* Account Tab */}
-      {activeTab === 'account' && user && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Account Information</h2>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <MdPerson className="w-6 h-6 text-gray-600" />
-              <div>
-                <p className="text-xs text-gray-500">Username</p>
-                <p className="font-medium text-gray-900">{user.username}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <MdBadge className="w-6 h-6 text-gray-600" />
-              <div>
-                <p className="text-xs text-gray-500">Role</p>
-                <p className="font-medium text-gray-900 capitalize">{user.role?.replace('_', ' ')}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <MdEmail className="w-6 h-6 text-gray-600" />
-              <div>
-                <p className="text-xs text-gray-500">Email Status</p>
-                <p className="font-medium text-gray-900">
-                  {user.email_verified ? (
-                    <span className="text-green-600">✓ Verified</span>
-                  ) : (
-                    <span className="text-amber-600">Not Verified</span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-xs text-gray-500">Account Created</p>
-                <p className="font-medium text-gray-900">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

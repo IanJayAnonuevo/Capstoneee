@@ -60,20 +60,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 LEFT JOIN user_profile resolver ON ir.resolved_by = resolver.user_id";
 
         // Add WHERE clause based on status
+        $whereConditions = [];
+        
         if (isset($_GET['status'])) {
             $requestedStatus = strtolower(trim($_GET['status']));
 
             if ($requestedStatus === 'resolved') {
-                $query .= " WHERE ir.status = 'resolved'";
+                $whereConditions[] = "ir.status = 'resolved'";
             } elseif ($requestedStatus === 'active') {
-                $query .= " WHERE (ir.status = 'active' OR ir.status = 'open' OR ir.status IS NULL)";
+                $whereConditions[] = "(ir.status = 'active' OR ir.status = 'open' OR ir.status IS NULL)";
             } elseif ($requestedStatus === 'closed') {
-                $query .= " WHERE ir.status = 'closed'";
+                $whereConditions[] = "ir.status = 'closed'";
             } elseif ($requestedStatus === 'pending') {
-                $query .= " WHERE ir.status = 'pending'";
+                $whereConditions[] = "ir.status = 'pending'";
             } elseif ($requestedStatus !== 'all' && $requestedStatus !== '') {
-                $query .= " WHERE ir.status = :status_filter";
+                $whereConditions[] = "ir.status = :status_filter";
             }
+        }
+        
+        // Exclude closed issues if requested
+        if (isset($_GET['exclude_closed']) && $_GET['exclude_closed'] === 'true') {
+            $whereConditions[] = "(ir.status IS NULL OR ir.status != 'closed')";
+        }
+        
+        if (!empty($whereConditions)) {
+            $query .= " WHERE " . implode(" AND ", $whereConditions);
         }
 
         $query .= " ORDER BY ir.created_at DESC";

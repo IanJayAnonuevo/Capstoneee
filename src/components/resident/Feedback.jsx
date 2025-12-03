@@ -141,7 +141,12 @@ export default function Feedback() {
             throw new Error('User ID missing.');
           }
 
-          const response = await fetch(`${API_BASE_URL}/get_user_details.php?user_id=${userId}`);
+          const token = localStorage.getItem('access_token');
+          const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+          const response = await fetch(`${API_BASE_URL}/get_user_details.php?user_id=${userId}`, {
+            headers: authHeaders
+          });
           const userDetails = await response.json();
 
           if (userDetails.status === 'success' && userDetails.data) {
@@ -150,7 +155,9 @@ export default function Feedback() {
 
             if (barangayId && !barangayName) {
               try {
-                const barangayResponse = await fetch(`${API_BASE_URL}/get_barangay_details.php?barangay_id=${barangayId}`);
+                const barangayResponse = await fetch(`${API_BASE_URL}/get_barangay_details.php?barangay_id=${barangayId}`, {
+                  headers: authHeaders
+                });
                 const barangayData = await barangayResponse.json();
                 if (barangayData.status === 'success' && barangayData.data?.barangay_name) {
                   barangayName = barangayData.data.barangay_name;

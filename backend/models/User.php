@@ -16,6 +16,7 @@ class User {
     public $contact_num;
     public $address;
     public $barangay_id;
+    public $account_status;
 
     // Constructor with DB
     public function __construct($db) {
@@ -37,6 +38,15 @@ class User {
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             // Debug: log the fetched row to error log
             error_log('LOGIN FETCHED ROW: ' . print_r($row, true));
+            
+            // Check if account is suspended
+            if (isset($row['account_status']) && $row['account_status'] === 'suspended') {
+                // Set a special flag to indicate suspended account
+                $this->user_id = $row['user_id'];
+                $this->account_status = 'suspended';
+                return 'suspended'; // Return special value instead of false
+            }
+            
             if(password_verify($this->password, $row['password'])) {
                 $this->user_id = $row['user_id'];
                 $this->email = $row['email'];

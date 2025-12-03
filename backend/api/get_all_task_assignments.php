@@ -77,10 +77,21 @@ try {
             ];
         }
 
-        // Calculate task status based on daily_route data
+        // Check for active emergencies
+        $emergencyQ = $db->prepare("
+            SELECT COUNT(*) 
+            FROM route_emergency_log 
+            WHERE route_id = ? AND resolved_at IS NULL
+        ");
+        $emergencyQ->execute([$row['route_id']]);
+        $hasEmergency = $emergencyQ->fetchColumn() > 0;
+
+        // Calculate task status based on daily_route data and emergency log
         $taskStatus = 'scheduled'; // Default status
         
-        if ($row['route_status']) {
+        if ($hasEmergency) {
+            $taskStatus = 'emergency';
+        } elseif ($row['route_status']) {
             $routeStatus = strtolower($row['route_status']);
             
             // Map route status to task status

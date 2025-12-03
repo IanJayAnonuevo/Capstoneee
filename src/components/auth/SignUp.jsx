@@ -491,11 +491,22 @@ export default function SignUp({ onLoginClick } = {}) {
     const startTime = Date.now()
 
     try {
-      await axios.post(buildApiUrl('signup_verification.php'), {
+      // Verify the code first
+      const verifyResponse = await axios.post(buildApiUrl('signup_verification.php'), {
         action: 'verify_code',
         email: form.email,
         verification_code: code
       })
+
+      // Check if verification was successful
+      if (verifyResponse.data?.status !== 'success') {
+        const errorMsg = verifyResponse.data?.message || 'Email verification failed. Please check your code.'
+        setVerificationError(errorMsg)
+        await waitForMinimumDuration(startTime)
+        setLoading(false)
+        setLoadingState(null)
+        return
+      }
 
       setLoadingState('creating-account')
 
@@ -687,8 +698,8 @@ export default function SignUp({ onLoginClick } = {}) {
             <div className="flex flex-col items-center text-center space-y-4 mt-2">
               <div
                 className={`w-16 h-16 rounded-full flex items-center justify-center shadow-inner ${feedbackModal.type === 'success'
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-red-100 text-red-600'
+                  ? 'bg-green-100 text-green-600'
+                  : 'bg-red-100 text-red-600'
                   }`}
               >
                 {feedbackModal.type === 'success' ? (
@@ -806,10 +817,10 @@ export default function SignUp({ onLoginClick } = {}) {
                       <div className="flex flex-col items-center min-w-[4.5rem]">
                         <div
                           className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors duration-200 ${isCompleted
-                              ? 'bg-green-500 border-green-500 text-white'
-                              : isActive
-                                ? 'bg-green-50 border-green-500 text-green-600'
-                                : 'bg-white border-gray-200 text-gray-400'
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : isActive
+                              ? 'bg-green-50 border-green-500 text-green-600'
+                              : 'bg-white border-gray-200 text-gray-400'
                             }`}
                         >
                           {index + 1}

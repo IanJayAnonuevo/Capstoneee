@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiUser, FiLock, FiAlertCircle, FiX, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FiUser, FiLock, FiAlertCircle, FiX, FiEye, FiEyeOff, FiCheckCircle } from 'react-icons/fi'
 import SignUp from './SignUp'
 import ForgotPassword from './ForgotPassword'
 import logo from '../../assets/logo/logo.png'
 import Skeleton from '../shared/Skeleton'
+import LeaveBlockedModal from '../shared/LeaveBlockedModal'
 
 const MIN_LOADING_DURATION_MS = 2000
 
@@ -31,6 +32,10 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [errorField, setErrorField] = useState('') // Track which field has error: 'username' or 'password'
   const [isMounting, setIsMounting] = useState(true)
+  const [showLeaveBlocked, setShowLeaveBlocked] = useState(false)
+  const [leaveDetails, setLeaveDetails] = useState(null)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   useEffect(() => {
     // Simulate initial loading for skeleton
@@ -137,6 +142,18 @@ function Login() {
       }
     } catch (err) {
       console.error('Login error:', err)
+
+      // Check if error is ON_LEAVE
+      if (err.error_code === 'ON_LEAVE' && err.leave_details) {
+        setLeaveDetails({
+          ...err.leave_details,
+          username: formData.username
+        });
+        setShowLeaveBlocked(true);
+        setLoading(false);
+        return;
+      }
+
       const fallbackMessage = err instanceof Error ? err.message : 'Network error. Please try again later.'
       const title = err instanceof Error && err.message.toLowerCase().includes('network')
         ? 'Network Error'
@@ -408,6 +425,55 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {/* Leave Blocked Modal */}
+      {showLeaveBlocked && leaveDetails && (
+        <LeaveBlockedModal
+          leaveDetails={leaveDetails}
+          onCancel={() => {
+            // After successful cancellation, show success modal
+            setShowLeaveBlocked(false);
+            setLeaveDetails(null);
+            setSuccessMessage('Leave cancelled successfully! You can now login to your account.');
+            setShowSuccessModal(true);
+          }}
+          onClose={() => {
+            setShowLeaveBlocked(false);
+            setLeaveDetails(null);
+          }}
+        />
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-fadeIn">
+            {/* Emerald gradient header */}
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6">
+              <div className="flex flex-col items-center text-center text-white">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 border-2 border-white/30">
+                  <FiCheckCircle className="w-10 h-10" />
+                </div>
+                <h3 className="text-xl font-bold">Success!</h3>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 text-center">
+              <p className="text-gray-700 leading-relaxed mb-6">
+                {successMessage}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Continue to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

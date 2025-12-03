@@ -624,177 +624,131 @@ export default function TaskManagement() {
       )}
       {/* Header removed - using global admin header */}
 
-      {/* Minimal Summary Bar - Tree Palette */}
-      <div className="w-full flex items-center justify-between bg-green-50 py-2 px-3 mb-2">
-        {/* Left: Info Columns */}
-        <div className="grid grid-cols-5 gap-y-2 gap-x-4 flex-1">
-          {/* Column 1 - Driver */}
-          <div className="flex items-center gap-2">
-            <FaUserTie className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.driver?.name ? (
-                  <>
-                    {selectedSchedule.driver.name}
-                    {selectedSchedule.driver.status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                    {selectedSchedule.driver.status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                    {selectedSchedule.driver.status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                  </>
-                ) : (
-                  <span className="text-gray-400">No driver selected</span>
-                )}
+      {/* Minimal Summary Bar - Responsive Layout */}
+      <div className="w-full bg-green-50 py-3 px-3 mb-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          {/* Info Grid - Responsive */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 flex-1">
+            {/* Driver */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FaUserTie className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.driver?.name || <span className="text-gray-400">No driver</span>}
+                </div>
+                <div className="text-xs text-green-700">Driver</div>
               </div>
-              <div className="text-xs text-green-700 font-normal">Truck Driver</div>
+            </div>
+
+            {/* Collector 1 */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FaUserFriends className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.collectors?.[0]?.name || <span className="text-gray-400">No collector</span>}
+                </div>
+                <div className="text-xs text-green-700">Collector 1</div>
+              </div>
+            </div>
+
+            {/* Collector 2 */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FaUserFriends className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.collectors?.[1]?.name || <span className="text-gray-400">No collector</span>}
+                </div>
+                <div className="text-xs text-green-700">Collector 2</div>
+              </div>
+            </div>
+
+            {/* Collector 3 */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FaUserFriends className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.collectors?.[2]?.name || <span className="text-gray-400">No collector</span>}
+                </div>
+                <div className="text-xs text-green-700">Collector 3</div>
+              </div>
+            </div>
+
+            {/* Collector 4 */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FaUserFriends className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.collectors?.[3]?.name || <span className="text-gray-400">No collector</span>}
+                </div>
+                <div className="text-xs text-green-700">Collector 4</div>
+              </div>
+            </div>
+
+            {/* Date */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FiCalendar className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.date || <span className="text-gray-400">No date</span>}
+                </div>
+                <div className="text-xs text-green-700">Date</div>
+              </div>
+            </div>
+
+            {/* Truck */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded col-span-2 md:col-span-1">
+              <FiTruck className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.truck_plate || <span className="text-gray-400">No truck</span>}
+                </div>
+                <div className="text-xs text-green-700">Truck</div>
+              </div>
+            </div>
+
+            {/* Time */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FiClock className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.time || <span className="text-gray-400">No time</span>}
+                </div>
+                <div className="text-xs text-green-700">Time</div>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="flex items-start gap-2 bg-white p-2 rounded">
+              <FiCheckCircle className="w-4 h-4 text-green-800 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-green-900 font-semibold leading-tight truncate">
+                  {selectedSchedule?.status === 'assigned' && <span className="text-yellow-600">Pending</span>}
+                  {selectedSchedule?.status === 'accepted' && <span className="text-green-600">Accepted</span>}
+                  {selectedSchedule?.status === 'declined' && <span className="text-red-600">Declined</span>}
+                  {!['assigned', 'accepted', 'declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
+                </div>
+                <div className="text-xs text-green-700">Status</div>
+              </div>
             </div>
           </div>
 
-          {/* Column 2 - Collector 1 */}
-          <div className="flex items-center gap-2">
-            <FaUserFriends className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.collectors?.[0] ? (
-                  <>
-                    {selectedSchedule.collectors[0].name}
-                    {selectedSchedule.collectors[0].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                    {selectedSchedule.collectors[0].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                    {selectedSchedule.collectors[0].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                  </>
-                ) : (
-                  <span className="text-gray-400">No collector</span>
-                )}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Garbage Collector 1</div>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2 lg:flex-shrink-0 lg:w-auto w-full">
+            <button
+              className="w-full lg:min-w-[140px] px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm
+                         bg-green-600 hover:bg-green-700 text-white active:scale-[0.98]"
+              onClick={() => handleAssign({ type: 'regular' })}
+            >
+              Assign
+            </button>
+            <button
+              className="w-full lg:min-w-[140px] px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm
+                         bg-green-600 hover:bg-green-700 text-white active:scale-[0.98]"
+              onClick={handleReassignAll}
+            >
+              Reassign All
+            </button>
           </div>
-
-          {/* Column 3 - Collector 2 */}
-          <div className="flex items-center gap-2">
-            <FaUserFriends className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.collectors?.[1] ? (
-                  <>
-                    {selectedSchedule.collectors[1].name}
-                    {selectedSchedule.collectors[1].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                    {selectedSchedule.collectors[1].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                    {selectedSchedule.collectors[1].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                  </>
-                ) : (
-                  <span className="text-gray-400">No collector</span>
-                )}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Garbage Collector 2</div>
-            </div>
-          </div>
-
-          {/* Column 4 - Collector 3 */}
-          <div className="flex items-center gap-2">
-            <FaUserFriends className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.collectors?.[2] ? (
-                  <>
-                    {selectedSchedule.collectors[2].name}
-                    {selectedSchedule.collectors[2].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                    {selectedSchedule.collectors[2].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                    {selectedSchedule.collectors[2].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                  </>
-                ) : (
-                  <span className="text-gray-400">No collector</span>
-                )}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Garbage Collector 3</div>
-            </div>
-          </div>
-
-          {/* Column 5 - Collector 4 */}
-          <div className="flex items-center gap-2">
-            <FaUserFriends className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.collectors?.[3] ? (
-                  <>
-                    {selectedSchedule.collectors[3].name}
-                    {selectedSchedule.collectors[3].status === 'accepted' && <span className="text-green-600"> (Accepted)</span>}
-                    {selectedSchedule.collectors[3].status === 'pending' && <span className="text-yellow-600"> (Pending)</span>}
-                    {selectedSchedule.collectors[3].status === 'declined' && <span className="text-red-600"> (Declined)</span>}
-                  </>
-                ) : (
-                  <span className="text-gray-400">No collector</span>
-                )}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Garbage Collector 4</div>
-            </div>
-          </div>
-
-          {/* Column 6 - Date */}
-          <div className="flex items-center gap-2">
-            <FiCalendar className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.date || <span className="text-gray-400">No date</span>}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Date Collected</div>
-            </div>
-          </div>
-
-          {/* Column 7 - Truck */}
-          <div className="flex items-center gap-2">
-            <FiTruck className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.truck_plate ? (
-                  <>
-                    {selectedSchedule.truck_plate} | {selectedSchedule.truck_type} | {selectedSchedule.truck_capacity}kg
-                  </>
-                ) : <span className="text-gray-400">No truck assigned</span>}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Truck Details</div>
-            </div>
-          </div>
-
-          {/* Column 8 - Time */}
-          <div className="flex items-center gap-2">
-            <FiClock className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.time || <span className="text-gray-400">No time</span>}
-              </div>
-              <div className="text-xs text-green-700 font-normal">Time Collected</div>
-            </div>
-          </div>
-
-          {/* Column 9 - Status */}
-          <div className="flex items-center gap-2">
-            <FiCheckCircle className="w-4 h-4 text-green-800" />
-            <div>
-              <div className="text-xs text-green-900 font-semibold leading-tight">
-                {selectedSchedule?.status === 'assigned' && <span className="text-yellow-600">pending</span>}
-                {selectedSchedule?.status === 'accepted' && <span className="text-green-600">Accepted</span>}
-                {selectedSchedule?.status === 'declined' && <span className="text-red-600">Declined</span>}
-                {!['assigned', 'accepted', 'declined'].includes(selectedSchedule?.status) && (selectedSchedule?.status || <span className="text-gray-400">No status</span>)}
-              </div>
-              <div className="text-xs text-green-700 font-normal">COLLECTION STATUS</div>
-            </div>
-          </div>
-        </div>
-        {/* Right: Action Buttons */}
-        <div className="flex-shrink-0 ml-8 flex flex-col gap-2 items-end">
-          <button
-            className="px-8 py-2 rounded text-base font-semibold transition shadow-none focus:outline-none focus:ring-2 disabled:opacity-50 min-w-[180px]
-                       bg-green-600 hover:bg-green-700 text-white focus:ring-green-800"
-            onClick={() => handleAssign({ type: 'regular' })}
-          >
-            Assign
-          </button>
-          <button
-            className="px-8 py-2 rounded text-base font-semibold transition shadow-none focus:outline-none focus:ring-2 disabled:opacity-50 min-w-[180px]
-                       bg-green-600 hover:bg-green-700 text-white focus:ring-green-800"
-            onClick={handleReassignAll}
-          >
-            Reassign All
-          </button>
         </div>
       </div>
 
@@ -876,411 +830,7 @@ export default function TaskManagement() {
         </div>
       </div>
 
-      {/* Pending Assignments Section */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-yellow-800 mb-4">Pending Assignments (Waiting for Personnel Acceptance)</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-yellow-200 rounded-md">
-            <thead>
-              <tr className="bg-yellow-100 text-yellow-800">
-                <th className="px-4 py-2 text-left">Schedule ID</th>
-                <th className="px-4 py-2 text-left">Barangay ID</th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Start Time</th>
-                <th className="px-4 py-2 text-left">End Time</th>
-                <th className="px-4 py-2 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedulesLoading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading...</td></tr>
-              ) : schedulesError ? (
-                <tr><td colSpan={6} className="text-center text-red-600 py-4">{schedulesError}</td></tr>
-              ) : schedules.filter(sched => sched.status === 'pending').length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-gray-500">No pending assignments found.</td></tr>
-              ) : (
-                schedules
-                  .filter(sched => sched.status === 'pending')
-                  .map((sched) => (
-                    <tr key={sched.schedule_id} className="border-b border-yellow-100">
-                      <td className="px-4 py-2">{sched.schedule_id}</td>
-                      <td className="px-4 py-2">{sched.barangay_id}</td>
-                      <td className="px-4 py-2">{sched.scheduled_date}</td>
-                      <td className="px-4 py-2">{sched.start_time}</td>
-                      <td className="px-4 py-2">{sched.end_time}</td>
-                      <td className="px-4 py-2">
-                        <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">
-                          {sched.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {/* Confirmed Schedule List (now based on collection_schedule) */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-green-800 mb-4">Confirmed Scheduled Pickups</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-green-200 rounded-md">
-            <thead>
-              <tr className="bg-green-100 text-green-800">
-                <th className="px-4 py-2 text-left">Schedule ID</th>
-                <th className="px-4 py-2 text-left">Barangay ID</th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Start Time</th>
-                <th className="px-4 py-2 text-left">End Time</th>
-                <th className="px-4 py-2 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedulesLoading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading...</td></tr>
-              ) : schedulesError ? (
-                <tr><td colSpan={6} className="text-center text-red-600 py-4">{schedulesError}</td></tr>
-              ) : schedules.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4">No schedules found.</td></tr>
-              ) : (
-                schedules
-                  .filter(sched => sched.status === 'scheduled') // Only show confirmed schedules
-                  .map((sched) => (
-                    <tr key={sched.schedule_id} className="border-b border-green-100">
-                      <td className="px-4 py-2">{sched.schedule_id}</td>
-                      <td className="px-4 py-2">{sched.barangay_id}</td>
-                      <td className="px-4 py-2">{sched.scheduled_date}</td>
-                      <td className="px-4 py-2">{sched.start_time}</td>
-                      <td className="px-4 py-2">{sched.end_time}</td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${sched.status === 'scheduled' ? 'bg-green-100 text-green-800' :
-                          sched.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                          {sched.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* All Assignments Table */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-medium text-green-800">All Task Assignments</h2>
-            {lastRefresh && (
-              <p className="text-xs text-gray-500 mt-1">
-                Last updated: {lastRefresh.toLocaleTimeString()}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={refreshAssignments}
-            disabled={allAssignmentsLoading}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
-          >
-            {allAssignmentsLoading && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            )}
-            {allAssignmentsLoading ? 'Refreshing...' : 'Refresh Data'}
-          </button>
-        </div>
-        <div className="mb-4 flex items-center gap-4 flex-wrap">
-          <div>
-            <label className="block text-sm text-green-700 mb-1">Filter by Date</label>
-            <input
-              type="date"
-              className="border border-green-200 rounded px-3 py-2"
-              value={assignmentDateFilter}
-              onChange={e => setAssignmentDateFilter(e.target.value)}
-            />
-            {assignmentDateFilter && (
-              <button
-                className="ml-2 text-sm text-green-700 underline"
-                onClick={() => setAssignmentDateFilter('')}
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm text-green-700 mb-1">Filter by Cluster</label>
-            <select
-              className="border border-green-200 rounded px-3 py-2"
-              value={assignmentClusterFilter}
-              onChange={e => setAssignmentClusterFilter(e.target.value)}
-            >
-              <option value="">All Clusters</option>
-              {clusterOptions.map(cluster => (
-                <option key={cluster} value={cluster}>{cluster}</option>
-              ))}
-            </select>
-            {assignmentClusterFilter && (
-              <button
-                className="ml-2 text-sm text-green-700 underline"
-                onClick={() => setAssignmentClusterFilter('')}
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm text-green-700 mb-1">Status</label>
-            <select
-              className="border border-green-200 rounded px-3 py-2"
-              value={assignmentStatusFilter}
-              onChange={e => setAssignmentStatusFilter(e.target.value)}
-            >
-              <option value="">All</option>
-              <option value="assigned">Assigned</option>
-              <option value="accepted">Accepted</option>
-              <option value="declined">Declined</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-green-700 mb-1">Driver</label>
-            <input
-              type="text"
-              placeholder="Search driver"
-              className="border border-green-200 rounded px-3 py-2"
-              value={assignmentDriverFilter}
-              onChange={e => setAssignmentDriverFilter(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-green-700 mb-1">Truck</label>
-            <input
-              type="text"
-              placeholder="Plate number"
-              className="border border-green-200 rounded px-3 py-2"
-              value={assignmentTruckFilter}
-              onChange={e => setAssignmentTruckFilter(e.target.value)}
-            />
-          </div>
-          <button
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-semibold"
-            onClick={handleDeleteAllAssignments}
-            disabled={filteredAssignments.length === 0}
-          >
-            Delete All Shown Assignments
-          </button>
-          <div className="ml-auto flex items-center gap-2">
-            <label className="text-sm text-green-700">Rows:</label>
-            <select className="border border-green-200 rounded px-2 py-1" value={pageSize} onChange={e => setPageSize(Number(e.target.value))}>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-        </div>
-        {/* Bulk actions bar */}
-        {selectedIds.length > 0 && (
-          <div className="mb-3 flex items-center gap-2 bg-green-50 border border-green-200 rounded px-3 py-2">
-            <div className="text-sm text-green-800">Selected: {selectedIds.length}</div>
-            <button className="text-sm px-3 py-1 rounded border border-green-200 text-green-800 hover:bg-green-50"
-              onClick={async () => {
-                if (!window.confirm(`Mark ${selectedIds.length} assignment(s) as completed?`)) return;
-                for (const id of selectedIds) {
-                  await fetch(buildApiUrl('update_assignment.php'), {
-                    method: 'POST',
-                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ assignment_id: id, status: 'completed' })
-                  });
-                }
-                setAllAssignments(prev => prev.map(a => selectedIds.includes(a.assignment_id) ? { ...a, status: 'completed' } : a));
-                clearSelection();
-              }}
-            >Complete</button>
-            <button className="text-sm px-3 py-1 rounded border border-green-200 text-green-800 hover:bg-green-50"
-              onClick={async () => {
-                if (!window.confirm(`Cancel ${selectedIds.length} assignment(s)?`)) return;
-                for (const id of selectedIds) {
-                  await fetch(buildApiUrl('update_assignment.php'), {
-                    method: 'POST',
-                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                    body: JSON.stringify({ assignment_id: id, status: 'cancelled' })
-                  });
-                }
-                setAllAssignments(prev => prev.map(a => selectedIds.includes(a.assignment_id) ? { ...a, status: 'cancelled' } : a));
-                clearSelection();
-              }}
-            >Cancel</button>
-            <button className="text-sm px-3 py-1 rounded border border-green-200 text-green-800 hover:bg-green-50" onClick={clearSelection}>Clear</button>
-          </div>
-        )}
-        {allAssignmentsLoading ? (
-          <div className="text-gray-500">Loading assignments...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-green-200 rounded-md">
-              <thead>
-                <tr className="bg-green-100 text-green-800">
-                  <th className="px-4 py-2">
-                    <input type="checkbox" checked={paginatedAssignments.every(a => isSelected(a.assignment_id)) && paginatedAssignments.length > 0}
-                      onChange={(e) => selectAllOnPage(e.target.checked)} />
-                  </th>
-                  <th className="px-4 py-2">Barangay</th>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Time</th>
-                  <th className="px-4 py-2">Driver</th>
-                  <th className="px-4 py-2">Collectors</th>
-                  <th className="px-4 py-2">Truck</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedAssignments.map((assignment) => (
-                  <tr key={assignment.assignment_id} className="border-b border-green-100">
-                    <td className="px-4 py-2">
-                      <input type="checkbox" checked={isSelected(assignment.assignment_id)} onChange={() => toggleSelect(assignment.assignment_id)} />
-                    </td>
-                    <td className="px-4 py-2">{assignment.barangay_name}</td>
-                    <td className="px-4 py-2">
-                      <input type="date" className="border border-green-200 rounded px-2 py-1 text-sm"
-                        defaultValue={assignment.date}
-                        onBlur={async (e) => {
-                          const v = e.target.value; if (!v || v === assignment.date) return;
-                          const before = { date: assignment.date };
-                          await fetch(buildApiUrl('update_assignment.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, date: v })
-                          });
-                          await fetch(buildApiUrl('log_task_event.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, event_type: 'update_date', before, after: { date: v } })
-                          });
-                          setAllAssignments(prev => prev.map(a => a.assignment_id === assignment.assignment_id ? { ...a, date: v } : a));
-                        }} />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input type="time" className="border border-green-200 rounded px-2 py-1 text-sm"
-                        defaultValue={assignment.time}
-                        onBlur={async (e) => {
-                          const v = e.target.value; if (!v || v === assignment.time) return;
-                          const before = { time: assignment.time };
-                          await fetch(buildApiUrl('update_assignment.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, time: v })
-                          });
-                          await fetch(buildApiUrl('log_task_event.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, event_type: 'update_time', before, after: { time: v } })
-                          });
-                          setAllAssignments(prev => prev.map(a => a.assignment_id === assignment.assignment_id ? { ...a, time: v } : a));
-                        }} />
-                    </td>
-                    <td className="px-4 py-2">
-                      {assignment.driver
-                        ? (
-                          <span
-                            style={{
-                              color: assignment.driver.status === 'declined' ? 'red' : undefined,
-                              fontWeight: assignment.driver.status === 'accepted' ? 'bold' : undefined
-                            }}
-                          >
-                            {assignment.driver.name}
-                            {assignment.driver.status === 'pending' && <span> (Pending)</span>}
-                          </span>
-                        )
-                        : '-'
-                      }
-                    </td>
-                    <td className="px-4 py-2">
-                      {assignment.collectors && assignment.collectors.length > 0
-                        ? assignment.collectors.map((collector, idx) => (
-                          <span
-                            key={collector.name + idx}
-                            style={{
-                              color: collector.status === 'declined' ? 'red' : undefined,
-                              fontWeight: collector.status === 'accepted' ? 'bold' : undefined,
-                              marginRight: 4
-                            }}
-                          >
-                            {collector.name}
-                            {collector.status === 'pending' && <span> (Pending)</span>}
-                            {idx < assignment.collectors.length - 1 && ', '}
-                          </span>
-                        ))
-                        : '-'
-                      }
-                    </td>
-                    <td className="px-4 py-2">{assignment.truck_plate}</td>
-                    <td className="px-4 py-2">
-                      <select className="border border-green-200 rounded px-2 py-1 text-sm" defaultValue={assignment.status}
-                        onChange={async (e) => {
-                          const v = e.target.value; if (!v || v === assignment.status) return;
-                          const before = { status: assignment.status };
-                          await fetch(buildApiUrl('update_assignment.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, status: v })
-                          });
-                          await fetch(buildApiUrl('log_task_event.php'), {
-                            method: 'POST',
-                            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-                            body: JSON.stringify({ assignment_id: assignment.assignment_id, event_type: 'update_status', before, after: { status: v } })
-                          });
-                          setAllAssignments(prev => prev.map(a => a.assignment_id === assignment.assignment_id ? { ...a, status: v } : a));
-                        }}>
-                        <option value="assigned">Assigned</option>
-                        <option value="accepted">Accepted</option>
-                        <option value="declined">Declined</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </td>
-                    {/* Actions */}
-                    <td className="px-4 py-2">
-                      <button
-                        className="text-sm px-3 py-1 rounded border border-green-200 text-green-800 hover:bg-green-50"
-                        onClick={async () => {
-                          setHistoryFor(assignment);
-                          setHistoryLoading(true);
-                          try {
-                            const res = await fetch(`${buildApiUrl('get_task_events.php')}?assignment_id=${encodeURIComponent(assignment.assignment_id)}`, {
-                              headers: getAuthHeaders(),
-                            });
-                            const data = await res.json();
-                            if (data.success) setHistoryEvents(Array.isArray(data.events) ? data.events : []);
-                            else setHistoryEvents([]);
-                          } catch (_) {
-                            setHistoryEvents([]);
-                          } finally {
-                            setHistoryLoading(false);
-                          }
-                        }}
-                      >
-                        View History
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {/* Pagination controls */}
-            <div className="flex items-center justify-between mt-3">
-              <div className="text-sm text-gray-600">Page {currentPage} of {totalPages} — {filteredAssignments.length} result(s)</div>
-              <div className="flex items-center gap-2">
-                <button className="px-3 py-1 rounded border border-green-200 text-green-800 disabled:opacity-50" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>Prev</button>
-                <button className="px-3 py-1 rounded border border-green-200 text-green-800 disabled:opacity-50" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Next</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* History side panel */}
       {historyFor && (

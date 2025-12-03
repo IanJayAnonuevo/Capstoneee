@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
-import { FiMoreVertical, FiEdit2, FiTrash2, FiClock, FiRefreshCw } from 'react-icons/fi';
 import { buildApiUrl } from '../../config/api.js';
+import { FiMoreVertical, FiEdit2, FiTrash2, FiClock } from 'react-icons/fi';
 
 const scheduleViewOptions = [
   { value: 'priority', label: 'Priority Barangays', type: 'priority', clusterId: '1C-PB' },
@@ -73,24 +73,20 @@ export default function ForemanSchedule() {
   const [editForm, setEditForm] = useState({ day_of_week: '', start_time: '', end_time: '', week_of_month: '' });
   const [editError, setEditError] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [editSuccessOpen, setEditSuccessOpen] = useState(false);
   // Delete modal state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteDeleting, setDeleteDeleting] = useState(false);
+  const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
   // Add schedule modal state
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState(null);
   const [addSaving, setAddSaving] = useState(false);
-  const [addForm, setAddForm] = useState({ date: '', start_time: '', end_time: '', barangay_id: '', week_of_month: '' });
-
-  // Success modal state
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-
-  // Duplicate warning modal state
-  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
-  const [duplicateSchedule, setDuplicateSchedule] = useState(null);
+  const [addForm, setAddForm] = useState({ date: '', start_time: '', end_time: '', barangay_id: '' });
+  const [duplicateErrorOpen, setDuplicateErrorOpen] = useState(false);
+  const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('');
 
   // History modal state
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -99,9 +95,44 @@ export default function ForemanSchedule() {
   const [historyData, setHistoryData] = useState([]);
   const [historyTotal, setHistoryTotal] = useState(0);
 
+  // Ctrl-based multi-select state
+  const [ctrlPressed, setCtrlPressed] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const toggleSelected = (id) => {
+    if (!id) return; // guard
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelected = () => setSelectedIds(new Set());
+  const selectedCount = selectedIds.size;
+  const selectedArray = Array.from(selectedIds);
+
   // Menu state for three-dot menu
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRefs = useRef({});
+
+  // Track Ctrl/Meta key
+  useEffect(() => {
+    const down = (e) => {
+      if (e.ctrlKey || e.key === 'Control' || e.metaKey) setCtrlPressed(true);
+    };
+    const up = (e) => {
+      if (!e.ctrlKey && !e.metaKey) setCtrlPressed(false);
+      if (e.key === 'Control' && !e.metaKey) setCtrlPressed(false);
+    };
+    const onBlur = () => setCtrlPressed(false);
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // Get the start of the current week (Monday)
   const getWeekStart = (date) => {
@@ -163,6 +194,8 @@ export default function ForemanSchedule() {
     return `${months[date.getMonth()]}, ${date.getFullYear()}`;
   };
 
+
+
   // Fetch predefined schedules from backend (filtered)
   const fetchSchedules = async () => {
     try {
@@ -173,13 +206,17 @@ export default function ForemanSchedule() {
       const params = new URLSearchParams();
 
       // Fetch all schedule types: daily_priority, fixed_days, and weekly_cluster
+      // We'll filter them in getFilteredSchedules based on truck selection
       if (isPriority) {
+        // Priority barangays use daily_priority and fixed_days schedules
         params.set('schedule_type', 'daily_priority,fixed_days');
       } else {
+        // Clustered barangays use weekly_cluster schedules
         params.set('schedule_type', 'weekly_cluster');
         params.set('cluster_id', currentOption.clusterId);
         params.set('week_of_month', String(weekNumber));
       }
+      // Limit to visible days (Monday to Sunday)
       params.set('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].join(','));
       const url = `${buildApiUrl('get_predefined_schedules.php')}?${params.toString()}`;
       const res = await fetch(url, {
@@ -250,11 +287,13 @@ export default function ForemanSchedule() {
   // Filter schedules based on truck selection
   const getFilteredSchedules = () => {
     if (isPriorityView) {
+      // Priority: Show priority barangays (cluster_id = 1C-PB) with daily_priority or fixed_days schedule types
       return predefinedSchedules.filter(schedule =>
         schedule.cluster_id === '1C-PB' &&
         (schedule.schedule_type === 'daily_priority' || schedule.schedule_type === 'fixed_days')
       );
     } else {
+      // Clustered view: Show barangays for the selected cluster
       const weekNumber = getWeekOfMonth(getWeekStart(currentWeek));
       const filtered = predefinedSchedules.filter(schedule => (
         schedule.cluster_id === selectedClusterId &&
@@ -293,6 +332,7 @@ export default function ForemanSchedule() {
       label: schedule.barangay_name,
       time: schedule.start_time,
       end: schedule.end_time,
+      // Green for daily_priority and fixed_days, blue for weekly_cluster
       color: schedule.schedule_type === 'weekly_cluster'
         ? 'bg-gradient-to-br from-blue-100 to-blue-200'
         : 'bg-gradient-to-br from-green-100 to-emerald-100',
@@ -319,10 +359,10 @@ export default function ForemanSchedule() {
   });
 
   // Improved grid sizing for better readability
-  const colWidth = '150px';
+  const colWidth = '150px'; // Reduced from 200px to fit 7 days better
   const rowHeight = 80;
-  const eventWidth = '140px';
-  const eventHeight = 65;
+  const eventWidth = '140px'; // Reduced to match smaller column
+  const eventHeight = 65; // Slightly taller for better visual appeal
   const eventFontSize = 13;
 
   // Tooltip formatter
@@ -367,6 +407,7 @@ export default function ForemanSchedule() {
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Failed to delete schedule');
 
+      // Remove locally
       setPredefinedSchedules(prev => prev.filter(s => {
         const sId = s.schedule_template_id || s.id;
         if (idVal) return sId !== idVal;
@@ -378,16 +419,16 @@ export default function ForemanSchedule() {
           s.day_of_week === scheduleToDelete.day_of_week &&
           sStart === (scheduleToDelete.start_time || '').substring(0, 5)
         );
-      }));
+      }))
 
       setDeleteOpen(false);
       setScheduleToDelete(null);
+      setDeleteSuccessOpen(true);
+      // Also close edit modal if it's open
       if (editOpen) {
         setEditOpen(false);
         setEditingSchedule(null);
       }
-      setSuccessMessage(`Schedule for ${scheduleToDelete.barangay_name} has been deleted successfully!`);
-      setSuccessOpen(true);
       await fetchSchedules();
     } catch (err) {
       setDeleteError(err.message);
@@ -396,11 +437,104 @@ export default function ForemanSchedule() {
     }
   };
 
-  // Handle click outside menu
+  // Bulk helpers
+  const bulkDelete = async () => {
+    if (selectedCount === 0) return;
+    if (!window.confirm(`Delete ${selectedCount} selected schedule(s)?`)) return;
+    setEditSaving(true);
+    try {
+      for (const id of selectedArray) {
+        const isNumeric = /^\d+$/.test(String(id));
+        if (isNumeric) {
+          await fetch(buildApiUrl('delete_predefined_schedule.php'), {
+            method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ id })
+          }).then(r => r.json()).then(d => { if (!d.success) throw new Error(d.message || 'Delete failed'); });
+        } else {
+          // Composite id format: barangay|type|cluster|day|start
+          const [barangay_id, schedule_type, cluster_id, day_of_week, start_time] = String(id).split('|');
+          await fetch(buildApiUrl('delete_predefined_schedule.php'), {
+            method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({
+              barangay_id, schedule_type, cluster_id, day_of_week, start_time
+            })
+          }).then(r => r.json()).then(d => { if (!d.success) throw new Error(d.message || 'Delete failed'); });
+        }
+      }
+      clearSelected();
+      await fetchSchedules();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkError, setBulkError] = useState(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkForm, setBulkForm] = useState({ day_of_week: '', start_time: '', end_time: '', week_of_month: '' });
+  const bulkEditSubmit = async (e) => {
+    e.preventDefault();
+    setBulkError(null);
+    if (!bulkForm.day_of_week || !bulkForm.start_time || !bulkForm.end_time) {
+      setBulkError('Please fill out day, start time and end time.');
+      return;
+    }
+    if (bulkForm.start_time >= bulkForm.end_time) {
+      setBulkError('Start time must be earlier than end time.');
+      return;
+    }
+    setBulkSaving(true);
+    try {
+      for (const id of selectedArray) {
+        const isNumeric = /^\d+$/.test(String(id));
+        if (isNumeric) {
+          await fetch(buildApiUrl('update_predefined_schedule.php'), {
+            method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({
+              schedule_template_id: id,
+              day_of_week: bulkForm.day_of_week,
+              start_time: bulkForm.start_time,
+              end_time: bulkForm.end_time,
+              week_of_month: bulkForm.week_of_month ? Number(bulkForm.week_of_month) : undefined
+            })
+          }).then(r => r.json()).then(d => { if (!d.success) throw new Error(d.message || 'Update failed'); });
+        } else {
+          const [barangay_id, schedule_type, cluster_id, dayOfWeekOriginal, startOriginal] = String(id).split('|');
+          await fetch(buildApiUrl('update_predefined_schedule_by_fields.php'), {
+            method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({
+              barangay_id, schedule_type, cluster_id,
+              match_day_of_week: dayOfWeekOriginal,
+              match_start_time: startOriginal,
+              day_of_week: bulkForm.day_of_week,
+              start_time: bulkForm.start_time,
+              end_time: bulkForm.end_time,
+              week_of_month: bulkForm.week_of_month ? Number(bulkForm.week_of_month) : undefined
+            })
+          }).then(r => r.json()).then(d => { if (!d.success) throw new Error(d.message || 'Update failed'); });
+        }
+      }
+      setBulkOpen(false);
+      clearSelected();
+      await fetchSchedules();
+    } catch (err) {
+      setBulkError(err.message);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  // Clear selection on context changes
+  useEffect(() => {
+    clearSelected();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedView, currentWeek]);
+
+  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openMenuId && menuRefs.current[openMenuId] && !menuRefs.current[openMenuId].contains(event.target)) {
-        setOpenMenuId(null);
+      if (openMenuId && menuRefs.current[openMenuId]) {
+        if (!menuRefs.current[openMenuId].contains(event.target)) {
+          setOpenMenuId(null);
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -410,10 +544,22 @@ export default function ForemanSchedule() {
   }, [openMenuId]);
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col">
+    <div className="p-2 max-w-full overflow-x-auto bg-emerald-50 min-h-screen font-sans text-xs">
+      {/* Bulk action bar (visible when there are selections) */}
+      {selectedCount > 0 && (
+        <div className="mb-2 flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-2 py-1">
+          <div className="text-emerald-900 text-[10px] font-medium">{selectedCount} selected</div>
+          <div className="flex items-center gap-1">
+            <button className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-[10px]" onClick={() => setBulkOpen(true)}>Edit</button>
+            <button className="px-2 py-1 rounded border border-red-300 text-red-700 hover:bg-red-50 text-[10px]" onClick={bulkDelete}>Delete</button>
+            <button className="px-2 py-1 rounded border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-[10px]" onClick={clearSelected}>Clear</button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-white px-4 py-4 shadow-sm sticky top-0 z-10">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="bg-white px-4 py-4 shadow-sm sticky top-0 z-10 mb-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
             className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
@@ -421,86 +567,73 @@ export default function ForemanSchedule() {
             <IoChevronBack className="w-6 h-6" />
           </button>
           <h1 className="text-xl font-bold text-gray-800">Schedule Management</h1>
-          <div className="ml-auto flex gap-2">
-            <button
-              onClick={fetchSchedules}
-              className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
-            >
-              <FiRefreshCw className={`w-5 h-5 ${schedulesLoading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
         </div>
+      </div>
 
-        {/* Navigation Controls */}
-        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-md p-1 shadow-sm">
-              <button
-                onClick={goToPreviousWeek}
-                className="p-1.5 rounded hover:bg-gray-100 text-gray-600 transition-colors"
-                aria-label="Previous week"
-              >
-                <IoChevronBack className="w-4 h-4" />
-              </button>
-              <div className="px-3 py-1 text-sm font-semibold text-gray-700 min-w-[140px] text-center">
-                {formatMonthYear(currentWeek)}
-              </div>
-              <button
-                onClick={goToNextWeek}
-                className="p-1.5 rounded hover:bg-gray-100 text-gray-600 transition-colors"
-                aria-label="Next week"
-              >
-                <IoChevronBack className="w-4 h-4 rotate-180" />
-              </button>
-
-              <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
-              <button
-                onClick={goToToday}
-                className="px-3 py-1 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-              >
-                Today
-              </button>
-            </div>
-
+      {/* Navigation Controls */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goToPreviousWeek}
+            className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
+            aria-label="Previous week"
+            title="Previous week"
+          >
+            ←
+          </button>
+          <div className="px-2 py-1 rounded text-green-900 font-medium text-[10px]">
+            {formatMonthYear(currentWeek)}
           </div>
+          <button
+            onClick={goToNextWeek}
+            className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
+            aria-label="Next week"
+            title="Next week"
+          >
+            →
+          </button>
+        </div>
+        <button
+          onClick={goToToday}
+          className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 text-[10px]"
+          title="Go to today"
+        >
+          Today
+        </button>
 
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-            <select
-              className="flex-1 sm:flex-none border border-gray-200 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none bg-white shadow-sm min-w-[160px]"
-              value={selectedView}
-              onChange={e => { setSelectedView(e.target.value); }}
-            >
-              {scheduleViewOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            <div className="flex items-center gap-2 ml-auto sm:ml-0">
-              <button
-                onClick={async () => {
-                  setHistoryOpen(true);
-                  setHistoryError(null);
-                  setHistoryData([]);
-                  await fetchScheduleHistory();
-                }}
-                className="px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 flex items-center gap-2 text-sm font-medium bg-white shadow-sm transition-colors"
-              >
-                <FiClock className="w-4 h-4" />
-                <span>History</span>
-              </button>
-
-              <button
-                onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '', week_of_month: '' }); setAddError(null); setAddOpen(true); }}
-                className="px-4 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 text-sm font-medium shadow-sm shadow-green-200 transition-all hover:shadow-md whitespace-nowrap"
-              >
-                <span className="text-lg leading-none">+</span>
-                Add Schedule
-              </button>
-            </div>
-          </div>
+        <div className="flex items-center gap-3">
+          <select
+            className="border border-gray-300 rounded-md px-2 py-0.5 text-[10px] font-semibold text-green-700 focus:border-green-600 focus:outline-none bg-white"
+            value={selectedView}
+            onChange={e => { setSelectedView(e.target.value); clearSelected(); }}
+            title="Select schedule view"
+          >
+            {scheduleViewOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={async () => {
+              setHistoryOpen(true);
+              setHistoryError(null);
+              setHistoryData([]);
+              await fetchScheduleHistory();
+            }}
+            className="ml-1 px-2 py-0.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+            title="View schedule history"
+          >
+            <FiClock className="w-3 h-3" />
+            History
+          </button>
+          <button
+            onClick={() => { setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '' }); setAddError(null); setAddOpen(true); }}
+            className="ml-1 px-2 py-0.5 rounded bg-green-600 text-white hover:bg-green-700"
+            title="Add schedule"
+          >
+            Add Schedule
+          </button>
         </div>
       </div>
 
@@ -523,7 +656,7 @@ export default function ForemanSchedule() {
       )}
 
       {/* Schedule Grid */}
-      <div className="flex-1 overflow-auto p-4" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 180px)', width: '100%' }}>
         {schedulesLoading ? (
           <div className="text-center py-8">Loading...</div>
         ) : filteredSchedules.length === 0 ? (
@@ -544,7 +677,7 @@ export default function ForemanSchedule() {
                 top: 0,
                 zIndex: 2,
                 background: '#f0fdf4',
-                minWidth: '1150px',
+                minWidth: '1150px', // 100px + (7 * 150px) = 1150px minimum
               }}
             >
               <div className="bg-green-100 rounded-tl-lg py-1.5 font-semibold text-[10px] text-center">
@@ -563,7 +696,7 @@ export default function ForemanSchedule() {
               style={{
                 gridTemplateColumns: `100px repeat(7, minmax(${colWidth}, 1fr))`,
                 minHeight: 500,
-                minWidth: '1150px',
+                minWidth: '1150px', // 100px + (7 * 150px) = 1150px minimum
               }}
             >
               {/* Time Column */}
@@ -585,75 +718,43 @@ export default function ForemanSchedule() {
                   {timeSlots.map((slot) => {
                     const key = `${day.day}-${slot}`;
                     const events = eventMap[key] || [];
+                    const hasEvents = events.length > 0;
+                    const cellMenuKey = `cell-${key}`;
+                    const isCellMenuOpen = openMenuId === cellMenuKey;
+
                     return (
                       <div
                         key={slot}
-                        className="w-full flex flex-col items-center justify-center border-r border-gray-100"
+                        className="w-full flex items-center justify-center border-r border-gray-100 relative"
                         style={{ height: rowHeight }}
                       >
-                        {events.map((event, idx) => {
-                          const eventKey = `${event.id || event.label}-${idx}`;
-                          const isMenuOpen = openMenuId === eventKey;
+                        {hasEvents ? (
+                          // Cell with schedule cards - show cards with their menus
+                          <>
+                            <div className="flex flex-col items-center w-full">
+                              {events.map((event, idx) => {
+                                const eventKey = `${event.id || event.label}-${idx}`;
 
-                          return (
-                            <div
-                              key={eventKey}
-                              className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center mb-2 p-2.5 hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer`}
-                              style={{
-                                width: eventWidth,
-                                height: eventHeight,
-                                fontWeight: 700,
-                                fontSize: eventFontSize,
-                                minHeight: '55px',
-                                overflow: 'visible',
-                                position: 'relative'
-                              }}
-                              title={formatTooltip(event)}
-                              onClick={(e) => {
-                                if (e.target.closest('.menu-button') || e.target.closest('.menu-dropdown')) {
-                                  return;
-                                }
-                                const s = event.schedule;
-                                setEditingSchedule(s);
-                                setEditForm({
-                                  day_of_week: s.day_of_week,
-                                  start_time: s.start_time?.substring(0, 5) || '',
-                                  end_time: s.end_time?.substring(0, 5) || '',
-                                  week_of_month: s.week_of_month || ''
-                                });
-                                setEditError(null);
-                                setEditOpen(true);
-                              }}
-                            >
-                              {event.isNew && (
-                                <div className={`absolute -top-1.5 -right-1.5 z-20 ${event.badgeColor} text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border-2 border-white animate-pulse`}>
-                                  NEW
-                                </div>
-                              )}
-
-                              <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
-
-                              <div
-                                className="absolute top-1 right-1 z-30 menu-button"
-                                ref={(el) => { menuRefs.current[eventKey] = el; }}
-                              >
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuId(isMenuOpen ? null : eventKey);
-                                  }}
-                                  className={`p-1 rounded-full hover:bg-black/10 transition-colors ${isMenuOpen ? 'bg-black/20' : ''}`}
-                                  title="More options"
-                                >
-                                  <FiMoreVertical className="w-3 h-3 text-gray-700" />
-                                </button>
-
-                                {isMenuOpen && (
-                                  <div className="absolute right-0 top-6 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px] z-40 menu-dropdown">
-                                    <button
+                                return (
+                                  <div key={eventKey} className="mb-2">
+                                    <div
+                                      className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center p-2.5 hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer ${selectedIds.has(event.id) ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}
+                                      style={{
+                                        width: eventWidth,
+                                        height: eventHeight,
+                                        fontWeight: 700,
+                                        fontSize: eventFontSize,
+                                        minHeight: '55px',
+                                        overflow: 'visible',
+                                        position: 'relative'
+                                      }}
+                                      title={formatTooltip(event)}
                                       onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenMenuId(null);
+                                        // If Ctrl/Meta is held, toggle selection; otherwise open edit
+                                        if (e.ctrlKey || e.metaKey || ctrlPressed) {
+                                          toggleSelected(event.id);
+                                          return;
+                                        }
                                         const s = event.schedule;
                                         setEditingSchedule(s);
                                         setEditForm({
@@ -665,34 +766,165 @@ export default function ForemanSchedule() {
                                         setEditError(null);
                                         setEditOpen(true);
                                       }}
-                                      className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                     >
-                                      <FiEdit2 className="w-3 h-3" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenMenuId(null);
-                                        setScheduleToDelete(event.schedule);
-                                        setDeleteError(null);
-                                        setDeleteOpen(true);
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                    >
-                                      <FiTrash2 className="w-3 h-3" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                                      {/* NEW badge for recently created schedules */}
+                                      {event.isNew && (
+                                        <div className={`absolute -top-1.5 -right-1.5 z-20 ${event.badgeColor} text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-lg border-2 border-white animate-pulse`}>
+                                          NEW
+                                        </div>
+                                      )}
 
-                              <div className={`${event.text} text-center font-bold truncate w-full px-1`}>
-                                {event.label}
-                              </div>
+                                      {/* Decorative corner accent */}
+                                      <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
+
+                                      {/* Main content */}
+                                      <div className="flex items-center justify-center w-full gap-2 min-w-0 relative z-10">
+                                        {/* Icon indicator */}
+                                        <div className={`flex-shrink-0 w-2 h-2 rounded-full ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-500' : 'bg-green-500'} shadow-sm`}></div>
+
+                                        <span
+                                          className={`text-sm font-bold ${event.text} truncate flex-1 text-center`}
+                                          style={{
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            lineHeight: '1.3'
+                                          }}
+                                        >
+                                          {event.label}
+                                        </span>
+
+                                        {(ctrlPressed || selectedCount > 0) && (
+                                          <input
+                                            type="checkbox"
+                                            className="h-4 w-4 flex-shrink-0"
+                                            checked={selectedIds.has(event.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={() => toggleSelected(event.id)}
+                                          />
+                                        )}
+                                      </div>
+
+                                      {/* Subtle pattern overlay */}
+                                      <div className={`absolute inset-0 opacity-5 ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-600' : 'bg-green-600'}`} style={{
+                                        backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, currentColor 2px, currentColor 4px)'
+                                      }}></div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+
+                            {/* Three-dot menu for cells with cards - positioned at top-right */}
+                            <div
+                              className="absolute top-2 right-2 z-30"
+                              ref={(el) => { menuRefs.current[cellMenuKey] = el; }}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(isCellMenuOpen ? null : cellMenuKey);
+                                }}
+                                className={`p-1 rounded-full hover:bg-gray-200 transition-colors ${isCellMenuOpen ? 'bg-gray-300' : ''}`}
+                                title="More options"
+                              >
+                                <FiMoreVertical className="w-3.5 h-3.5 text-gray-600" />
+                              </button>
+
+                              {/* Dropdown menu */}
+                              {isCellMenuOpen && (
+                                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[140px] z-50">
+                                  {events.map((event, idx) => (
+                                    <div key={idx}>
+                                      <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-b border-gray-100">
+                                        {event.label}
+                                      </div>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenMenuId(null);
+                                          const s = event.schedule;
+                                          setEditingSchedule(s);
+                                          setEditForm({
+                                            barangay_id: s.barangay_id,
+                                            barangay_name: s.barangay_name,
+                                            day_of_week: s.day_of_week,
+                                            start_time: s.start_time?.substring(0, 5) || '',
+                                            end_time: s.end_time?.substring(0, 5) || '',
+                                            week_of_month: s.week_of_month || ''
+                                          });
+                                          setEditError(null);
+                                          setEditOpen(true);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      >
+                                        <FiEdit2 className="w-3 h-3" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenMenuId(null);
+                                          setScheduleToDelete(event.schedule);
+                                          setDeleteError(null);
+                                          setDeleteOpen(true);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-b border-gray-100 last:border-b-0"
+                                      >
+                                        <FiTrash2 className="w-3 h-3" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          // Empty cell - show three-dot menu for adding schedule
+                          <div
+                            className="absolute top-2 right-2"
+                            ref={(el) => { menuRefs.current[cellMenuKey] = el; }}
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(isCellMenuOpen ? null : cellMenuKey);
+                              }}
+                              className={`p-1 rounded-full hover:bg-gray-200 transition-colors ${isCellMenuOpen ? 'bg-gray-300' : ''}`}
+                              title="Add schedule"
+                            >
+                              <FiMoreVertical className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+
+                            {/* Dropdown menu for empty cell */}
+                            {isCellMenuOpen && (
+                              <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px] z-50">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(null);
+                                    // Pre-fill the add form with this cell's day and time
+                                    const fullDate = new Date(day.fullDate);
+                                    const dateStr = fullDate.toISOString().split('T')[0];
+                                    setAddForm({
+                                      date: dateStr,
+                                      start_time: slot,
+                                      end_time: '',
+                                      barangay_id: ''
+                                    });
+                                    setAddError(null);
+                                    setAddOpen(true);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                >
+                                  <FiEdit2 className="w-3 h-3" />
+                                  Add Schedule
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -703,318 +935,361 @@ export default function ForemanSchedule() {
         )}
       </div>
 
-      {/* Edit Modal - Simplified for foreman */}
-      {editOpen && editingSchedule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-              <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
-                onClick={() => {
-                  setEditOpen(false);
-                  setEditingSchedule(null);
-                  setEditError(null);
-                }}
-              >✕</button>
-              <h2 className="text-lg font-semibold text-gray-800">Edit Schedule</h2>
-            </div>
-            <div className="px-4 py-3">
-              {editError && (
-                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                  {editError}
-                </div>
-              )}
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setEditError(null);
-                  try {
-                    setEditSaving(true);
-                    const idVal = editingSchedule.schedule_template_id || editingSchedule.id;
-                    const res = await fetch(buildApiUrl('update_predefined_schedule.php'), {
-                      method: 'POST',
-                      headers: getAuthHeaders(),
-                      body: JSON.stringify({
-                        schedule_template_id: idVal,
-                        day_of_week: editForm.day_of_week,
-                        start_time: editForm.start_time + ':00',
-                        end_time: editForm.end_time + ':00',
-                        week_of_month: editForm.week_of_month || null
-                      })
-                    });
-                    const data = await res.json();
-                    if (!data.success) throw new Error(data.message || 'Failed to update schedule');
-                    setEditOpen(false);
-                    setEditingSchedule(null);
-                    setSuccessMessage(`Schedule for ${editingSchedule.barangay_name} has been updated successfully!`);
-                    setSuccessOpen(true);
-                    await fetchSchedules();
-                  } catch (err) {
-                    setEditError(err.message);
-                  } finally {
-                    setEditSaving(false);
-                  }
-                }}
-                className="space-y-3"
-              >
+      {/* Bulk Edit Modal */}
+      {selectedCount > 0 && bulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative p-3">
+            <button className="absolute top-3 right-3 text-gray-500 hover:text-green-700" onClick={() => setBulkOpen(false)}>✕</button>
+            <h2 className="text-lg font-semibold text-green-800 mb-4">Edit {selectedCount} Selected</h2>
+            {bulkError && <div className="text-red-600 text-sm mb-3">{bulkError}</div>}
+            <form onSubmit={bulkEditSubmit} className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Day of Week</label>
-                  <select
-                    className="w-full border border-gray-300 rounded px-2 py-1"
-                    value={editForm.day_of_week}
-                    onChange={(e) => setEditForm({ ...editForm, day_of_week: e.target.value })}
-                    required
-                  >
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
+                  <label className="block text-[10px] text-green-700 mb-0.5">Day of Week</label>
+                  <select className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.day_of_week} onChange={(e) => setBulkForm({ ...bulkForm, day_of_week: e.target.value })} required>
+                    <option value="">Select day</option>
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (<option key={d} value={d}>{d}</option>))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
-                    <input
-                      type="time"
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                      value={editForm.start_time}
-                      onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
-                    <input
-                      type="time"
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                      value={editForm.end_time}
-                      onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Week of Month</label>
+                  <input type="number" min={1} max={4} className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.week_of_month || ''} onChange={(e) => setBulkForm({ ...bulkForm, week_of_month: e.target.value })} />
                 </div>
-                {editingSchedule.schedule_type === 'weekly_cluster' && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Week of Month</label>
-                    <select
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                      value={editForm.week_of_month}
-                      onChange={(e) => setEditForm({ ...editForm, week_of_month: e.target.value })}
-                    >
-                      <option value="">Select Week</option>
-                      {[1, 2, 3, 4].map(w => (
-                        <option key={w} value={w}>Week {w}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    onClick={() => {
-                      setEditOpen(false);
-                      setEditingSchedule(null);
-                      setEditError(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                    disabled={editSaving}
-                  >
-                    {editSaving ? 'Saving...' : 'Save'}
-                  </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Start Time</label>
+                  <input type="time" className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.start_time} onChange={(e) => setBulkForm({ ...bulkForm, start_time: e.target.value })} required />
                 </div>
-              </form>
-            </div>
+                <div>
+                  <label className="block text-[10px] text-green-700 mb-0.5">End Time</label>
+                  <input type="time" className="w-full border border-green-200 rounded px-2 py-1" value={bulkForm.end_time} onChange={(e) => setBulkForm({ ...bulkForm, end_time: e.target.value })} required />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1 pt-1">
+                <button type="button" className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setBulkOpen(false)}>Cancel</button>
+                <button type="submit" className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={bulkSaving}>{bulkSaving ? 'Saving...' : 'Apply Changes'}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
-      {deleteOpen && scheduleToDelete && (
+      {/* Inline Edit Modal */}
+      {editOpen && editingSchedule && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-              <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
-                onClick={() => {
-                  setDeleteOpen(false);
-                  setScheduleToDelete(null);
-                  setDeleteError(null);
-                }}
-              >✕</button>
-              <h2 className="text-lg font-semibold text-gray-800">Delete Schedule</h2>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden border-4 border-emerald-500">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 bg-gradient-to-r from-emerald-50 to-green-50">
+              <h2 className="text-lg font-bold text-emerald-800">Edit Schedule</h2>
             </div>
-            <div className="px-4 py-3">
-              {deleteError && (
-                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                  {deleteError}
+
+            {editError && (
+              <div className="mx-4 mt-3 rounded-lg bg-red-50 border-2 border-red-300 px-4 py-3 flex items-start gap-2">
+                <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-800">{editError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Body */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setEditError(null);
+
+                // Validation
+                if (!editForm.barangay_id && !editingSchedule.barangay_id) {
+                  setEditError('Please select a barangay.');
+                  return;
+                }
+
+                if (editingSchedule.schedule_type === 'weekly_cluster') {
+                  const w = Number(editForm.week_of_month);
+                  if (!w || w < 1 || w > 4) {
+                    setEditError('Week of month must be between 1 and 4 for weekly clusters.');
+                    return;
+                  }
+                }
+
+                try {
+                  setEditSaving(true);
+                  const idVal = (
+                    editingSchedule?.schedule_template_id ||
+                    editingSchedule?.template_id ||
+                    editingSchedule?.id ||
+                    editingSchedule?.schedule_id ||
+                    editingSchedule?.predefined_id
+                  );
+                  let res;
+                  if (!idVal) {
+                    res = await fetch(buildApiUrl('update_predefined_schedule_by_fields.php'), {
+                      method: 'POST',
+                      headers: getAuthHeaders(),
+                      body: JSON.stringify({
+                        barangay_id: editingSchedule.barangay_id,
+                        cluster_id: editingSchedule.cluster_id,
+                        schedule_type: editingSchedule.schedule_type,
+                        match_day_of_week: editingSchedule.day_of_week,
+                        match_start_time: (editingSchedule.start_time || '').substring(0, 5),
+                        day_of_week: editForm.day_of_week,
+                        start_time: editForm.start_time,
+                        end_time: editForm.end_time,
+                        week_of_month: editingSchedule.schedule_type === 'weekly_cluster' ? Number(editForm.week_of_month) : undefined
+                      })
+                    });
+                  } else {
+                    res = await fetch(buildApiUrl('update_predefined_schedule.php'), {
+                      method: 'POST',
+                      headers: getAuthHeaders(),
+                      body: JSON.stringify({
+                        schedule_template_id: idVal,
+                        template_id: idVal,
+                        id: idVal,
+                        schedule_id: idVal,
+                        predefined_id: idVal,
+                        barangay_id: editForm.barangay_id || editingSchedule.barangay_id,
+                        day_of_week: editForm.day_of_week,
+                        start_time: editForm.start_time,
+                        end_time: editForm.end_time,
+                        week_of_month: editingSchedule.schedule_type === 'weekly_cluster' ? Number(editForm.week_of_month) : undefined
+                      })
+                    });
+                  }
+                  const data = await res.json();
+                  if (!data.success) throw new Error(data.message || 'Failed to update schedule');
+
+                  // Update local state
+                  setPredefinedSchedules((prev) => {
+                    const originalDay = editingSchedule.day_of_week;
+                    const originalStart = (editingSchedule.start_time || '').substring(0, 5);
+                    const idVal = (
+                      editingSchedule?.schedule_template_id ||
+                      editingSchedule?.template_id ||
+                      editingSchedule?.id ||
+                      editingSchedule?.schedule_id ||
+                      editingSchedule?.predefined_id
+                    );
+                    return prev.map((s) => {
+                      const sStart = (s.start_time || '').substring(0, 5);
+                      const idMatch = idVal && (
+                        s.schedule_template_id === idVal || s.id === idVal
+                      );
+                      const fieldMatch = (
+                        s.barangay_id === editingSchedule.barangay_id &&
+                        s.cluster_id === editingSchedule.cluster_id &&
+                        s.schedule_type === editingSchedule.schedule_type &&
+                        s.day_of_week === originalDay &&
+                        sStart === originalStart
+                      );
+                      if (idMatch || fieldMatch) {
+                        return {
+                          ...s,
+                          barangay_id: editForm.barangay_id || editingSchedule.barangay_id,
+                          barangay_name: editForm.barangay_name || editingSchedule.barangay_name,
+                          day_of_week: editForm.day_of_week,
+                          start_time: editForm.start_time,
+                          end_time: editForm.end_time,
+                          week_of_month: editingSchedule.schedule_type === 'weekly_cluster'
+                            ? Number(editForm.week_of_month)
+                            : s.week_of_month
+                        };
+                      }
+                      return s;
+                    });
+                  });
+                  setEditOpen(false);
+                  setEditSuccessOpen(true);
+                } catch (err) {
+                  // Check if it's a duplicate error
+                  if (err.message && (err.message.includes('Duplicate entry') || err.message.includes('1062'))) {
+                    setEditOpen(false);
+                    setDuplicateErrorMessage('A schedule already exists for this barangay at this time. Please choose a different time or barangay.');
+                    setDuplicateErrorOpen(true);
+                  } else {
+                    setEditError(err.message);
+                  }
+                } finally {
+                  setEditSaving(false);
+                }
+              }}
+              className="px-4 py-4 space-y-4"
+            >
+              {/* Time Display (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <div className="text-lg font-semibold text-gray-900">
+                  {editForm.start_time} - {editForm.end_time}
+                </div>
+              </div>
+
+              {/* Barangay Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Barangay</label>
+                <select
+                  className="w-full border-2 border-emerald-400 rounded-lg px-3 py-2 bg-emerald-50 text-gray-900 font-medium focus:border-emerald-500 focus:ring-0"
+                  value={editForm.barangay_id !== undefined ? String(editForm.barangay_id) : String(editingSchedule.barangay_id)}
+                  onChange={(e) => {
+                    const selectedValue = e.target.value;
+                    const selectedBarangay = barangayList.find(b => String(b.barangay_id) === selectedValue);
+                    if (selectedBarangay) {
+                      setEditForm({
+                        ...editForm,
+                        barangay_id: selectedBarangay.barangay_id,
+                        barangay_name: selectedBarangay.barangay_name
+                      });
+                    }
+                  }}
+                >
+                  {barangayList.map(barangay => (
+                    <option key={barangay.barangay_id} value={String(barangay.barangay_id)}>
+                      {barangay.barangay_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Week of Month Dropdown (only for weekly_cluster) */}
+              {editingSchedule.schedule_type === 'weekly_cluster' && (
+                <div>
+                  <button
+                    type="button"
+                    className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 bg-white text-left flex items-center justify-between hover:border-emerald-400 transition-colors"
+                    onClick={() => {
+                      const nextWeek = ((Number(editForm.week_of_month) || 1) % 4) + 1;
+                      setEditForm({ ...editForm, week_of_month: nextWeek.toString() });
+                    }}
+                  >
+                    <span className="font-medium text-gray-700">Week {editForm.week_of_month} of Month</span>
+                    <span className="text-gray-400">▼</span>
+                  </button>
                 </div>
               )}
-              <p className="text-sm text-gray-700 mb-4">
-                Are you sure you want to delete this schedule?
-              </p>
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 mb-4">
-                <p className="text-sm font-semibold text-gray-800">{scheduleToDelete.barangay_name}</p>
-                <p className="text-xs text-gray-600">{scheduleToDelete.day_of_week} • {scheduleToDelete.start_time?.substring(0, 5)} - {scheduleToDelete.end_time?.substring(0, 5)}</p>
-              </div>
-              <div className="flex items-center justify-end gap-2">
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-center gap-3 pt-2">
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                  onClick={() => {
-                    setDeleteOpen(false);
-                    setScheduleToDelete(null);
-                    setDeleteError(null);
-                  }}
+                  onClick={() => setEditOpen(false)}
+                  className="px-6 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  disabled={editSaving}
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                  onClick={handleDeleteSchedule}
-                  disabled={deleteDeleting}
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                  disabled={editSaving}
                 >
-                  {deleteDeleting ? 'Deleting...' : 'Delete'}
+                  {editSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {editSuccessOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm relative overflow-hidden border-4 border-emerald-500 animate-scale-in">
+            <div className="px-6 py-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Schedule Updated!</h3>
+              <p className="text-gray-600 mb-6">The schedule has been successfully updated.</p>
+              <button
+                onClick={() => setEditSuccessOpen(false)}
+                className="px-8 py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors shadow-lg"
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Add Schedule Modal */}
-      {addOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+      {
+        addOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg p-3 w-full max-w-sm relative">
               <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
-                onClick={() => {
-                  setAddOpen(false);
-                  setAddError(null);
-                }}
-                disabled={addSaving}
+                className="absolute top-2 right-2 text-gray-500 hover:text-green-700"
+                onClick={() => setAddOpen(false)}
+                aria-label="Close"
               >✕</button>
-              <h2 className="text-lg font-semibold text-gray-800">Add Schedule</h2>
-            </div>
-            <div className="px-4 py-3">
+              <h2 className="text-sm font-semibold text-green-800 mb-2">Add Schedule</h2>
               {addError && (
-                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                  {addError}
-                </div>
+                <div className="text-red-600 text-[10px] mb-1.5">{addError}</div>
               )}
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setAddError(null);
-
-                  if (!addForm.barangay_id) {
-                    setAddError('Please select a barangay.');
+                  if (!addForm.date || !addForm.start_time || !addForm.end_time || !addForm.barangay_id) {
+                    setAddError('Please fill out date, time, and barangay.');
                     return;
                   }
-
-                  if (!addForm.start_time || !addForm.end_time) {
-                    setAddError('Please enter start and end times.');
-                    return;
-                  }
-
                   if (addForm.start_time >= addForm.end_time) {
                     setAddError('Start time must be earlier than end time.');
                     return;
                   }
-
-                  // Check for duplicate schedule
-                  let dayOfWeek = 'Monday';
-                  if (addForm.date) {
-                    const dayIndex = new Date(addForm.date).getDay();
-                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                    dayOfWeek = dayNames[dayIndex];
-                  }
-
-                  const weekOfMonth = !isPriorityView ? (addForm.week_of_month ? parseInt(addForm.week_of_month) : getWeekOfMonth(addForm.date ? new Date(addForm.date) : new Date())) : null;
-
-                  // Check if schedule already exists
-                  const existingSchedule = filteredSchedules.find(s => {
-                    const matchesBarangay = String(s.barangay_id) === String(addForm.barangay_id);
-                    const matchesDay = s.day_of_week === dayOfWeek;
-                    const matchesTime = s.start_time?.substring(0, 5) === addForm.start_time;
-                    const matchesWeek = !isPriorityView ? (s.week_of_month === weekOfMonth || (!s.week_of_month && !weekOfMonth)) : true;
-
-                    return matchesBarangay && matchesDay && matchesTime && matchesWeek;
-                  });
-
-                  if (existingSchedule) {
-                    setDuplicateSchedule(existingSchedule);
-                    setDuplicateWarningOpen(true);
-                    return;
-                  }
-
                   try {
                     setAddSaving(true);
-
+                    const dayIndex = new Date(addForm.date).getDay();
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const dayOfWeek = dayNames[dayIndex];
+                    const wom = getWeekOfMonth(addForm.date);
                     const schedule_type = isPriorityView ? 'daily_priority' : 'weekly_cluster';
                     const cluster_id = selectedClusterId;
-
                     const barangay = barangayList.find(b => String(b.barangay_id) === String(addForm.barangay_id));
-
                     const payload = {
                       barangay_id: addForm.barangay_id,
                       barangay_name: barangay ? barangay.barangay_name : undefined,
                       cluster_id,
                       schedule_type,
                       day_of_week: dayOfWeek,
-                      start_time: addForm.start_time + ':00',
-                      end_time: addForm.end_time + ':00',
+                      start_time: addForm.start_time,
+                      end_time: addForm.end_time,
                       frequency_per_day: 1,
-                      week_of_month: weekOfMonth,
+                      week_of_month: schedule_type === 'weekly_cluster' ? wom : undefined,
                       is_active: 1
                     };
-
                     const res = await fetch(buildApiUrl('create_predefined_schedule.php'), {
                       method: 'POST',
                       headers: getAuthHeaders(),
                       body: JSON.stringify(payload)
                     });
-
                     const data = await res.json();
-                    if (!data.success) {
-                      // Check if it's a duplicate error from database
-                      if (data.message && data.message.includes('Duplicate') || data.message.includes('duplicate')) {
-                        setDuplicateSchedule({
-                          barangay_name: barangay?.barangay_name || addForm.barangay_id,
-                          day_of_week: dayOfWeek,
-                          start_time: addForm.start_time
-                        });
-                        setDuplicateWarningOpen(true);
-                        setAddSaving(false);
-                        return;
-                      }
-                      throw new Error(data.message || 'Failed to create schedule');
-                    }
-
-                    setAddOpen(false);
-                    setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '', week_of_month: '' });
-                    setAddError(null);
-                    setSuccessMessage(`Schedule for ${barangay?.barangay_name || 'barangay'} on ${dayOfWeek} at ${addForm.start_time} has been created successfully!`);
-                    setSuccessOpen(true);
+                    if (!data.success) throw new Error(data.message || 'Failed to create schedule');
                     await fetchSchedules();
+                    setAddOpen(false);
                   } catch (err) {
-                    setAddError(err.message || 'Failed to create schedule');
+                    // Check if it's a duplicate error
+                    if (err.message && (err.message.includes('Duplicate entry') || err.message.includes('1062'))) {
+                      setAddOpen(false);
+                      setDuplicateErrorMessage('A schedule already exists for this barangay at this time. Please choose a different time or barangay.');
+                      setDuplicateErrorOpen(true);
+                    } else {
+                      setAddError(err.message);
+                    }
                   } finally {
                     setAddSaving(false);
                   }
                 }}
-                className="space-y-3"
+                className="space-y-2"
               >
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Barangay</label>
+                  <label className="block text-[10px] text-green-700 mb-0.5">Barangay</label>
                   <select
-                    className="w-full border border-gray-300 rounded px-2 py-1"
+                    className="w-full border border-green-200 rounded px-2 py-1"
                     value={addForm.barangay_id}
                     onChange={(e) => setAddForm({ ...addForm, barangay_id: e.target.value })}
                     required
@@ -1027,352 +1302,379 @@ export default function ForemanSchedule() {
                       ))}
                   </select>
                 </div>
-
-                {!isPriorityView && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Week of Month</label>
-                    <select
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                      value={addForm.week_of_month || getWeekOfMonth(addForm.date ? new Date(addForm.date) : new Date()).toString()}
-                      onChange={(e) => setAddForm({ ...addForm, week_of_month: e.target.value })}
+                    <label className="block text-[10px] text-green-700 mb-0.5">Date</label>
+                    <input
+                      type="date"
+                      className="w-full border border-green-200 rounded px-2 py-1"
+                      value={addForm.date}
+                      onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
                       required
-                    >
-                      <option value="">Select Week</option>
-                      {[1, 2, 3, 4].map(w => (
-                        <option key={w} value={w}>Week {w}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date (for day of week)</label>
-                  <input
-                    type="date"
-                    className="w-full border border-gray-300 rounded px-2 py-1"
-                    value={addForm.date}
-                    onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Select a date to determine the day of week</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
+                    <label className="block text-[10px] text-green-700 mb-0.5">Start Time</label>
                     <input
                       type="time"
-                      className="w-full border border-gray-300 rounded px-2 py-1"
+                      className="w-full border border-green-200 rounded px-2 py-1"
                       value={addForm.start_time}
                       onChange={(e) => setAddForm({ ...addForm, start_time: e.target.value })}
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
-                    <input
-                      type="time"
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                      value={addForm.end_time}
-                      onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
-                      required
-                    />
-                  </div>
                 </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    onClick={() => {
-                      setAddOpen(false);
-                      setAddError(null);
-                      setAddForm({ date: '', start_time: '', end_time: '', barangay_id: '', week_of_month: '' });
-                    }}
-                    disabled={addSaving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                    disabled={addSaving}
-                  >
-                    {addSaving ? 'Creating...' : 'Create Schedule'}
+                <div>
+                  <label className="block text-[10px] text-green-700 mb-0.5">End Time</label>
+                  <input
+                    type="time"
+                    className="w-full border border-green-200 rounded px-2 py-1"
+                    value={addForm.end_time}
+                    onChange={(e) => setAddForm({ ...addForm, end_time: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="flex items-center justify-end gap-1 pt-1">
+                  <button type="button" className="px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setAddOpen(false)}>Cancel</button>
+                  <button type="submit" className="px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={addSaving}>
+                    {addSaving ? 'Saving...' : 'Create Schedule'}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {/* History Modal */}
-      {historyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] relative overflow-hidden flex flex-col">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
-              <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
-                onClick={() => {
-                  setHistoryOpen(false);
-                  setHistoryError(null);
-                  setHistoryData([]);
-                }}
-              >✕</button>
-              <div className="flex items-center gap-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <FiClock className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">Schedule History</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Track all schedule changes by admin and foreman</p>
+      {/* Delete Confirmation Modal */}
+      {
+        deleteOpen && scheduleToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
+              {/* Header */}
+              <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+                <button
+                  className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
+                  onClick={() => {
+                    setDeleteOpen(false);
+                    setScheduleToDelete(null);
+                    setDeleteError(null);
+                  }}
+                  aria-label="Close"
+                  title="Close"
+                  disabled={deleteDeleting}
+                >✕</button>
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <FiTrash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-800">Delete Schedule</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">This action cannot be undone</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="px-4 py-3 flex-1 overflow-y-auto">
-              {historyLoading && (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Loading history...</p>
-                </div>
-              )}
+              {/* Body */}
+              <div className="px-4 py-3">
+                {deleteError && (
+                  <div className="mb-3 rounded-lg bg-red-50 border-2 border-red-300 px-4 py-3 flex items-start gap-2">
+                    <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-800">{deleteError}</p>
+                    </div>
+                  </div>
+                )}
 
-              {historyError && (
-                <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                  {historyError}
-                </div>
-              )}
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700 mb-3">
+                    Are you sure you want to delete this schedule?
+                  </p>
 
-              {!historyLoading && !historyError && historyData.length === 0 && (
-                <div className="text-center py-8">
-                  <FiClock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No history records found</p>
-                </div>
-              )}
-
-              {!historyLoading && !historyError && historyData.length > 0 && (
-                <div className="space-y-3">
-                  {historyData.map((record) => {
-                    const actionColors = {
-                      create: 'bg-green-100 text-green-800 border-green-200',
-                      update: 'bg-blue-100 text-blue-800 border-blue-200',
-                      delete: 'bg-red-100 text-red-800 border-red-200',
-                      restore: 'bg-purple-100 text-purple-800 border-purple-200'
-                    };
-                    const actionColor = actionColors[record.action] || 'bg-gray-100 text-gray-800 border-gray-200';
-
-                    return (
-                      <div key={record.history_id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold border uppercase ${actionColor}`}>
-                              {record.action}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {new Date(record.changed_at).toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 mb-2">
-                          <div>
-                            <p className="text-xs font-medium text-gray-600 mb-1">Actor</p>
-                            <p className="text-sm text-gray-800 font-semibold">
-                              {record.actor.name || record.actor.username}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {record.actor.role || 'Unknown Role'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-gray-600 mb-1">Schedule</p>
-                            <p className="text-sm text-gray-800 font-semibold">
-                              {record.schedule_info?.barangay_name || 'N/A'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {record.schedule_info?.day_of_week} • {record.schedule_info?.start_time?.substring(0, 5)} - {record.schedule_info?.end_time?.substring(0, 5)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {record.action === 'update' && record.before_payload && record.after_payload && (
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <p className="text-xs font-medium text-gray-600 mb-1">Changes:</p>
-                            <div className="text-xs space-y-1">
-                              {Object.keys(record.after_payload).map((key) => {
-                                if (key === 'updated_at' || key === 'created_at' || key === 'deleted_at' ||
-                                  key === 'created_by' || key === 'updated_by' || key === 'deleted_by' ||
-                                  key === 'schedule_template_id' || key === 'is_active') return null;
-
-                                const beforeVal = record.before_payload[key];
-                                const afterVal = record.after_payload[key];
-
-                                if (beforeVal === afterVal) return null;
-
-                                return (
-                                  <div key={key} className="flex items-center gap-2">
-                                    <span className="text-gray-600 font-medium">{key}:</span>
-                                    <span className="text-red-600 line-through">{String(beforeVal || 'N/A')}</span>
-                                    <span className="text-gray-400">→</span>
-                                    <span className="text-green-600 font-semibold">{String(afterVal || 'N/A')}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {record.remarks && (
-                          <div className="mt-2 pt-2 border-t border-gray-100">
-                            <p className="text-xs text-gray-600 italic">{record.remarks}</p>
-                          </div>
-                        )}
+                  {/* Schedule Details */}
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600 w-24">Barangay:</span>
+                        <span className="text-xs text-gray-800 font-semibold">{scheduleToDelete.barangay_name || scheduleToDelete.barangay_id}</span>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600 w-24">Day:</span>
+                        <span className="text-xs text-gray-800">{scheduleToDelete.day_of_week}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600 w-24">Time:</span>
+                        <span className="text-xs text-gray-800">
+                          {scheduleToDelete.start_time?.substring(0, 5) || ''} - {scheduleToDelete.end_time?.substring(0, 5) || ''}
+                        </span>
+                      </div>
+                      {scheduleToDelete.schedule_type === 'weekly_cluster' && scheduleToDelete.week_of_month && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600 w-24">Week:</span>
+                          <span className="text-xs text-gray-800">Week {scheduleToDelete.week_of_month}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600 w-24">Type:</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 uppercase">
+                          {scheduleToDelete.schedule_type}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-              <div className="text-xs text-gray-600">
-                Total: {historyTotal} record{historyTotal !== 1 ? 's' : ''}
               </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    setDeleteOpen(false);
+                    setScheduleToDelete(null);
+                    setDeleteError(null);
+                  }}
+                  disabled={deleteDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={handleDeleteSchedule}
+                  disabled={deleteDeleting}
+                >
+                  {deleteDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 className="w-4 h-4" />
+                      Delete Schedule
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Delete Success Modal */}
+      {deleteSuccessOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm relative overflow-hidden border-4 border-emerald-500 animate-scale-in">
+            <div className="px-6 py-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Schedule Deleted!</h3>
+              <p className="text-gray-600 mb-6">The schedule has been successfully deleted.</p>
               <button
-                type="button"
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                onClick={() => {
-                  setHistoryOpen(false);
-                  setHistoryError(null);
-                  setHistoryData([]);
-                }}
+                onClick={() => setDeleteSuccessOpen(false)}
+                className="px-8 py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors shadow-lg"
               >
-                Close
+                OK
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Duplicate Warning Modal */}
-      {duplicateWarningOpen && duplicateSchedule && (
+      {/* Duplicate Error Modal */}
+      {duplicateErrorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden border-4 border-orange-500 animate-scale-in">
+            <div className="px-6 py-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-10 h-10 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Duplicate Schedule</h3>
+              <p className="text-gray-600 mb-6">{duplicateErrorMessage}</p>
               <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
                 onClick={() => {
-                  setDuplicateWarningOpen(false);
-                  setDuplicateSchedule(null);
+                  setDuplicateErrorOpen(false);
+                  setDuplicateErrorMessage('');
                 }}
-              >✕</button>
-              <div className="flex items-center gap-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <span className="text-yellow-600 text-xl">⚠</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">Schedule Already Exists</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Cannot create duplicate schedule</p>
-                </div>
-              </div>
-            </div>
-            <div className="px-4 py-3">
-              <p className="text-sm text-gray-700 mb-4">
-                A schedule already exists for this barangay, day, and time:
-              </p>
-              <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 mb-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 w-24">Barangay:</span>
-                    <span className="text-sm text-gray-800 font-semibold">{duplicateSchedule.barangay_name || duplicateSchedule.barangay_id}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 w-24">Day:</span>
-                    <span className="text-sm text-gray-800">{duplicateSchedule.day_of_week}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-600 w-24">Time:</span>
-                    <span className="text-sm text-gray-800">
-                      {duplicateSchedule.start_time?.substring(0, 5) || addForm.start_time} - {duplicateSchedule.end_time?.substring(0, 5) || addForm.end_time}
-                    </span>
-                  </div>
-                  {duplicateSchedule.week_of_month && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-gray-600 w-24">Week:</span>
-                      <span className="text-sm text-gray-800">Week {duplicateSchedule.week_of_month}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 mb-4">
-                Please choose a different time, day, or barangay to create a new schedule.
-              </p>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                  onClick={() => {
-                    setDuplicateWarningOpen(false);
-                    setDuplicateSchedule(null);
-                  }}
-                >
-                  OK
-                </button>
-              </div>
+                className="px-8 py-3 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700 transition-colors shadow-lg"
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Success Modal */}
-      {successOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative">
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-              <button
-                className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
-                onClick={() => {
-                  setSuccessOpen(false);
-                  setSuccessMessage('');
-                }}
-              >✕</button>
-              <div className="flex items-center gap-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-green-600 text-xl">✓</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">Success!</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Operation completed successfully</p>
+      {/* History Modal */}
+      {
+        historyOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] relative overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+                <button
+                  className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-500 hover:text-red-700 hover:bg-gray-100"
+                  onClick={() => {
+                    setHistoryOpen(false);
+                    setHistoryError(null);
+                    setHistoryData([]);
+                  }}
+                  aria-label="Close"
+                  title="Close"
+                >✕</button>
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <FiClock className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-800">Schedule History</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">Track all schedule changes by admin and foreman</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="px-4 py-3">
-              <p className="text-sm text-gray-700 mb-4">
-                {successMessage || 'Operation completed successfully!'}
-              </p>
-              <div className="flex items-center justify-end gap-2">
+
+              {/* Body */}
+              <div className="px-4 py-3 flex-1 overflow-y-auto">
+                {historyLoading && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">Loading history...</p>
+                  </div>
+                )}
+
+                {historyError && (
+                  <div className="mb-3 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                    {historyError}
+                  </div>
+                )}
+
+                {!historyLoading && !historyError && historyData.length === 0 && (
+                  <div className="text-center py-8">
+                    <FiClock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">No history records found</p>
+                  </div>
+                )}
+
+                {!historyLoading && !historyError && historyData.length > 0 && (
+                  <div className="space-y-3">
+                    {historyData.map((record) => {
+                      const actionColors = {
+                        create: 'bg-green-100 text-green-800 border-green-200',
+                        update: 'bg-blue-100 text-blue-800 border-blue-200',
+                        delete: 'bg-red-100 text-red-800 border-red-200',
+                        restore: 'bg-purple-100 text-purple-800 border-purple-200'
+                      };
+                      const actionColor = actionColors[record.action] || 'bg-gray-100 text-gray-800 border-gray-200';
+
+                      return (
+                        <div key={record.history_id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-xs font-semibold border uppercase ${actionColor}`}>
+                                {record.action}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(record.changed_at).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mb-2">
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 mb-1">Actor</p>
+                              <p className="text-sm text-gray-800 font-semibold">
+                                {record.actor.name || record.actor.username}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {record.actor.role || 'Unknown Role'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 mb-1">Schedule</p>
+                              <p className="text-sm text-gray-800 font-semibold">
+                                {record.schedule_info?.barangay_name || 'N/A'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {record.schedule_info?.day_of_week} • {record.schedule_info?.start_time?.substring(0, 5)} - {record.schedule_info?.end_time?.substring(0, 5)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {record.action === 'update' && record.before_payload && record.after_payload && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Changes:</p>
+                              <div className="text-xs space-y-1">
+                                {Object.keys(record.after_payload).map((key) => {
+                                  if (key === 'updated_at' || key === 'created_at' || key === 'deleted_at' ||
+                                    key === 'created_by' || key === 'updated_by' || key === 'deleted_by' ||
+                                    key === 'schedule_template_id' || key === 'is_active') return null;
+
+                                  const beforeVal = record.before_payload[key];
+                                  const afterVal = record.after_payload[key];
+
+                                  if (beforeVal === afterVal) return null;
+
+                                  return (
+                                    <div key={key} className="flex items-center gap-2">
+                                      <span className="text-gray-600 font-medium">{key}:</span>
+                                      <span className="text-red-600 line-through">{String(beforeVal || 'N/A')}</span>
+                                      <span className="text-gray-400">→</span>
+                                      <span className="text-green-600 font-semibold">{String(afterVal || 'N/A')}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {record.remarks && (
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                              <p className="text-xs text-gray-600 italic">{record.remarks}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+                <div className="text-xs text-gray-600">
+                  Total: {historyTotal} record{historyTotal !== 1 ? 's' : ''}
+                </div>
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
                   onClick={() => {
-                    setSuccessOpen(false);
-                    setSuccessMessage('');
+                    setHistoryOpen(false);
+                    setHistoryError(null);
+                    setHistoryData([]);
                   }}
                 >
-                  OK
+                  Close
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

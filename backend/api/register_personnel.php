@@ -25,6 +25,21 @@ $barangay_id = $data['barangay_id'] ?? '';
 $birthdate = $data['birthdate'] ?? null;
 $gender = $data['gender'] ?? null;
 $status = $data['status'] ?? null;
+$employee_id = $data['employee_id'] ?? null;
+$employment_type = $data['employment_type'] ?? 'job_order';
+
+// Only require employee_id for specific roles
+$roles_requiring_employee_id = ['truck_driver', 'garbage_collector', 'foreman'];
+if (in_array($role, $roles_requiring_employee_id)) {
+    if (empty($employee_id)) {
+        echo json_encode(["success" => false, "message" => "Employee ID is required for this role."]);
+        exit;
+    }
+} else {
+    // For roles that don't need employee_id (barangay_head, resident), set it to NULL
+    $employee_id = null;
+    $employment_type = null;
+}
 
 if (!$username || !$email || !$password || !$role || !$firstname || !$lastname || !$contact_num || !$address || !$barangay_id) {
     echo json_encode(["success" => false, "message" => "All fields are required."]);
@@ -53,8 +68,8 @@ try {
     $user_id = $conn->lastInsertId();
 
     // Insert into user_profile
-    $stmt = $conn->prepare("INSERT INTO user_profile (user_id, firstname, lastname, birthdate, contact_num, gender, address, status, barangay_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$user_id, $firstname, $lastname, $birthdate, $contact_num, $gender, $address, $status, $barangay_id]);
+    $stmt = $conn->prepare("INSERT INTO user_profile (user_id, firstname, lastname, birthdate, contact_num, gender, address, status, barangay_id, employee_id, employment_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$user_id, $firstname, $lastname, $birthdate, $contact_num, $gender, $address, $status, $barangay_id, $employee_id, $employment_type]);
 
     $conn->commit();
     echo json_encode(["success" => true, "message" => "Personnel account created."]);

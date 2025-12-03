@@ -1,4 +1,7 @@
 <?php
+// Set timezone to Philippine Standard Time to ensure correct date/time calculations
+date_default_timezone_set('Asia/Manila');
+
 require_once __DIR__ . '/_bootstrap.php';
 
 header('Access-Control-Allow-Origin: *');
@@ -36,6 +39,9 @@ try {
         throw new RuntimeException('Database connection failed.');
     }
 
+    // CRITICAL: Set MySQL session timezone to Philippine Time
+    $pdo->exec("SET time_zone = '+08:00'");
+
     // Validate the personnel record directly in the database for extra safety.
     $userStmt = $pdo->prepare("
         SELECT u.user_id, u.role_id, u.username,
@@ -61,7 +67,37 @@ try {
     $sessionField = isset($_POST['session']) ? trim($_POST['session']) : null;
     $locationLat = isset($_POST['location_lat']) && $_POST['location_lat'] !== '' ? (float)$_POST['location_lat'] : null;
     $locationLng = isset($_POST['location_lng']) && $_POST['location_lng'] !== '' ? (float)$_POST['location_lng'] : null;
+    
+    // Get and validate unique ID
+    $uniqueId = isset($_POST['unique_id']) ? trim($_POST['unique_id']) : null;
+    
+    if (!$uniqueId || $uniqueId === '') {
+        throw new RuntimeException('Unique ID is required for verification.');
+    }
 
+    
+    // Verify unique ID matches user's employee ID in user_profile
+    $verifyStmt = $pdo->prepare("
+        SELECT employee_id 
+        FROM user_profile 
+        WHERE user_id = ? 
+        LIMIT 1
+    ");
+    $verifyStmt->execute([$personnel['user_id']]);
+    $profile = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$profile) {
+        throw new RuntimeException('User profile not found. Please contact administrator.');
+    }
+    
+    if (!$profile['employee_id']) {
+        throw new RuntimeException('Employee ID not set for your account. Please contact administrator.');
+    }
+    
+    if ($profile['employee_id'] !== $uniqueId) {
+        throw new RuntimeException('Invalid Unique ID. Please enter your correct employee ID.');
+    }
+    
     if ($scheduleId !== null) {
         $scheduleStmt = $pdo->prepare("SELECT id FROM daily_route WHERE id = ? LIMIT 1");
         $scheduleStmt->execute([$scheduleId]);
@@ -135,18 +171,32 @@ try {
     // Determine session: use provided session if available, otherwise infer from current time
     $hour = (int)date('H');
     $sessionNow = $hour >= 12 ? 'PM' : 'AM';
+    // IMPORTANT: Use provided session field if available, otherwise use current time's session
+    // This allows users to submit requests for different sessions
     $sessionToCheck = $sessionField ? $sessionField : $sessionNow;
 
-    // Check for existing verified record
+    // DEBUG: Log the values being checked
+    error_log("DEBUG create_attendance_request.php - Checking attendance:");
+    error_log("  user_id: " . $personnel['user_id']);
+    error_log("  today: " . $today);
+    error_log("  sessionField: " . ($sessionField ? $sessionField : 'NULL'));
+    error_log("  sessionNow: " . $sessionNow);
+    error_log("  sessionToCheck: " . $sessionToCheck);
+    error_log("  intent: " . ($intent ? $intent : 'NULL'));
+
+    // Check for existing verified record FOR THE SPECIFIC SESSION being requested
     $checkStmt = $pdo->prepare(
         "SELECT attendance_id, time_in, time_out FROM attendance WHERE user_id = ? AND attendance_date = ? AND session = ? AND verification_status = 'verified' LIMIT 1"
     );
     $checkStmt->execute([$personnel['user_id'], $today, $sessionToCheck]);
     $existingVerified = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
+    // DEBUG: Log the query result
+    error_log("  existingVerified: " . ($existingVerified ? json_encode($existingVerified) : 'NULL'));
+
     if ($existingVerified) {
         if ($intent === 'time_out') {
-            // If intent is time_out, block only if time_out is already recorded
+            // If intent is time_out, block only if time_out is already recorded for this session
             if (!empty($existingVerified['time_out'])) {
                 kolektrash_respond_json(400, [
                     'status' => 'error',
@@ -156,10 +206,10 @@ try {
             // If time_out is empty, we allow the request (it will be a new request row for the foreman to approve)
         } else {
             // Default intent is time_in
-            // If record exists and is verified, time_in is definitely done
+            // If record exists and is verified for this specific session, time_in is definitely done
             kolektrash_respond_json(400, [
                 'status' => 'error',
-                'message' => 'Attendance (Time In) for today has already been approved. You cannot submit another request.'
+                'message' => 'Attendance (Time In) for this session has already been approved. You cannot submit another request.'
             ]);
         }
     }
@@ -184,7 +234,10 @@ try {
         $remarksToSave = $remarks;
     }
 
-    $insertStmt = $pdo->prepare("INSERT INTO attendance_request (user_id, schedule_id, photo_path, remarks, location_lat, location_lng) VALUES (:user_id, :schedule_id, :photo_path, :remarks, :location_lat, :location_lng)");
+    // Get current Philippine time
+    $currentPhTime = date('Y-m-d H:i:s');
+    
+    $insertStmt = $pdo->prepare("INSERT INTO attendance_request (user_id, schedule_id, photo_path, remarks, location_lat, location_lng, submitted_at) VALUES (:user_id, :schedule_id, :photo_path, :remarks, :location_lat, :location_lng, :submitted_at)");
 
     $insertStmt->execute([
         ':user_id' => $personnel['user_id'],
@@ -192,7 +245,8 @@ try {
         ':photo_path' => $relativePath,
         ':remarks' => $remarksToSave,
         ':location_lat' => $locationLat,
-        ':location_lng' => $locationLng
+        ':location_lng' => $locationLng,
+        ':submitted_at' => $currentPhTime
     ]);
 
     $requestId = (int)$pdo->lastInsertId();
@@ -246,4 +300,3 @@ try {
         'message' => $e->getMessage()
     ]);
 }
-

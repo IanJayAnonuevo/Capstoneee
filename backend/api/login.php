@@ -48,7 +48,20 @@ try {
     $user->username = $username;
     $user->password = $password;
 
-    if (!$user->login()) {
+    $loginResult = $user->login();
+    
+    // Check if account is suspended
+    if ($loginResult === 'suspended') {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'error_code' => 'ACCOUNT_SUSPENDED',
+            'message' => 'Your account has been suspended. Please contact the administrator.'
+        ]);
+        exit();
+    }
+    
+    if (!$loginResult) {
         http_response_code(401);
         echo json_encode([
             'status' => 'error',
@@ -73,6 +86,44 @@ try {
     } catch (Exception $e) {
         // Log error but don't fail login if online_status column doesn't exist yet
         error_log('Failed to update online_status: ' . $e->getMessage());
+    }
+
+    // Check if user has an active approved leave
+    try {
+        $today = date('Y-m-d');
+        $checkLeaveStmt = $db->prepare("
+            SELECT id, leave_type, start_date, end_date, reason 
+            FROM leave_request 
+            WHERE user_id = ? 
+            AND request_status = 'approved' 
+            AND start_date <= ? 
+            AND end_date >= ?
+            ORDER BY start_date ASC
+            LIMIT 1
+        ");
+        $checkLeaveStmt->execute([(int)$user->user_id, $today, $today]);
+        $activeLeave = $checkLeaveStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($activeLeave) {
+            // User is currently on approved leave, block login
+            http_response_code(403);
+            echo json_encode([
+                'status' => 'error',
+                'error_code' => 'ON_LEAVE',
+                'message' => 'This account is currently on leave',
+                'leave_details' => [
+                    'leave_request_id' => (int)$activeLeave['id'],
+                    'leave_type' => $activeLeave['leave_type'],
+                    'start_date' => $activeLeave['start_date'],
+                    'end_date' => $activeLeave['end_date'],
+                    'reason' => $activeLeave['reason']
+                ]
+            ]);
+            exit();
+        }
+    } catch (PDOException $e) {
+        // If leave_request table doesn't exist, continue with login
+        error_log('Leave check failed: ' . $e->getMessage());
     }
 
     // Issue a JWT so the client can access protected endpoints using the same login flow.

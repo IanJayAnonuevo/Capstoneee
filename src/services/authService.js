@@ -106,6 +106,13 @@ export const authService = {
       const data = await response.json();
 
       if (!response.ok) {
+        // Check if this is a leave-blocked error
+        if (data.error_code === 'ON_LEAVE') {
+          const error = new Error(data.message || 'Account is on leave');
+          error.error_code = data.error_code;
+          error.leave_details = data.leave_details;
+          throw error;
+        }
         throw new Error(data.message || 'Login failed');
       }
 
@@ -449,6 +456,99 @@ export const authService = {
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to delete notification');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getPersonnel() {
+    try {
+      const response = await fetch(buildApiUrl('get_personnel.php'), {
+        method: 'GET',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        handleAuthError(response);
+        throw new Error(data.message || 'Failed to fetch personnel');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getTrucks() {
+    try {
+      const response = await fetch(buildApiUrl('get_trucks.php'), {
+        method: 'GET',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        handleAuthError(response);
+        throw new Error(data.message || 'Failed to fetch trucks');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getPickupRequests() {
+    try {
+      const response = await fetch(buildApiUrl('get_pickup_requests.php'), {
+        method: 'GET',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        handleAuthError(response);
+        throw new Error(data.message || 'Failed to fetch pickup requests');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updatePickupRequestStatus(requestId, status, additionalData = {}) {
+    try {
+      const response = await fetch(buildApiUrl('update_pickup_request_status.php'), {
+        method: 'POST',
+        headers: withAuthHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({
+          request_id: requestId,
+          status: status,
+          ...additionalData
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        handleAuthError(response);
+        throw new Error(data.message || 'Failed to update pickup request status');
       }
 
       return data;

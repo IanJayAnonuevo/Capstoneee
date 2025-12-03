@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Manila');
 // Explicit CORS Headers
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
@@ -53,6 +54,9 @@ try {
     if (!$pdo) {
         throw new RuntimeException('Database connection failed.');
     }
+
+    // CRITICAL: Set MySQL session timezone to Philippine Time
+    $pdo->exec("SET time_zone = '+08:00'");
 
     $input = json_decode(file_get_contents('php://input'), true);
     
@@ -177,6 +181,7 @@ try {
                         $timeOut = determineTimeOut($updated);
 
                         if ($attendanceId) {
+                            $currentPhTime = date('Y-m-d H:i:s');
                             $updateAttendanceStmt = $pdo->prepare("
                                 UPDATE attendance
                                 SET time_out = COALESCE(time_out, ?),
@@ -184,17 +189,19 @@ try {
                                     verification_status = 'verified',
                                     recorded_by = ?,
                                     notes = COALESCE(?, notes),
-                                    updated_at = NOW()
+                                    updated_at = ?
                                 WHERE attendance_id = ?
                             ");
                             $updateAttendanceStmt->execute([
                                 $timeOut,
                                 $currentUser['user_id'],
                                 $reviewNote,
+                                $currentPhTime,
                                 $attendanceId
                             ]);
                         } else {
                             // If no attendance record exists yet, insert with time_out (time_in unknown)
+                            $currentPhTime = date('Y-m-d H:i:s');
                             $insertAttendanceStmt = $pdo->prepare("
                                 INSERT INTO attendance (
                                     user_id,
@@ -204,8 +211,10 @@ try {
                                     status,
                                     verification_status,
                                     recorded_by,
-                                    notes
-                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?)
+                                    notes,
+                                    created_at,
+                                    updated_at
+                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?, ?, ?)
                             ");
                             $insertAttendanceStmt->execute([
                                 $request['user_id'],
@@ -213,7 +222,9 @@ try {
                                 $session,
                                 $timeOut,
                                 $currentUser['user_id'],
-                                $reviewNote
+                                $reviewNote,
+                                $currentPhTime,
+                                $currentPhTime
                             ]);
                         }
                     } else {
@@ -221,6 +232,7 @@ try {
                         $timeIn = determineTimeIn($updated);
 
                         if ($attendanceId) {
+                            $currentPhTime = date('Y-m-d H:i:s');
                             $updateAttendanceStmt = $pdo->prepare("
                                 UPDATE attendance
                                 SET time_in = COALESCE(time_in, ?),
@@ -228,16 +240,18 @@ try {
                                     verification_status = 'verified',
                                     recorded_by = ?,
                                     notes = COALESCE(?, notes),
-                                    updated_at = NOW()
+                                    updated_at = ?
                                 WHERE attendance_id = ?
                             ");
                             $updateAttendanceStmt->execute([
                                 $timeIn,
                                 $currentUser['user_id'],
                                 $reviewNote,
+                                $currentPhTime,
                                 $attendanceId
                             ]);
                         } else {
+                            $currentPhTime = date('Y-m-d H:i:s');
                             $insertAttendanceStmt = $pdo->prepare("
                                 INSERT INTO attendance (
                                     user_id,
@@ -247,8 +261,10 @@ try {
                                     status,
                                     verification_status,
                                     recorded_by,
-                                    notes
-                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?)
+                                    notes,
+                                    created_at,
+                                    updated_at
+                                ) VALUES (?, ?, ?, ?, 'present', 'verified', ?, ?, ?, ?)
                             ");
                             $insertAttendanceStmt->execute([
                                 $request['user_id'],
@@ -256,7 +272,9 @@ try {
                                 $session,
                                 $timeIn,
                                 $currentUser['user_id'],
-                                $reviewNote
+                                $reviewNote,
+                                $currentPhTime,
+                                $currentPhTime
                             ]);
                         }
                     }

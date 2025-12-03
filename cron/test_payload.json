@@ -1,0 +1,7 @@
+{
+    "start_date": "2025-11-30",
+    "end_date": "2025-11-30",
+    "session": "AM",
+    "overwrite": true,
+    "cron_token": "kolektrash_cron_2024"
+}

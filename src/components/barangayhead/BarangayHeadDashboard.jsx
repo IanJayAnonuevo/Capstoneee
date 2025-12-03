@@ -489,43 +489,63 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
     {
       id: 'reports',
       title: 'Submit Report Issue',
+      description: 'Report waste collection issues or concerns in your barangay.',
       icon: MdReport,
       indicatorLabel: 'Submit Report',
       onClick: () => handleNavigation('/barangayhead/report', { closeMenu: false }),
     },
     {
+      id: 'issue-status',
+      title: 'View Issue Status',
+      description: 'Track the status of reported issues and resolutions.',
+      icon: FiClipboard,
+      indicatorLabel: 'Check Status',
+      onClick: () => handleNavigation('/barangayhead/issue-status', { closeMenu: false }),
+    },
+    {
       id: 'special-pickup',
-      title: 'Submit Special Pick-up',
+      title: 'Submit Special Pick-up Request',
+      description: 'Request special waste collection for bulk items or events.',
       icon: MdEvent,
-      indicatorLabel: 'Submit Special Requests',
+      indicatorLabel: 'Submit Request',
       onClick: () => handleNavigation('/barangayhead/pickup', { closeMenu: false }),
     },
     {
       id: 'schedule',
-      title: 'Collection Schedule',
-      icon: FiClipboard,
-      indicatorLabel: 'Open Schedule',
+      title: 'View Collection Schedule',
+      description: 'View the waste collection schedule for your barangay.',
+      icon: MdEvent,
+      indicatorLabel: 'View Calendar',
       onClick: () => handleNavigation('/barangayhead/schedule', { closeMenu: false }),
     },
     {
       id: 'iec',
-      title: 'IEC Materials',
+      title: 'Access IEC Materials',
+      description: 'Access educational materials and waste management guides.',
       icon: MdMenuBook,
       indicatorLabel: 'Open Library',
       onClick: () => handleNavigation('/barangayhead/iec', { closeMenu: false }),
+    },
+    {
+      id: 'feedback',
+      title: 'Feedback',
+      description: 'Provide feedback or suggestions to improve services.',
+      icon: FiMessageSquare,
+      indicatorLabel: 'Send Feedback',
+      onClick: () => handleNavigation('/barangayhead/feedback', { closeMenu: false }),
     },
   ];
 
   const confirmLogout = async () => {
     setShowLogoutModal(false);
-    
+
     // Call logout API to set online_status to offline
     const userId = localStorage.getItem('user_id');
     if (userId) {
       const { authService } = await import('../../services/authService');
       await authService.logout(parseInt(userId));
     }
-    
+
     localStorage.removeItem('user');
     localStorage.removeItem('user_id');
     await showLoader({
@@ -634,23 +654,22 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                 {navLinks.map((link) => {
                   const isActive = link.to && location.pathname === link.to;
                   return (
-                  <button
-                    key={link.label}
-                    className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors ${
-                      link.label === 'Logout'
-                        ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
-                        : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
-                    } ${isActive ? 'border-2' : 'border'}`}
-                    onClick={() => handleNavigation(link.to, {
-                      skipLoading: link.showLoading === false,
-                      customAction: link.action
-                    })}
-                  >
-                    <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>{link.icon}</span>
-                    <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
-                      {link.label}
-                    </span>
-                  </button>
+                    <button
+                      key={link.label}
+                      className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors ${link.label === 'Logout'
+                          ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
+                          : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
+                        } ${isActive ? 'border-2' : 'border'}`}
+                      onClick={() => handleNavigation(link.to, {
+                        skipLoading: link.showLoading === false,
+                        customAction: link.action
+                      })}
+                    >
+                      <span className={link.label === 'Logout' ? 'text-red-500' : 'text-green-700'}>{link.icon}</span>
+                      <span className={`ml-3 text-sm font-medium ${link.label === 'Logout' ? 'text-red-600' : ''}`}>
+                        {link.label}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -744,25 +763,28 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                   <h2 className="text-xl font-bold text-green-800">Quick Actions</h2>
                   <p className="text-sm text-gray-500">Handle your priority barangay tasks in just a few taps.</p>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {quickActionItems.map((item) => {
-                    const Icon = item.icon;
+                    const IconComponent = item.icon;
                     return (
                       <button
                         key={item.id}
                         type="button"
                         onClick={item.onClick}
-                        className="group flex flex-col items-center justify-between rounded-2xl bg-gradient-to-br from-green-700 to-green-600 p-4 sm:p-5 text-center shadow-lg text-white transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 min-h-[160px]"
+                        className="group relative flex flex-col justify-between rounded-2xl bg-gradient-to-br from-green-700 to-green-600 p-6 text-left shadow-lg text-white transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
-                        <div className="flex flex-col items-center gap-3">
+                        <div className="flex items-start gap-4">
                           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-white">
-                            <Icon className="h-6 w-6" />
+                            <IconComponent className="h-6 w-6" />
                           </div>
-                          <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                          <div className="flex-1">
+                            <h3 className="text-base font-semibold text-white">{item.title}</h3>
+                            <p className="mt-2 text-sm text-white/80 leading-relaxed">{item.description}</p>
+                          </div>
                         </div>
-                        <div className="inline-flex items-center justify-center gap-2 text-xs font-medium text-white/90 bg-white/10 rounded-full px-3 py-1 mt-4 group-hover:bg-white group-hover:text-green-700 transition-colors">
+                        <div className="mt-5 flex items-center justify-between text-sm font-medium text-white/90">
                           <span>{item.indicatorLabel}</span>
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white transition-colors group-hover:bg-green-100 group-hover:text-green-700">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors group-hover:bg-white group-hover:text-green-700">
                             <FiChevronRight className="h-4 w-4" />
                           </span>
                         </div>
@@ -829,11 +851,10 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${
-                    message.type === 'user'
+                  className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${message.type === 'user'
                       ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
                       : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
-                  }`}
+                    }`}
                 >
                   {message.content}
                 </div>

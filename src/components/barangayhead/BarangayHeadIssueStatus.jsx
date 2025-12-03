@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 
 import { buildApiUrl } from '../../config/api';
+import { useLoader } from '../../contexts/LoaderContext';
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -269,6 +270,11 @@ export default function BarangayHeadIssueStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const { hideLoader } = useLoader();
+
+  useEffect(() => {
+    hideLoader();
+  }, []);
 
   useEffect(() => {
     fetchIssues();
@@ -297,12 +303,15 @@ export default function BarangayHeadIssueStatus() {
         return;
       }
 
-      let url = `${API_BASE_URL}/get_user_issue_reports.php?user_id=${userId}&role=Barangay Head`;
+      let url = buildApiUrl(`get_user_issue_reports.php?user_id=${userId}&role=Barangay Head`);
       if (filterStatus !== 'all') {
         url += `&status=${filterStatus}`;
       }
 
-      const response = await axios.get(url);
+      const token = localStorage.getItem('access_token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const response = await axios.get(url, { headers });
 
       if (response.data.status === 'success') {
         const normalizedIssues = (response.data.data || []).map((issue) => {
@@ -365,11 +374,10 @@ export default function BarangayHeadIssueStatus() {
             <button
               key={option.value}
               onClick={() => setFilterStatus(option.value)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                filterStatus === option.value
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition ${filterStatus === option.value
+                ? 'bg-green-600 text-white shadow-md'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
             >
               {option.label}
             </button>
@@ -414,3 +422,5 @@ export default function BarangayHeadIssueStatus() {
     </div>
   );
 }
+
+

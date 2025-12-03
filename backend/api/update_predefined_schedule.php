@@ -48,7 +48,7 @@ try {
     $fields = [];
     $params = [];
 
-    $allowed = ['day_of_week', 'start_time', 'end_time', 'week_of_month'];
+    $allowed = ['barangay_id', 'day_of_week', 'start_time', 'end_time', 'week_of_month'];
     foreach ($allowed as $key) {
         if (array_key_exists($key, $input)) {
             $fields[] = "$key = ?";

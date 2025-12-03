@@ -35,12 +35,7 @@ const ConfirmationModal = ({ isOpen, onConfirm, onCancel, isSubmitting, formData
               <p className="font-medium text-gray-800">{new Date(formData.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
           )}
-          {formData.type && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Type of Waste</p>
-              <p className="font-medium text-gray-800">{formData.type}</p>
-            </div>
-          )}
+
           {formData.notes && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
               <p className="text-xs uppercase tracking-wide text-gray-500">Notes</p>
@@ -125,7 +120,6 @@ export default function PickupRequest() {
     barangay: '',
     contact: '',
     date: today, // Set default date to today
-    type: '',
     notes: '',
   });
   const [success, setSuccess] = useState(false);
@@ -233,7 +227,7 @@ export default function PickupRequest() {
     setError('');
     setSuccess(false);
 
-    if (!form.contact || !form.date || !form.type) {
+    if (!form.contact || !form.date) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -245,7 +239,7 @@ export default function PickupRequest() {
       barangay: form.barangay,
       contact_number: form.contact,
       pickup_date: form.date,
-      waste_type: form.type,
+      waste_type: '',
       notes: form.notes || ''
     });
 
@@ -272,7 +266,6 @@ export default function PickupRequest() {
         setForm(prevForm => ({
           ...prevForm,
           date: today,
-          type: '',
           notes: ''
         }));
       } else {
@@ -401,21 +394,7 @@ export default function PickupRequest() {
             required
           />
         </div>
-        {/* Type of Waste */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
-            <FiBox className="text-green-500" /> Type of Waste <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="type"
-            value={form.type}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-200 text-base"
-            placeholder="e.g. Bulky, Hazardous, Recyclable, etc."
-            required
-          />
-        </div>
+
         {/* Notes */}
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
@@ -434,8 +413,8 @@ export default function PickupRequest() {
           type="submit"
           disabled={loading || isSubmitting}
           className={`w-full px-4 py-2 rounded-lg font-medium text-white transition-colors ${loading || isSubmitting
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
             }`}
         >
           {loading || isSubmitting ? 'Processing...' : 'Submit Request'}

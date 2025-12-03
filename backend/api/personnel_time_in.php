@@ -58,6 +58,31 @@ try {
     $client_hour = isset($input['client_hour']) ? (int)$input['client_hour'] : null;
     $client_minute = isset($input['client_minute']) ? (int)$input['client_minute'] : null;
 
+    // Validate time window for time-in
+    if ($action === 'time_in') {
+        $hourNow = is_int($client_hour) ? $client_hour : (int)date('H');
+        
+        if ($session === 'AM') {
+            // AM session: must time in between 5:00 AM - 6:00 AM
+            if ($hourNow < 5 || $hourNow >= 6) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Time In for AM session is allowed only between 5:00 AM and 6:00 AM.'
+                ]);
+                exit;
+            }
+        } elseif ($session === 'PM') {
+            // PM session: must time in between 1:00 PM - 2:00 PM
+            if ($hourNow < 13 || $hourNow >= 14) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Time In for PM session is allowed only between 1:00 PM and 2:00 PM.'
+                ]);
+                exit;
+            }
+        }
+    }
+
     // Check if attendance record exists
     $stmtCheck = $pdo->prepare("
         SELECT * FROM attendance 

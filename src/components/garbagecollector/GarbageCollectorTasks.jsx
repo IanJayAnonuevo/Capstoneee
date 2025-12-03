@@ -84,7 +84,9 @@ export default function GarbageCollectorTasks() {
   const [filterTab, setFilterTab] = useState('today'); // 'today' | 'upcoming' | 'all'
   const [dailyByDate, setDailyByDate] = useState({});
   const [startLoadingKey, setStartLoadingKey] = useState(null);
-  
+  const [barangayBreakdown, setBarangayBreakdown] = useState({}); // Store per-barangay stop counts
+  const [scheduleTimeFilter, setScheduleTimeFilter] = useState('am'); // 'am' | 'pm'
+
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'in-progress' | 'completed' | 'cancelled'
@@ -122,11 +124,57 @@ export default function GarbageCollectorTasks() {
     try { const t = localStorage.getItem('access_token'); return t ? { Authorization: `Bearer ${t}` } : {}; } catch { return {}; }
   };
 
+  // Fetch per-barangay breakdown for accurate progress bars
+  const fetchBarangayBreakdown = useCallback(async (routeId) => {
+    try {
+      const res = await fetch(buildApiUrl(`get_route_barangay_breakdown.php?route_id=${routeId}`), {
+        headers: { ...authHeaders() }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const breakdownMap = {};
+        data.breakdown.forEach(item => {
+          breakdownMap[item.barangay_id] = {
+            total: item.total_stops,
+            completed: item.completed_stops
+          };
+        });
+        return breakdownMap;
+      }
+    } catch (e) {
+      console.error('Failed to fetch barangay breakdown:', e);
+    }
+    return null;
+  }, []);
+
+  // Load breakdowns when tasks change
+  useEffect(() => {
+    const loadBreakdowns = async () => {
+      const breakdowns = {};
+      for (const task of tasks) {
+        const routeId = task.routeId || task.route_id || (task.barangayList && task.barangayList[0] && (task.barangayList[0].route_id || task.barangayList[0].id));
+        if (routeId && !barangayBreakdown[routeId]) {
+          const breakdown = await fetchBarangayBreakdown(routeId);
+          if (breakdown) {
+            breakdowns[routeId] = breakdown;
+          }
+        }
+      }
+      if (Object.keys(breakdowns).length > 0) {
+        setBarangayBreakdown(prev => ({ ...prev, ...breakdowns }));
+      }
+    };
+
+    if (tasks.length > 0) {
+      loadBreakdowns();
+    }
+  }, [tasks, fetchBarangayBreakdown, barangayBreakdown]);
+
   useEffect(() => {
     async function fetchTasks() {
       setLoading(true); setError(null);
       try {
-  const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=collector`), { headers: { ...authHeaders() } });
+        const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=collector`), { headers: { ...authHeaders() } });
         const data = await res.json();
         if (data.success) {
           const mapped = (data.schedules || []).map((s, idx) => {
@@ -186,11 +234,12 @@ export default function GarbageCollectorTasks() {
               scheduleId: s.schedule_id || idx,
               routeId: resolvedRouteId != null ? Number(resolvedRouteId) || resolvedRouteId : null,
               teamId: s.team_id,
+              barangayId: s.barangay_id,
               title: `${s.barangay || 'Route'} Route`,
               description: `Driver: ${s.driver_name || 'N/A'}`,
               priority: 'normal',
               status: uiStatus,
-              dueTime: `${(s.time || '').slice(0,5)} - ${(s.end_time || '').slice(0,5)}`,
+              dueTime: `${(s.time || '').slice(0, 5)} - ${(s.end_time || '').slice(0, 5)}`,
               location: s.barangay || '—',
               date: formatPrettyDate(s.date),
               truckPlate: s.truck_number || 'N/A',
@@ -202,6 +251,8 @@ export default function GarbageCollectorTasks() {
               driverName,
               rawDate: s.date,
               fallbackCollectorName: collectorDisplayName,
+              totalStops: s.total_stops ?? 0,
+              completedStops: s.completed_stops ?? 0,
             };
           });
           setTasks(mapped);
@@ -214,7 +265,7 @@ export default function GarbageCollectorTasks() {
 
   const acceptDecline = async (teamId, response) => {
     try {
-  const res = await fetch(buildApiUrl('respond_assignment.php'), {
+      const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id: teamId, user_id: userId, response_status: response, role: 'collector' })
@@ -268,11 +319,11 @@ export default function GarbageCollectorTasks() {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-      } catch(_) { 
-        return new Date().toISOString().slice(0,10); 
+      } catch (_) {
+        return new Date().toISOString().slice(0, 10);
       }
     })();
-    
+
     const isToday = (d) => {
       const dateStr = normalizeDate(d);
       return dateStr === todayStr;
@@ -285,7 +336,7 @@ export default function GarbageCollectorTasks() {
       const dateStr = normalizeDate(d);
       return dateStr < todayStr;
     };
-    
+
     // If date filter is set, it takes priority - filter by exact date match only
     if (dateFilter) {
       // HTML date input returns YYYY-MM-DD format directly - use it as-is
@@ -295,14 +346,14 @@ export default function GarbageCollectorTasks() {
         // Invalid date filter format, return empty
         return [];
       }
-      
+
       let validTasks = tasks.filter(t => {
         // Normalize task date to YYYY-MM-DD format
         const taskDate = normalizeDate(t.rawDate);
         // Strict string comparison - must match exactly
         return taskDate === filterDateStr;
       });
-      
+
       // Apply status filter
       if (statusFilter !== 'all') {
         validTasks = validTasks.filter(t => {
@@ -310,7 +361,7 @@ export default function GarbageCollectorTasks() {
           return taskStatus === statusFilter;
         });
       }
-      
+
       // Apply search filter
       if (searchFilter.trim()) {
         const searchLower = searchFilter.toLowerCase().trim();
@@ -321,13 +372,13 @@ export default function GarbageCollectorTasks() {
           return barangayMatch || truckMatch || titleMatch;
         });
       }
-      
+
       return validTasks;
     }
-    
+
     // No date filter - apply tab-based filtering
     let validTasks = tasks.filter(t => !isPast(t.rawDate));
-    
+
     if (filterTab === 'today') {
       const todayTasks = validTasks.filter(t => isToday(t.rawDate));
       // If no tasks for today, show the earliest future date that has tasks
@@ -353,7 +404,7 @@ export default function GarbageCollectorTasks() {
     } else if (filterTab === 'upcoming') {
       validTasks = validTasks.filter(t => !isToday(t.rawDate));
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       validTasks = validTasks.filter(t => {
@@ -361,7 +412,7 @@ export default function GarbageCollectorTasks() {
         return taskStatus === statusFilter;
       });
     }
-    
+
     // Apply search filter (barangay or truck number)
     if (searchFilter.trim()) {
       const searchLower = searchFilter.toLowerCase().trim();
@@ -372,11 +423,11 @@ export default function GarbageCollectorTasks() {
         return barangayMatch || truckMatch || titleMatch;
       });
     }
-    
+
     return validTasks;
   }, [tasks, filterTab, statusFilter, dateFilter, searchFilter]);
 
-  // Group and enrich by date similar to TruckDriverTask
+  // Group and enrich by Date + Truck + Driver
   const dailyCards = useMemo(() => {
     const map = {};
     for (const t of filteredTasks) {
@@ -402,14 +453,21 @@ export default function GarbageCollectorTasks() {
           return '';
         }
       };
-      
+
       const dateKey = normalizeDate(t.rawDate);
       if (!dateKey) continue;
-      if (!map[dateKey]) {
-        // Format the dateKey properly for display
+
+      // Group by Date + Truck + Driver to merge schedules for the same shift/team
+      // Use a fallback for missing truck/driver to avoid grouping unrelated tasks
+      const truckKey = (t.truckPlate || 'UnknownTruck').trim().toLowerCase();
+      const driverKey = (t.driverName || 'UnknownDriver').trim().toLowerCase();
+      const uniqueKey = `${dateKey}_${truckKey}_${driverKey}`;
+
+      if (!map[uniqueKey]) {
         const formattedDate = formatPrettyDate(dateKey);
-        map[dateKey] = {
-          key: dateKey,
+        map[uniqueKey] = {
+          key: uniqueKey,
+          dateKey: dateKey, // Keep dateKey for sorting/filtering
           dateLabel: formattedDate,
           startTimes: [],
           endTimes: [],
@@ -421,7 +479,7 @@ export default function GarbageCollectorTasks() {
           fallbackCollectorName: t.fallbackCollectorName,
         };
       }
-      const bucket = map[dateKey];
+      const bucket = map[uniqueKey];
       const [start, end] = String(t.dueTime || '').split(' - ');
       if (start) bucket.startTimes.push(start);
       if (end) bucket.endTimes.push(end);
@@ -431,8 +489,9 @@ export default function GarbageCollectorTasks() {
         time: t.dueTime,
         route_id: t.routeId ?? null,
         schedule_id: t.scheduleId ?? t.id,
-        totalStops: 0,
-        completedStops: 0,
+        barangay_id: t.barangayId,
+        totalStops: t.totalStops || 0,
+        completedStops: t.completedStops || 0,
         status: t.status,
         team_id: t.teamId,
       });
@@ -440,15 +499,20 @@ export default function GarbageCollectorTasks() {
     let cards = Object.values(map).map((d) => ({
       ...d,
       time: (d.startTimes.sort()[0] || '') && (d.endTimes.sort().slice(-1)[0] || '') ? `${d.startTimes.sort()[0]} - ${d.endTimes.sort().slice(-1)[0]}` : (d.startTimes.sort()[0] || d.endTimes.sort().slice(-1)[0] || '-'),
-      barangayList: (dailyByDate[d.key]?.barangayList?.length ? dailyByDate[d.key].barangayList : d.barangayList),
-      barangayCount: (dailyByDate[d.key]?.barangayList?.length ? dailyByDate[d.key].barangayList.length : d.barangayList.length),
-      totalStops: (dailyByDate[d.key]?.barangayList || d.barangayList).reduce((s, b) => s + (Number(b.totalStops) || 0), 0),
-      completedStops: (dailyByDate[d.key]?.barangayList || d.barangayList).reduce((s, b) => s + (Number(b.completedStops) || 0), 0),
+      barangayList: d.barangayList,
+      barangayCount: d.barangayList.length,
+      totalStops: d.barangayList.reduce((s, b) => s + (Number(b.totalStops) || 0), 0),
+      completedStops: d.barangayList.reduce((s, b) => s + (Number(b.completedStops) || 0), 0),
       remainingStops: 0,
       driverName: d.driverName,
       fallbackCollectorName: d.fallbackCollectorName,
-    })).sort((a,b)=>a.key.localeCompare(b.key));
-    
+    })).sort((a, b) => {
+      // Sort by date first, then by time
+      const dateCompare = a.dateKey.localeCompare(b.dateKey);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
     // If dateFilter is set, ensure we only show cards matching that exact date
     // AND use the dateFilter value for the label (not the task's date)
     if (dateFilter) {
@@ -476,13 +540,13 @@ export default function GarbageCollectorTasks() {
             return '';
           }
         };
-        
+
         // Filter cards to only show the selected date
         cards = cards.filter(card => {
-          const cardDate = normalizeDate(card.key);
+          const cardDate = normalizeDate(card.dateKey);
           return cardDate === filterDateStr;
         });
-        
+
         // Update ALL cards to use the filter date for the label
         // This ensures the label ALWAYS matches what the user selected in the filter
         cards = cards.map(card => ({
@@ -491,13 +555,13 @@ export default function GarbageCollectorTasks() {
         }));
       }
     }
-    
+
     return cards;
   }, [filteredTasks, dailyByDate, dateFilter]);
 
   // Fetch daily routes for date cards (collector perspective)
   useEffect(() => {
-    const uniqueDates = Array.from(new Set(filteredTasks.map(t => String(t.rawDate||'').slice(0,10)).filter(Boolean)));
+    const uniqueDates = Array.from(new Set(filteredTasks.map(t => String(t.rawDate || '').slice(0, 10)).filter(Boolean)));
     if (uniqueDates.length === 0) return;
     let cancelled = false;
     (async () => {
@@ -510,7 +574,7 @@ export default function GarbageCollectorTasks() {
             id: r.id ?? idx,
             route_id: r.id ?? idx,
             name: r.barangay_name || r.name || 'Barangay',
-            time: `${String(r.start_time||'').slice(0,5)} - ${String(r.end_time||'').slice(0,5)}`,
+            time: `${String(r.start_time || '').slice(0, 5)} - ${String(r.end_time || '').slice(0, 5)}`,
             totalStops: Number(r.total_stops || 0),
             completedStops: Number(r.completed_stops || 0),
             status: r.status || 'scheduled',
@@ -615,7 +679,7 @@ export default function GarbageCollectorTasks() {
       <div className="w-full max-w-lg">
         <h1 className="text-[18px] font-semibold text-gray-900 mb-1 pl-1 tracking-tight">ASSIGNED TASK</h1>
         <p className="text-[13px] text-gray-600 mb-4 pl-1">You're all set for today's task</p>
-        
+
         {/* Search Bar */}
         <div className="mb-3 pl-1">
           <div className="relative">
@@ -638,22 +702,28 @@ export default function GarbageCollectorTasks() {
           </div>
         </div>
 
-        {/* Tabs and Filter Toggle */}
+        {/* AM/PM Toggle and Filter */}
         <div className="flex gap-2 mb-3 pl-1 items-center">
           <div className="flex gap-2 flex-1">
-            {['today','upcoming'].map(tab => (
-              <button key={tab} onClick={() => setFilterTab(tab)} className={`px-3 py-1 rounded text-xs font-semibold border ${filterTab===tab?'bg-green-600 text-white border-green-600':'bg-white text-green-700 border-green-200'}`}>
-                {tab === 'today' ? 'Today' : tab === 'upcoming' ? 'Upcoming' : 'All'}
+            {['am', 'pm'].map(period => (
+              <button
+                key={period}
+                onClick={() => setScheduleTimeFilter(period)}
+                className={`px-3 py-1 rounded text-xs font-semibold border ${scheduleTimeFilter === period
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-green-700 border-green-200'
+                  }`}
+              >
+                {period.toUpperCase()}
               </button>
             ))}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-3 py-1 rounded text-xs font-semibold border flex items-center gap-1 ${
-              showFilters || hasActiveFilters
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white text-green-700 border-green-200'
-            }`}
+            className={`px-3 py-1 rounded text-xs font-semibold border flex items-center gap-1 ${showFilters || hasActiveFilters
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-green-700 border-green-200'
+              }`}
           >
             <FiFilter size={14} />
             Filters
@@ -675,7 +745,7 @@ export default function GarbageCollectorTasks() {
                 </button>
               )}
             </div>
-            
+
             <div className="space-y-3">
               {/* Status Filter */}
               <div>
@@ -727,156 +797,190 @@ export default function GarbageCollectorTasks() {
             Showing tasks for: <strong>{formatPrettyDate(dateFilter)}</strong>
           </div>
         )}
-      <div className="grid gap-4">
-          {dailyCards.map((task) => (
-            <div key={task.key} className="rounded-md border border-green-100 bg-green-50 shadow-sm overflow-hidden">
-              <div className="px-5 pt-4 pb-2 bg-green-100/70 border-b border-green-200 flex items-center justify-between text-[12px]">
-                <div className="flex items-center gap-2 font-semibold text-gray-900">
-                  <FiCalendar className="text-green-700" />
-                  <span className="uppercase tracking-wide">{task.dateLabel}</span>
+        <div className="grid gap-4">
+          {dailyCards
+            .filter((task) => {
+              // Filter tasks by AM/PM based on their time range
+              const timeStr = task.time || '';
+              const [startStr, endStr] = timeStr.split('-').map(s => s.trim());
+
+              const startHour = parseInt(startStr?.split(':')[0] || '0', 10);
+              // If end time is missing, assume it's the same as start time for filtering purposes
+              const endHour = endStr ? parseInt(endStr.split(':')[0] || '0', 10) : startHour;
+
+              if (scheduleTimeFilter === 'am') {
+                // Show in AM if it starts in AM (before 12:00)
+                return startHour < 12;
+              }
+              if (scheduleTimeFilter === 'pm') {
+                // Show in PM if it ends in PM (12:00 or later) or starts in PM
+                return endHour >= 12 || startHour >= 12;
+              }
+              return true;
+            })
+            .map((task) => (
+              <div key={task.key} className="rounded-md border border-green-100 bg-green-50 shadow-sm overflow-hidden">
+                <div className="px-5 pt-4 pb-2 bg-green-100/70 border-b border-green-200 flex items-center justify-between text-[12px]">
+                  <div className="flex items-center gap-2 font-semibold text-gray-900">
+                    <FiCalendar className="text-green-700" />
+                    <span className="uppercase tracking-wide">{task.dateLabel}</span>
                   </div>
-                <div className="text-[11px] text-gray-700">Priority Barangay</div>
+                  <div className="text-[11px] text-gray-700">Priority Barangay</div>
+                </div>
+                <div className="px-5 pb-3 pt-3">
+                  <div className="grid grid-cols-2 gap-y-2 text-[12px] text-gray-800">
+                    <div className="flex items-center"><span className="text-gray-700">Time:</span></div>
+                    <div className="flex items-center justify-end"><span className="font-medium">{task.time}</span></div>
+                    <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Truck Number:</span><span className="font-medium ml-2">{task.vehicle || 'N/A'}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-gray-700">Barangays:</span><span className="font-medium ml-2">{task.barangayCount ?? '-'}</span></div>
+                    <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Total Stops:</span><span className="font-medium ml-2">{task.totalStops ?? 0}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-gray-700">Completed:</span><span className="font-medium ml-2">{task.completedStops ?? 0}</span></div>
+                    <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Remaining:</span><span className="font-medium ml-2">{(task.totalStops || 0) - (task.completedStops || 0)}</span></div>
+                    <div></div>
+                  </div>
+                </div>
+                {/* Overall Route Progress */}
+                <div className="px-5 pb-3">
+                  <div className="text-[11px] font-semibold text-gray-700 mb-1">OVERALL PROGRESS</div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-3 bg-green-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-600 rounded-full transition-all duration-300"
+                        style={{ width: `${task.totalStops > 0 ? Math.round((task.completedStops / task.totalStops) * 100) : 0}%` }}
+                      />
                     </div>
-              <div className="px-5 pb-3 pt-3">
-                <div className="grid grid-cols-2 gap-y-2 text-[12px] text-gray-800">
-                  <div className="flex items-center"><span className="text-gray-700">Time:</span></div>
-                  <div className="flex items-center justify-end"><span className="font-medium">{task.time}</span></div>
-                  <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Truck Number:</span><span className="font-medium ml-2">{task.vehicle || 'N/A'}</span></div>
-                  <div className="flex items-center justify-between"><span className="text-gray-700">Barangays:</span><span className="font-medium ml-2">{task.barangayCount ?? '-'}</span></div>
-                  <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Total Stops:</span><span className="font-medium ml-2">{task.totalStops ?? 0}</span></div>
-                  <div className="flex items-center justify-between"><span className="text-gray-700">Completed:</span><span className="font-medium ml-2">{task.completedStops ?? 0}</span></div>
-                  <div className="flex items-center justify-between pr-3"><span className="text-gray-700">Remaining:</span><span className="font-medium ml-2">{(task.totalStops||0)-(task.completedStops||0)}</span></div>
-                  <div></div>
+                    <div className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
+                      {task.completedStops || 0}/{task.totalStops || 0}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="px-5 pb-2">
-                <div className="text-[12px] font-semibold text-gray-700 mb-2">BARANGAY LIST</div>
-                <div className="grid gap-3">
-                  {(() => {
-                    const barangays = (task.barangayList || []).map((b) => {
-                      const total = Number(b.totalStops ?? b.total ?? 0);
-                      const done = Number(b.completedStops ?? b.completed ?? 0);
-                      const computedPct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
-                      const statusVal = String(b.status || '').toLowerCase();
-                      const isDone = computedPct >= 100 || ['completed','done','visited','finished'].includes(statusVal) || (total === 0 && statusVal === 'completed');
-                      const pct = isDone ? 100 : computedPct;
-                      const routeId = b.route_id || b.id;
-                      return { raw: b, pct, isDone, routeId };
-                    });
-                    return barangays.map((b2, i) => {
-                      const canStart = !b2.isDone && (i === 0 || barangays[i-1].isDone);
-                      const b = b2.raw;
-                      const routeId = normalizeId(b2.routeId);
-                      const uniqueKey = `${task.key}-${normalizeId(b.schedule_id ?? routeId ?? i) ?? i}`;
-                      return (
-                      <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-3 shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="text-[12px] font-semibold text-gray-900 leading-4">{b.name || `Route ${i+1}`}</div>
-                            <div className="text-[11px] text-gray-600">{b.time || task.time}</div>
+                <div className="px-5 pb-2">
+                  <div className="text-[12px] font-semibold text-gray-700 mb-2">SCHEDULE BREAKDOWN</div>
+                  <div className="grid gap-2">
+                    {(task.barangayList || [])
+                      .map((b, i) => {
+                        return (
+                          <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-2.5 shadow-sm">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="text-[11px] font-semibold text-gray-900 leading-4">{b.name || `Route ${i + 1}`}</div>
+                                <div className="text-[10px] text-gray-600">{b.time || task.time}</div>
+                              </div>
+                              <div className="text-green-600 text-sm">
+                                <FiMap />
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-green-600">{b2.isDone ? <FiCheckCircle /> : <FiMap />}</div>
-                  </div>
-                        <div className="mt-2">
-                          <div className="h-2.5 w-full bg-green-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-600 rounded-full" style={{ width: `${b2.pct}%` }} />
+                        );
+                      })}
                   </div>
                 </div>
-                        <div className="mt-2 flex items-center justify-end">
-                          {!b2.isDone ? (
-                            <button
-                              disabled={!canStart || startLoadingKey === uniqueKey}
-                              className={`text-[11px] px-3 py-1 rounded border font-semibold ${canStart && startLoadingKey !== uniqueKey ? 'border-green-300 text-green-700 bg-white' : 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'}`}
-                              onClick={async () => {
-                                if (!canStart) return;
-                                setStartLoadingKey(uniqueKey);
-                                const resolved = await resolveRouteId({
-                                  existingRouteId: routeId,
-                                  dateKey: task.key,
-                                  teamId: b.team_id,
-                                  barangayName: b.name || task.title,
-                                  scheduleId: b.schedule_id,
-                                });
-                                setStartLoadingKey(null);
-                                if (resolved) navigate(`/garbagecollector/route/${resolved}`);
-                                else alert('Missing route id for this barangay. Please refresh and try again.');
-                              }}
-                            >
-                              {startLoadingKey === uniqueKey ? 'Loading…' : 'Start'}
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-green-700 font-semibold">Completed</span>
-                          )}
+                {/* Single Start Route Button */}
+                <div className="px-5 pb-3">
+                  {(() => {
+                    const isFullyCompleted = (task.totalStops || 0) > 0 && (task.completedStops || 0) >= (task.totalStops || 0);
+                    const routeId = task.routeId || task.route_id || (task.barangayList && task.barangayList[0] && (task.barangayList[0].route_id || task.barangayList[0].id));
+                    const uniqueKey = `${task.key}-start-route`;
+
+                    if (isFullyCompleted) {
+                      return (
+                        <div className="text-center py-2 text-green-700 font-semibold text-sm">
+                          <FiCheckCircle className="inline mr-1" />
+                          Route Completed
                         </div>
-                      </div>
                       );
-                    });
+                    }
+
+                    return (
+                      <button
+                        disabled={startLoadingKey === uniqueKey}
+                        className="w-full px-4 py-2.5 rounded-lg border-2 border-green-600 text-green-700 bg-white font-semibold text-sm hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={async () => {
+                          setStartLoadingKey(uniqueKey);
+                          const resolved = await resolveRouteId({
+                            existingRouteId: routeId,
+                            dateKey: task.key,
+                            teamId: task.teamId,
+                            barangayName: task.title,
+                            scheduleId: task.scheduleId,
+                          });
+                          setStartLoadingKey(null);
+                          if (resolved) {
+                            // Navigate WITHOUT barangay_id to show all stops
+                            navigate(`/garbagecollector/route/${resolved}`);
+                          } else {
+                            alert('Missing route id. Please refresh and try again.');
+                          }
+                        }}
+                      >
+                        {startLoadingKey === uniqueKey ? 'Loading…' : 'Start Route'}
+                      </button>
+                    );
                   })()}
                 </div>
-              </div>
-              <div className="px-5 pb-4 pt-1">
-                <div className="text-[12px] font-semibold text-gray-700 mb-2">TEAM INFORMATION</div>
-                <div className="grid gap-2 text-[12px] bg-white/60 border border-green-100 rounded p-3">
-                  {task.collectors && task.collectors.length > 0 ? (
-                    task.collectors.map((c, i) => {
-                      const collectorName = c.displayName ||
-                        [c.firstname, c.lastname].filter(Boolean).join(' ').trim() ||
-                        [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
-                        c.full_name ||
-                        c.fullname ||
-                        c.name ||
-                        c.username ||
-                        'Collector';
-                      const statusValue = String(c.response_status || 'pending').toLowerCase();
-                      const statusColor = statusValue === 'accepted'
-                        ? 'text-green-700'
-                        : statusValue === 'declined'
-                          ? 'text-red-600'
-                          : 'text-yellow-700';
-                      return (
-                        <div
-                          key={c.user_id ?? c.id ?? i}
-                          className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1 last:border-b-0"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-gray-900 shrink-0">Collector Name {i + 1}:</span>
-                            <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
+                <div className="px-5 pb-4 pt-1">
+                  <div className="text-[12px] font-semibold text-gray-700 mb-2">TEAM INFORMATION</div>
+                  <div className="grid gap-2 text-[12px] bg-white/60 border border-green-100 rounded p-3">
+                    {task.collectors && task.collectors.length > 0 ? (
+                      task.collectors.map((c, i) => {
+                        const collectorName = c.displayName ||
+                          [c.firstname, c.lastname].filter(Boolean).join(' ').trim() ||
+                          [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
+                          c.full_name ||
+                          c.fullname ||
+                          c.name ||
+                          c.username ||
+                          'Collector';
+                        const statusValue = String(c.response_status || 'pending').toLowerCase();
+                        const statusColor = statusValue === 'accepted'
+                          ? 'text-green-700'
+                          : statusValue === 'declined'
+                            ? 'text-red-600'
+                            : 'text-yellow-700';
+                        return (
+                          <div
+                            key={c.user_id ?? c.id ?? i}
+                            className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1 last:border-b-0"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-gray-900 shrink-0">Collector Name {i + 1}:</span>
+                              <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
+                            </div>
+                            <span className={`uppercase font-semibold text-xs sm:text-[11px] ${statusColor}`}>
+                              {String(c.response_status || 'pending').toUpperCase()}
+                            </span>
                           </div>
-                          <span className={`uppercase font-semibold text-xs sm:text-[11px] ${statusColor}`}>
-                            {String(c.response_status || 'pending').toUpperCase()}
+                        );
+                      })
+                    ) : (
+                      fallbackCollectorName ? (
+                        <div className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-gray-900 shrink-0">Collector Name:</span>
+                            <span className="font-semibold text-gray-900 truncate">{fallbackCollectorName}</span>
+                          </div>
+                          <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus || 'pending').toLowerCase() === 'accepted' ? 'text-green-700' : String(task.yourResponseStatus || 'pending').toLowerCase() === 'declined' ? 'text-red-600' : 'text-yellow-700'}`}>
+                            {String(task.yourResponseStatus || 'pending').toUpperCase()}
                           </span>
                         </div>
-                      );
-                    })
-                  ) : (
-                    fallbackCollectorName ? (
-                      <div className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-gray-900 shrink-0">Collector Name:</span>
-                          <span className="font-semibold text-gray-900 truncate">{fallbackCollectorName}</span>
-                        </div>
-                        <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus||'pending').toLowerCase()==='accepted'?'text-green-700':String(task.yourResponseStatus||'pending').toLowerCase()==='declined'?'text-red-600':'text-yellow-700'}`}>
-                          {String(task.yourResponseStatus || 'pending').toUpperCase()}
-                        </span>
+                      ) : (
+                        <div className="text-gray-500">No collectors listed</div>
+                      )
+                    )}
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-gray-900 shrink-0">Driver Name:</span>
+                        <span className="font-semibold text-gray-900 truncate">{task.driverName || 'N/A'}</span>
                       </div>
-                    ) : (
-                      <div className="text-gray-500">No collectors listed</div>
-                    )
-                  )}
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-gray-900 shrink-0">Driver Name:</span>
-                      <span className="font-semibold text-gray-900 truncate">{task.driverName || 'N/A'}</span>
+                      <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus || 'pending').toLowerCase() === 'accepted' ? 'text-green-700' : String(task.yourResponseStatus || 'pending').toLowerCase() === 'declined' ? 'text-red-600' : 'text-yellow-700'}`}>
+                        {String(task.yourResponseStatus || 'pending').toUpperCase()}
+                      </span>
                     </div>
-                    <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus||'pending').toLowerCase()==='accepted'?'text-green-700':String(task.yourResponseStatus||'pending').toLowerCase()==='declined'?'text-red-600':'text-yellow-700'}`}>
-                      {String(task.yourResponseStatus || 'pending').toUpperCase()}
-                    </span>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-          </div>
+            ))}
+        </div>
       </div>
     </div>
   );

@@ -2,17 +2,16 @@
 // CORS Headers - Allow all origins for development
 // BUT: If headers are already set (e.g., by post_gps.php for credentials), don't override them
 if (!headers_sent() && !isset($_SERVER['HTTP_ACCESS_CONTROL_ALLOW_ORIGIN_SET'])) {
-  // Allow requests from any localhost origin (e.g., different dev servers/ports)
-  // Prefer the request Origin for more strict behavior when available.
   $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
 
-  // Accept any http(s)://localhost or 127.0.0.1 origins regardless of port
-  if ($origin !== '*' && (preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin))) {
+  if ($origin !== '*' && (
+    preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $origin) ||
+    preg_match('#^https://kolektrash\.systemproj\.com$#', $origin) ||
+    preg_match('#^https://koletrash\.systemproj\.com$#', $origin)
+  )) {
     header('Access-Control-Allow-Origin: ' . $origin);
-    // If the origin is explicitly echoed back, allow credentials
     header('Access-Control-Allow-Credentials: true');
   } else {
-    // For non-localhost origins, be permissive during development
     header('Access-Control-Allow-Origin: *');
   }
 

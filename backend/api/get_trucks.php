@@ -8,7 +8,15 @@ try {
     $database = new Database();
     $pdo = $database->connect();
 
-    $stmt = $pdo->prepare("SELECT truck_id, plate_num, capacity, truck_type, status FROM truck");
+    $stmt = $pdo->prepare("
+        SELECT 
+            truck_id, 
+            plate_num,
+            capacity, 
+            truck_type, 
+            status 
+        FROM truck
+    ");
     $stmt->execute();
     $trucks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

@@ -38,6 +38,12 @@ $email = strtolower(trim($email));
 
 $conn = (new Database())->connect();
 
+if (!$conn) {
+    error_log("Registration failed: Database connection is null");
+    echo json_encode(["success" => false, "message" => "Database connection failed. Please try again later."]);
+    exit;
+}
+
 try {
     $conn->exec("CREATE TABLE IF NOT EXISTS email_verifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -57,6 +63,7 @@ try {
     $stmt = $conn->prepare("SELECT 1 FROM user WHERE username = ? LIMIT 1");
     $stmt->execute([$username]);
     if ($stmt->fetch()) {
+        error_log("Registration failed: Username '$username' already exists");
         echo json_encode(["success" => false, "message" => "Username is already taken. Please choose another one."]);
         exit;
     }
@@ -65,6 +72,7 @@ try {
     $stmt = $conn->prepare("SELECT 1 FROM user WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
+        error_log("Registration failed: Email '$email' already exists");
         echo json_encode(["success" => false, "message" => "Email is already registered. Try logging in or reset your password."]);
         exit;
     }
@@ -75,29 +83,35 @@ try {
     $verification = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$verification) {
+        error_log("Registration failed: Email verification failed for '$email' with code '$verificationCode'");
         echo json_encode(["success" => false, "message" => "Email verification failed. Please confirm the code we sent to your email."]);
         exit;
     }
 
     $conn->beginTransaction();
+    error_log("Registration: Starting transaction for user '$username' with email '$email'");
 
     // 1. Get role_id for resident
     $roleStmt = $conn->prepare("SELECT role_id FROM role WHERE role_name = 'resident' LIMIT 1");
     $roleStmt->execute();
     $roleRow = $roleStmt->fetch(PDO::FETCH_ASSOC);
     if (!$roleRow) {
+        error_log("Registration failed: Resident role not found in database");
         throw new Exception('Resident role not found');
     }
     $role_id = $roleRow['role_id'];
+    error_log("Registration: Found resident role_id = $role_id");
 
     // 2. Insert into user
     $stmt = $conn->prepare("INSERT INTO user (username, email, password, role_id) VALUES (?, ?, ?, ?)");
     $stmt->execute([$username, $email, $password, $role_id]);
     $user_id = $conn->lastInsertId();
+    error_log("Registration: Inserted user with user_id = $user_id");
 
     // 3. Insert into user_profile
     $stmt = $conn->prepare("INSERT INTO user_profile (user_id, firstname, lastname, contact_num, address, barangay_id) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->execute([$user_id, $firstname, $lastname, $contact_num, $address, $barangay_id]);
+    error_log("Registration: Inserted user_profile for user_id = $user_id");
 
     // 4. Optionally, insert into resident table if it exists (skip if not needed)
     // $stmt = $conn->prepare("INSERT INTO resident (user_id, barangay_id) VALUES (?, ?)");
@@ -105,11 +119,16 @@ try {
 
     $conn->prepare("UPDATE email_verifications SET used = 1, used_at = NOW() WHERE id = ?")
         ->execute([$verification['id']]);
+    error_log("Registration: Marked verification code as used");
 
     $conn->commit();
+    error_log("Registration: Successfully committed transaction for user '$username'");
     echo json_encode(["success" => true, "message" => "Resident registered successfully"]);
 } catch (Exception $e) {
-    $conn->rollBack();
+    if ($conn) {
+        $conn->rollBack();
+    }
+    error_log("Registration exception: " . $e->getMessage() . " | Stack trace: " . $e->getTraceAsString());
     echo json_encode(["success" => false, "message" => "Registration failed: " . $e->getMessage()]);
 }
 ?>

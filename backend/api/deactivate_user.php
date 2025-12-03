@@ -27,16 +27,23 @@ $userId = $input['user_id'];
 
 try {
     $conn = (new Database())->connect();
-    $stmt = $conn->prepare("UPDATE user SET online_status = 'offline' WHERE user_id = ?");
-    $stmt->execute([$userId]);
-
-    if ($stmt->rowCount() === 0) {
+    
+    // First check if user exists
+    $checkStmt = $conn->prepare("SELECT user_id, account_status FROM user WHERE user_id = ?");
+    $checkStmt->execute([$userId]);
+    $user = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) {
         throw new Exception("User not found.");
     }
+    
+    // Suspend account and force offline
+    $stmt = $conn->prepare("UPDATE user SET account_status = 'suspended', online_status = 'offline' WHERE user_id = ?");
+    $stmt->execute([$userId]);
 
     echo json_encode([
         "success" => true,
-        "message" => "User has been deactivated."
+        "message" => "User account has been suspended."
     ]);
 } catch (Exception $e) {
     http_response_code(400);

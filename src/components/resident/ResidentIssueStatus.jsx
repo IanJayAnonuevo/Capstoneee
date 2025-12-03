@@ -3,6 +3,7 @@ import { FiAlertCircle, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiMapPin,
 import axios from 'axios';
 
 import { buildApiUrl } from '../../config/api';
+import { useLoader } from '../../contexts/LoaderContext';
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
@@ -232,7 +233,7 @@ const IssueCard = ({ issue }) => {
         imageUrl={issue.photo_url}
         onClose={() => setShowImageModal(false)}
       />
-      
+
       <ImageModal
         isOpen={showResolutionImageModal}
         imageUrl={issue.resolution_photo_url}
@@ -247,6 +248,12 @@ export default function ResidentIssueStatus() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const { hideLoader } = useLoader();
+
+  useEffect(() => {
+    // Hide the loader when component mounts
+    hideLoader();
+  }, []);
 
   useEffect(() => {
     fetchIssues();
@@ -272,7 +279,10 @@ export default function ResidentIssueStatus() {
         endpoint += `&status=${encodeURIComponent(filterStatus)}`;
       }
 
-      const response = await axios.get(buildApiUrl(endpoint));
+      const token = localStorage.getItem('access_token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const response = await axios.get(buildApiUrl(endpoint), { headers });
 
       if (response.data.status === 'success') {
         const normalizedIssues = (response.data.data || []).map((issue) => {
@@ -335,11 +345,10 @@ export default function ResidentIssueStatus() {
             <button
               key={option.value}
               onClick={() => setFilterStatus(option.value)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                filterStatus === option.value
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition ${filterStatus === option.value
+                ? 'bg-green-600 text-white shadow-md'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
             >
               {option.label}
             </button>

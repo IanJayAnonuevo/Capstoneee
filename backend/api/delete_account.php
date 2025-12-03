@@ -10,10 +10,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once '../config/Database.php';
+require_once '../config/database.php';
 
 $database = new Database();
 $db = $database->connect();
+
+if ($db === null) {
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Database connection failed'
+    ]);
+    exit();
+}
 
 $json_input = file_get_contents("php://input");
 $data = json_decode($json_input);
@@ -27,22 +36,54 @@ if (!$data || !isset($data->user_id)) {
 }
 
 try {
-    $db->beginTransaction();
-    // Delete from user_profile first (if not ON DELETE CASCADE)
-    $stmt1 = $db->prepare("DELETE FROM user_profile WHERE user_id = :user_id");
-    $stmt1->bindParam(':user_id', $data->user_id);
-    $stmt1->execute();
-    // Delete from user (should cascade to related tables if set)
-    $stmt2 = $db->prepare("DELETE FROM user WHERE user_id = :user_id");
-    $stmt2->bindParam(':user_id', $data->user_id);
-    $stmt2->execute();
-    $db->commit();
+    // Get current admin user ID from auth
+    $currentUser = kolektrash_current_user();
+    $deletedBy = $currentUser['user_id'] ?? null;
+    
+    // Check if user exists and is not already deleted
+    $stmt = $db->prepare("SELECT user_id, username, deleted_at FROM user WHERE user_id = :user_id");
+    $stmt->bindParam(':user_id', $data->user_id);
+    $stmt->execute();
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'User not found'
+        ]);
+        exit();
+    }
+    
+    if ($user['deleted_at'] !== null) {
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'User is already deleted'
+        ]);
+        exit();
+    }
+    
+    // Soft delete: Set deleted_at timestamp and deleted_by user
+    $now = date('Y-m-d H:i:s');
+    $stmt = $db->prepare("
+        UPDATE user 
+        SET deleted_at = :deleted_at,
+            deleted_by = :deleted_by,
+            account_status = 'suspended'
+        WHERE user_id = :user_id
+    ");
+    $stmt->bindParam(':deleted_at', $now);
+    $stmt->bindParam(':deleted_by', $deletedBy);
+    $stmt->bindParam(':user_id', $data->user_id);
+    $stmt->execute();
+    
     echo json_encode([
         'status' => 'success',
-        'message' => 'Account deleted successfully'
+        'message' => 'User deleted successfully',
+        'deleted_at' => $now,
+        'deleted_by' => $deletedBy
     ]);
+    
 } catch (PDOException $e) {
-    $db->rollBack();
     echo json_encode([
         'status' => 'error',
         'message' => 'Database error: ' . $e->getMessage()

@@ -34,6 +34,8 @@ export default function ForemanAttendance() {
   // Modal State
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState({ open: false, type: '', requestId: null, personName: null });
+  const [reviewNote, setReviewNote] = useState('');
 
   // --- Data Fetching ---
 
@@ -122,7 +124,10 @@ export default function ForemanAttendance() {
     }
   };
 
-  const handleReview = async (requestId, decision, personName) => {
+  const handleReview = async () => {
+    const { requestId, type, personName } = confirmationModal;
+    const decision = type === 'approve' ? 'approved' : 'declined';
+
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
@@ -132,14 +137,14 @@ export default function ForemanAttendance() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ request_id: requestId, decision })
+        body: JSON.stringify({ request_id: requestId, decision, review_note: reviewNote })
       });
       const data = await response.json();
       if (data.status === 'success') {
-        setMessage({ type: 'success', text: `${personName} ${decision} successfully` });
+        // Close modal and refresh list
+        setConfirmationModal({ open: false, type: '', requestId: null, personName: null });
+        setReviewNote('');
         fetchVerificationRequests('pending'); // Refresh list
-        setShowPhotoModal(false);
-        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
       } else {
         setMessage({ type: 'error', text: data.message });
       }
@@ -148,6 +153,11 @@ export default function ForemanAttendance() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openConfirmation = (requestId, type, personName) => {
+    setConfirmationModal({ open: true, type, requestId, personName });
+    setReviewNote('');
   };
 
   const resolvePhotoUrl = (path) => {
@@ -220,7 +230,7 @@ export default function ForemanAttendance() {
                 <MdFactCheck className="w-6 h-6" />
               </div>
               <h2 className="font-bold text-sm leading-tight mb-1">Verification Requests</h2>
-              <p className="text-green-100 text-[10px] leading-tight">Verify time-in photos</p>
+              <p className="text-green-100 text-[10px] leading-tight">Verify attendance</p>
             </div>
 
             {/* Past Attendance */}
@@ -235,9 +245,9 @@ export default function ForemanAttendance() {
               <p className="text-green-100 text-[10px] leading-tight">Browse history</p>
             </div>
 
-            {/* Requests and Approvals */}
+            {/* Leave Requests */}
             <div
-              onClick={() => setView('leave_requests')}
+              onClick={() => navigate('/foreman/leave-requests')}
               className="bg-[#008F53] rounded-xl p-4 text-white shadow-md relative overflow-hidden cursor-pointer active:scale-95 transition-transform flex flex-col items-center text-center justify-center aspect-square"
             >
               <div className="bg-white/20 p-3 rounded-full mb-2">
@@ -269,7 +279,7 @@ export default function ForemanAttendance() {
           <div className="bg-[#008F53] text-white p-4 rounded-t-lg">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-xl font-bold">Attendance Monitoring</h1>
+
                 <h2 className="text-lg font-semibold opacity-90">{title}</h2>
                 <p className="text-sm opacity-80 mt-1">
                   DATE: {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
@@ -328,24 +338,34 @@ export default function ForemanAttendance() {
                       const amRecord = getRecord(person.user_id, 'AM');
                       const pmRecord = getRecord(person.user_id, 'PM');
 
-                      // Color coding helper - returns dot HTML
-                      const getStatusDot = (record, isTimeOut = false) => {
-                        if (!record) return null;
-                        const status = record.status?.toLowerCase();
+                      // Color coding helper - returns dot HTML (DATABASE ONLY)
+                      const getStatusDot = (record, session, isTimeOut = false) => {
+                        // If no record exists, don't show anything
+                        if (!record) {
+                          return null;
+                        }
 
-                        // Check if absent
+                        const status = record.verification_status?.toLowerCase();
+
+                        // Check if absent - show red for both IN and OUT
                         if (status === 'absent') {
                           return <span className="inline-block w-4 h-4 rounded-full bg-red-500"></span>;
                         }
 
-                        // Check if on-leave
+                        // Check if on-leave - show yellow for both IN and OUT
                         if (status === 'on-leave' || status === 'on_leave') {
                           return <span className="inline-block w-4 h-4 rounded-full bg-yellow-400"></span>;
                         }
 
-                        // Check if present (has time_in or time_out)
-                        if (isTimeOut ? record.time_out : record.time_in) {
-                          return <span className="inline-block w-4 h-4 rounded-full bg-green-500"></span>;
+                        // Check if present (verified status)
+                        if (status === 'verified') {
+                          // For time IN: check if time_in exists
+                          // For time OUT: check if time_out exists
+                          if (isTimeOut) {
+                            return record.time_out ? <span className="inline-block w-4 h-4 rounded-full bg-green-500"></span> : null;
+                          } else {
+                            return record.time_in ? <span className="inline-block w-4 h-4 rounded-full bg-green-500"></span> : null;
+                          }
                         }
 
                         return null;
@@ -360,16 +380,16 @@ export default function ForemanAttendance() {
                             {person.designation}
                           </td>
                           <td className="border border-gray-300 p-2 text-center">
-                            {getStatusDot(amRecord)}
+                            {getStatusDot(amRecord, 'AM')}
                           </td>
                           <td className="border border-gray-300 p-2 text-center">
-                            {getStatusDot(amRecord, true)}
+                            {getStatusDot(amRecord, 'AM', true)}
                           </td>
                           <td className="border border-gray-300 p-2 text-center">
-                            {getStatusDot(pmRecord)}
+                            {getStatusDot(pmRecord, 'PM')}
                           </td>
                           <td className="border border-gray-300 p-2 text-center">
-                            {getStatusDot(pmRecord, true)}
+                            {getStatusDot(pmRecord, 'PM', true)}
                           </td>
                         </tr>
                       );
@@ -467,8 +487,19 @@ export default function ForemanAttendance() {
               <h2 className="text-sm opacity-90">Past Attendance</h2>
               <p className="text-xs opacity-80">View Record History</p>
             </div>
-            <div className="bg-white/20 px-3 py-1 rounded text-sm font-bold">
-              {selectedYear}
+            <div className="relative">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-white/20 text-white px-3 py-1 rounded text-sm font-bold outline-none cursor-pointer border-none focus:ring-2 focus:ring-white/50 appearance-none pr-8"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
+              >
+                {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  <option key={year} value={year} className="text-gray-800">
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -597,14 +628,14 @@ export default function ForemanAttendance() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleReview(req.id, 'approved', req.personnel_name)}
+                    onClick={() => openConfirmation(req.id, 'approve', req.personnel_name)}
                     className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700"
                     title="Approve"
                   >
                     <MdCheckCircle className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => handleReview(req.id, 'declined', req.personnel_name)}
+                    onClick={() => openConfirmation(req.id, 'decline', req.personnel_name)}
                     className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700"
                     title="Decline"
                   >
@@ -632,17 +663,72 @@ export default function ForemanAttendance() {
       {/* Photo Modal */}
       {showPhotoModal && selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold">Proof Photo</h3>
-              <button onClick={() => setShowPhotoModal(false)}><MdCancel className="w-6 h-6 text-gray-500" /></button>
-            </div>
+          <div className="bg-white rounded-lg max-w-lg w-full p-4 relative">
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
+            >
+              <MdCancel className="w-6 h-6 text-gray-500" />
+            </button>
+            <h3 className="font-bold mb-4 text-lg">Proof Photo</h3>
             <img
               src={resolvePhotoUrl(selectedRequest.photo_url)}
               alt="Proof"
-              className="w-full rounded-lg"
+              className="w-full rounded-lg max-h-[70vh] object-contain bg-gray-100"
               onError={(e) => e.target.src = 'https://via.placeholder.com/400x300?text=Image+Error'}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmationModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div className={`p-4 text-white flex items-center gap-3 ${confirmationModal.type === 'approve' ? 'bg-green-600' : 'bg-red-600'}`}>
+              {confirmationModal.type === 'approve' ? <MdCheckCircle className="w-6 h-6" /> : <MdCancel className="w-6 h-6" />}
+              <h3 className="font-bold text-lg">
+                {confirmationModal.type === 'approve' ? 'Approve Request' : 'Decline Request'}
+              </h3>
+            </div>
+
+            <div className="p-5">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to <strong>{confirmationModal.type === 'approve' ? 'approve' : 'decline'}</strong> the attendance request for <strong>{confirmationModal.personnel_name || confirmationModal.personName}</strong>?
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                  Add a Note (Optional)
+                </label>
+                <textarea
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
+                  rows="3"
+                  placeholder="Enter reason or remarks..."
+                ></textarea>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setConfirmationModal({ open: false, type: '', requestId: null, personName: null })}
+                  className="px-4 py-2 rounded-lg text-gray-600 font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReview}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-lg text-white font-bold shadow-md transition-transform active:scale-95 ${confirmationModal.type === 'approve'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                    } ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {loading ? 'Processing...' : 'Confirm'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ html {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -21,6 +22,7 @@ html {
     opacity: 0;
     transform: scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -40,6 +42,7 @@ html {
     opacity: 0;
     transform: translateY(24px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -67,7 +70,9 @@ html {
 
 /* Custom styles can be added below */
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   height: 100%;
   min-height: 100vh;
@@ -92,6 +97,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -105,11 +111,111 @@ h1 {
 /* Intentionally left blank */
 
 @media (prefers-color-scheme: light) {
-  html, body, #root {
+
+  html,
+  body,
+  #root {
     background: #f8fafc;
     color: #213547;
   }
+
   a:hover {
     color: #747bff;
+  }
+}
+
+/* Print Styles */
+@media print {
+
+  /* Hide sidebar navigation */
+  nav,
+  aside,
+  .sidebar,
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Hide buttons and interactive elements */
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hide page header, filters, and dashboard cards */
+  .min-h-screen>div:first-child,
+  .grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4,
+  .flex.flex-wrap.gap-3.mb-6 {
+    display: none !important;
+  }
+
+  /* Hide error messages */
+  .bg-red-50 {
+    display: none !important;
+  }
+
+  /* Hide the map panel */
+  .grid.grid-cols-1.lg\\:grid-cols-2>div:first-child {
+    display: none !important;
+  }
+
+  /* Make table panel full width */
+  .grid.grid-cols-1.lg\\:grid-cols-2 {
+    display: block !important;
+  }
+
+  .grid.grid-cols-1.lg\\:grid-cols-2>div:last-child {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Clean page layout */
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Remove shadows and borders for clean print */
+  * {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Optimize table for printing */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ddd !important;
+    padding: 8px !important;
+    text-align: left !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Add page title */
+  .grid.grid-cols-1.lg\\:grid-cols-2::before {
+    content: "Route Management - Routes List";
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 2px solid #000;
+  }
+
+  /* Page breaks */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
   }
 }

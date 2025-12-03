@@ -9,7 +9,7 @@ import ForgotPassword from './components/auth/ForgotPassword'
 import RequireAuth, { GuestOnly } from './components/auth/RequireAuth'
 import ManageSchedule from './components/admin/ManageSchedule'
 import ManageUsers from './components/admin/ManageUsers'
-import ManageRoute from './components/admin/ManageRoute'
+import ManageRoutes from './components/admin/ManageRoutes'
 import Pickup from './components/admin/Pickup'
 import PickupSimple from './components/admin/PickupSimple'
 import BarangayActivity from './components/admin/BarangayActivity'
@@ -46,9 +46,14 @@ import Appointments from './components/barangayhead/Appointments'
 import IEC from './components/barangayhead/IEC'
 import TruckDriverDashboard from './components/truckdriver/TruckDriverDashboard'
 import TruckDriverHome from './components/truckdriver/TruckDriverHome'
+import AttendancePage from './components/truckdriver/AttendancePage'
+import TruckDriverAttendanceVerification from './components/truckdriver/AttendanceVerification'
+import TruckDriverAttendanceLogs from './components/truckdriver/AttendanceLogs'
+import TruckDriverAttendanceLogsDetail from './components/truckdriver/AttendanceLogsDetail'
+import TruckDriverLeaveRequests from './components/truckdriver/LeaveRequests'
 import TruckDriverNotifications from './components/truckdriver/TruckDriverNotifications'
 import TruckDriverSettings from './components/truckdriver/TruckDriverSettings'
-import TruckDriverCollectionSchedule from './components/truckdriver/TruckDriverCollectionSchedule'
+import TruckDriverScheduleCalendar from './components/truckdriver/TruckDriverScheduleCalendar'
 import TruckDriverTask from './components/truckdriver/TruckDriverTask'
 import TruckDriverRoutes from './components/truckdriver/TruckDriverRoutes'
 import RouteRun from './components/truckdriver/RouteRun'
@@ -61,6 +66,12 @@ import GarbageCollectorRoutes from './components/garbagecollector/GarbageCollect
 import CollectorRouteRun from './components/garbagecollector/CollectorRouteRun'
 import GarbageCollectorTasks from './components/garbagecollector/GarbageCollectorTasks'
 import GarbageCollectorSchedule from './components/garbagecollector/GarbageCollectorSchedule'
+import GarbageCollectorAttendancePage from './components/garbagecollector/AttendancePage'
+import GarbageCollectorAttendanceVerification from './components/garbagecollector/AttendanceVerification'
+import GarbageCollectorAttendanceLogs from './components/garbagecollector/AttendanceLogs'
+import GarbageCollectorAttendanceLogsDetail from './components/garbagecollector/AttendanceLogsDetail'
+import GarbageCollectorScheduleCalendar from './components/garbagecollector/GarbageCollectorScheduleCalendar'
+import GarbageCollectorLeaveRequests from './components/garbagecollector/LeaveRequests'
 import ForemanDashboard from './components/foreman/ForemanDashboard'
 import ForemanHome from './components/foreman/ForemanHome'
 import ForemanAttendance from './components/foreman/ForemanAttendance'
@@ -69,9 +80,14 @@ import ForemanTasks from './components/foreman/ForemanTasks'
 import ForemanTrucks from './components/foreman/ForemanTrucks'
 import ForemanSpecialPickup from './components/foreman/ForemanSpecialPickup'
 import ForemanIssues from './components/foreman/ForemanIssues'
+import ForemanEmergencies from './components/foreman/ForemanEmergencies'
 import ForemanSettings from './components/foreman/ForemanSettings'
+import ForemanLeaveRequests from './components/foreman/ForemanLeaveRequests'
+import ForemanNotifications from './components/foreman/ForemanNotifications'
 import Issues from './components/admin/Issues'
 import AdminFeedback from './components/admin/Feedback'
+import CollectionPoints from './components/admin/CollectionPoints'
+import ManageBarangay from './components/admin/ManageBarangay'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useLoader } from './contexts/LoaderContext.jsx';
@@ -161,10 +177,12 @@ function App() {
   const isAdmin = location.pathname.startsWith('/admin')
   const getAdminTitle = () => {
     if (!isAdmin) return ''
-    if (location.pathname.startsWith('/admin/dashboard')) return 'Dashboard'
+    if (location.pathname.startsWith('/admin/dashboard')) return 'Daily Operations Overview'
     if (location.pathname.startsWith('/admin/users')) return 'User Management'
     if (location.pathname.startsWith('/admin/schedule')) return 'Schedule Management'
     if (location.pathname.startsWith('/admin/routes')) return 'Route Management'
+    if (location.pathname.startsWith('/admin/collection-points')) return 'Collection Points'
+    if (location.pathname.startsWith('/admin/barangays')) return 'Manage Barangays'
     if (location.pathname.startsWith('/admin/pickup')) return 'Special Pickup'
     if (location.pathname.startsWith('/admin/barangay')) return 'Barangay Activity'
     if (location.pathname.startsWith('/admin/feedback')) return 'Feedback'
@@ -188,7 +206,12 @@ function App() {
                 <p className="text-[11px] text-emerald-700/70">Track operations and monitor activities</p>
               </div>
             </div>
-            <div className="relative flex items-center gap-2">
+            <div className="relative flex items-center gap-3">
+              {location.pathname.startsWith('/admin/dashboard') && (
+                <div className="text-right mr-2">
+                  <p className="text-sm font-medium text-emerald-900">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                </div>
+              )}
               <button
                 ref={profileBtnRef}
                 onClick={() => setProfileOpen((v) => !v)}
@@ -223,7 +246,9 @@ function App() {
             <Route path="/admin" element={<RequireAuth allowedRoles={['admin']}><Navigate to="/admin/dashboard" replace /></RequireAuth>} />
             <Route path="/admin/dashboard" element={<RequireAuth allowedRoles={['admin']}><Dashboard /></RequireAuth>} />
             <Route path="/admin/users" element={<RequireAuth allowedRoles={['admin']}><ManageUsers /></RequireAuth>} />
-            <Route path="/admin/routes" element={<RequireAuth allowedRoles={['admin']}><ManageRoute /></RequireAuth>} />
+            <Route path="/admin/routes" element={<RequireAuth allowedRoles={['admin']}><ManageRoutes /></RequireAuth>} />
+            <Route path="/admin/collection-points" element={<RequireAuth allowedRoles={['admin']}><CollectionPoints /></RequireAuth>} />
+            <Route path="/admin/barangays" element={<RequireAuth allowedRoles={['admin']}><ManageBarangay /></RequireAuth>} />
             <Route path="/admin/schedule" element={<RequireAuth allowedRoles={['admin']}><ManageSchedule /></RequireAuth>} />
             <Route path="/admin/pickup" element={<RequireAuth allowedRoles={['admin']}><PickupSimple /></RequireAuth>} />
             <Route path="/admin/barangay" element={<RequireAuth allowedRoles={['admin']}><BarangayActivity /></RequireAuth>} />
@@ -273,7 +298,12 @@ function App() {
               element={<RequireAuth allowedRoles={['truck_driver']}><TruckDriverDashboard unreadNotifications={unreadCount} /></RequireAuth>}
             >
               <Route index element={<TruckDriverHome />} />
-              <Route path="schedule" element={<TruckDriverCollectionSchedule />} />
+              <Route path="attendance" element={<AttendancePage />} />
+              <Route path="attendance-verification" element={<TruckDriverAttendanceVerification />} />
+              <Route path="attendance-logs" element={<TruckDriverAttendanceLogs />} />
+              <Route path="attendance-logs/:year/:month" element={<TruckDriverAttendanceLogsDetail />} />
+              <Route path="leave-requests" element={<TruckDriverLeaveRequests />} />
+              <Route path="schedule" element={<TruckDriverScheduleCalendar />} />
               <Route path="tasks" element={<TruckDriverTask />} />
               <Route path="routes" element={<TruckDriverRoutes />} />
               <Route path="route/:id" element={<RouteRun />} />
@@ -287,7 +317,12 @@ function App() {
               element={<RequireAuth allowedRoles={['garbage_collector']}><GarbageCollectorDashboard unreadNotifications={unreadCount} /></RequireAuth>}
             >
               <Route index element={<GarbageCollectorHome />} />
-              <Route path="schedule" element={<GarbageCollectorSchedule />} />
+              <Route path="attendance" element={<GarbageCollectorAttendancePage />} />
+              <Route path="attendance-verification" element={<GarbageCollectorAttendanceVerification />} />
+              <Route path="attendance-logs" element={<GarbageCollectorAttendanceLogs />} />
+              <Route path="attendance-logs/:year/:month" element={<GarbageCollectorAttendanceLogsDetail />} />
+              <Route path="leave-requests" element={<GarbageCollectorLeaveRequests />} />
+              <Route path="schedule" element={<GarbageCollectorScheduleCalendar />} />
               <Route path="tasks" element={<GarbageCollectorTasks />} />
               <Route path="routes" element={<GarbageCollectorRoutes />} />
               <Route path="route/:id" element={<CollectorRouteRun />} />
@@ -303,9 +338,15 @@ function App() {
               <Route path="attendance" element={<ForemanAttendance />} />
               <Route path="schedule" element={<ForemanSchedule />} />
               <Route path="tasks" element={<ForemanTasks />} />
+              <Route path="tasks/today" element={<TodaysTasks />} />
+              <Route path="tasks/past" element={<PastTasks />} />
+              <Route path="tasks/manual" element={<TaskManagement />} />
               <Route path="trucks" element={<ForemanTrucks />} />
               <Route path="special-pickup" element={<ForemanSpecialPickup />} />
               <Route path="issues" element={<ForemanIssues />} />
+              <Route path="emergencies" element={<ForemanEmergencies />} />
+              <Route path="leave-requests" element={<ForemanLeaveRequests />} />
+              <Route path="notifications" element={<ForemanNotifications notifications={notifications} setNotifications={setNotifications} />} />
               <Route path="settings" element={<ForemanSettings />} />
             </Route>
             {/* Catch all route */}

@@ -12,7 +12,7 @@ import {
   FiAlertCircle,
   FiLogOut
 } from 'react-icons/fi'
-import { FaUsers, FaMapMarkedAlt, FaCalendarAlt, FaTasks, FaTruckMoving, FaBuilding, FaComments, FaExclamationCircle, FaSignOutAlt, FaTachometerAlt, FaChevronDown, FaChevronRight } from 'react-icons/fa'
+import { FaUsers, FaMapMarkedAlt, FaCalendarAlt, FaTasks, FaTruckMoving, FaBuilding, FaComments, FaExclamationCircle, FaSignOutAlt, FaTachometerAlt, FaChevronDown, FaChevronRight, FaMapMarkerAlt } from 'react-icons/fa'
 
 // Keep structure simple but allow dynamic icon coloring
 const navItems = [
@@ -21,15 +21,16 @@ const navItems = [
   { to: '/admin/users', label: 'Manage Users', Icon: FaUsers },
   { to: '/admin/schedule', label: 'Manage Schedule', Icon: FaCalendarAlt },
   { to: '/admin/routes', label: 'Manage Routes', Icon: FaMapMarkedAlt },
+  { to: '/admin/collection-points', label: 'Collection Points', Icon: FaMapMarkerAlt },
   {
     label: 'Task Management',
     Icon: FaTasks,
     children: [
       { to: '/admin/task-management/today', label: "Today's tasks" },
-      { to: '/admin/task-management/past', label: 'Past tasks' },
-      { to: '/admin/task-management/manual', label: 'Manual Assignment' }
+      { to: '/admin/task-management/past', label: 'Past tasks' }
     ]
   },
+  { to: '/admin/barangays', label: 'Manage Barangays', Icon: FaBuilding },
   { to: '/admin/pickup', label: 'Special Pickup', Icon: FaTruckMoving },
   { divider: true },
   { to: '/admin/feedback', label: 'Feedback', Icon: FaComments },

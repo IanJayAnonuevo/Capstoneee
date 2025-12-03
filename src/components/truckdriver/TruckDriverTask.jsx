@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiTruck, FiMap, FiCheckCircle, FiFilter, FiX, FiSearch } from 'react-icons/fi';
 import { GiTrashCan } from 'react-icons/gi';
@@ -41,8 +41,10 @@ export default function TruckDriverTask() {
   const [filterTab, setFilterTab] = useState('today'); // 'today' | 'upcoming' | 'all'
   const [expanded, setExpanded] = useState({});
   const navigate = useNavigate();
-  const [dailyByDate, setDailyByDate] = useState({}); // { 'YYYY-MM-DD': { barangayList: [...] } }
-  
+  const [dailyByDate, setDailyByDate] = useState({});
+  const [barangayBreakdown, setBarangayBreakdown] = useState({}); // Store per-barangay stop counts // { 'YYYY-MM-DD': { barangayList: [...] } }
+  const [scheduleTimeFilter, setScheduleTimeFilter] = useState('am'); // 'am' | 'pm'
+
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'in-progress' | 'completed' | 'cancelled'
@@ -61,6 +63,52 @@ export default function TruckDriverTask() {
       return t ? { Authorization: `Bearer ${t}` } : {};
     } catch { return {}; }
   };
+
+  // Fetch per-barangay breakdown for accurate progress bars
+  const fetchBarangayBreakdown = useCallback(async (routeId) => {
+    try {
+      const res = await fetch(buildApiUrl(`get_route_barangay_breakdown.php?route_id=${routeId}`), {
+        headers: { ...authHeaders() }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const breakdownMap = {};
+        data.breakdown.forEach(item => {
+          breakdownMap[item.barangay_id] = {
+            total: item.total_stops,
+            completed: item.completed_stops
+          };
+        });
+        return breakdownMap;
+      }
+    } catch (e) {
+      console.error('Failed to fetch barangay breakdown:', e);
+    }
+    return null;
+  }, []);
+
+  // Load breakdowns when tasks change
+  useEffect(() => {
+    const loadBreakdowns = async () => {
+      const breakdowns = {};
+      for (const task of tasks) {
+        const routeId = task.taskRouteId || task.routeId || task.route_id || (task.barangayList && task.barangayList[0] && (task.barangayList[0].route_id || task.barangayList[0].id));
+        if (routeId && !barangayBreakdown[routeId]) {
+          const breakdown = await fetchBarangayBreakdown(routeId);
+          if (breakdown) {
+            breakdowns[routeId] = breakdown;
+          }
+        }
+      }
+      if (Object.keys(breakdowns).length > 0) {
+        setBarangayBreakdown(prev => ({ ...prev, ...breakdowns }));
+      }
+    };
+
+    if (tasks.length > 0) {
+      loadBreakdowns();
+    }
+  }, [tasks, fetchBarangayBreakdown, barangayBreakdown]);
 
   const fallbackDriverName = useMemo(() => {
     try {
@@ -90,7 +138,7 @@ export default function TruckDriverTask() {
       setLoading(true);
       setError(null);
       try {
-  const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver&_t=${Date.now()}`), { headers: { ...authHeaders() }, cache: 'no-cache' });
+        const res = await fetch(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver&_t=${Date.now()}`), { headers: { ...authHeaders() }, cache: 'no-cache' });
         const data = await res.json();
         if (data.success) {
           const mapped = (data.schedules || []).map((s, idx) => {
@@ -137,29 +185,32 @@ export default function TruckDriverTask() {
             // Build barangayList - prioritize route_id from schedule, then from barangay_list/routes
             const barangayList = Array.isArray(s.barangay_list)
               ? s.barangay_list.map(b => ({
-                  ...b,
-                  route_id: s.route_id ?? b.route_id ?? b.id ?? b.routeId ?? null,
-                  barangay_name: b.barangay_name ?? b.name ?? s.barangay_name ?? s.barangay,
-                  team_id: b.team_id ?? s.team_id ?? null,
-                }))
+                ...b,
+                route_id: s.route_id ?? b.route_id ?? b.id ?? b.routeId ?? null,
+                barangay_name: b.barangay_name ?? b.name ?? s.barangay_name ?? s.barangay,
+                barangay_id: b.barangay_id ?? s.barangay_id,
+                team_id: b.team_id ?? s.team_id ?? null,
+              }))
               : Array.isArray(s.routes)
                 ? s.routes.map(r => ({
-                    ...r,
-                    route_id: s.route_id ?? r.route_id ?? r.id ?? r.routeId ?? null,
-                    barangay_name: r.barangay_name ?? r.name ?? s.barangay_name ?? s.barangay,
-                    team_id: r.team_id ?? s.team_id ?? null,
-                  }))
+                  ...r,
+                  route_id: s.route_id ?? r.route_id ?? r.id ?? r.routeId ?? null,
+                  barangay_name: r.barangay_name ?? r.name ?? s.barangay_name ?? s.barangay,
+                  barangay_id: r.barangay_id ?? s.barangay_id,
+                  team_id: r.team_id ?? s.team_id ?? null,
+                }))
                 : [
-                    {
-                      name: s.barangay || s.barangay_name || 'Route',
-                      barangay_name: s.barangay_name ?? s.barangay,
-                      time: `${(s.time || '').slice(0,5)} - ${(s.end_time || '').slice(0,5)}`,
-                      totalStops: s.total_stops ?? 0,
-                      completedStops: s.completed_stops ?? 0,
-                      route_id: s.route_id ?? null,
-                      team_id: s.team_id ?? null,
-                    }
-                  ];
+                  {
+                    name: s.barangay || s.barangay_name || 'Route',
+                    barangay_name: s.barangay_name ?? s.barangay,
+                    barangay_id: s.barangay_id,
+                    time: `${(s.time || '').slice(0, 5)} - ${(s.end_time || '').slice(0, 5)}`,
+                    totalStops: s.total_stops ?? 0,
+                    completedStops: s.completed_stops ?? 0,
+                    route_id: s.route_id ?? null,
+                    team_id: s.team_id ?? null,
+                  }
+                ];
             const totalStops = s.total_stops ?? barangayList.reduce((sum, r) => sum + (Number(r.totalStops) || 0), 0);
             const completedStops = s.completed_stops ?? barangayList.reduce((sum, r) => sum + (Number(r.completedStops) || 0), 0);
             const remainingStops = Math.max(0, Number(totalStops) - Number(completedStops));
@@ -168,7 +219,7 @@ export default function TruckDriverTask() {
               teamId: s.team_id,
               route: `${s.barangay || 'Route'}`,
               date: formatPrettyDate(s.date),
-              time: `${(s.time || '').slice(0,5)} - ${(s.end_time || '').slice(0,5)}`,
+              time: `${(s.time || '').slice(0, 5)} - ${(s.end_time || '').slice(0, 5)}`,
               vehicle: s.truck_number || 'N/A',
               truckType: s.truck_model || 'N/A',
               truckCapacity: s.truck_capacity ?? null,
@@ -205,7 +256,7 @@ export default function TruckDriverTask() {
 
   const acceptDecline = async (teamId, response) => {
     try {
-  const res = await fetch(buildApiUrl('respond_assignment.php'), {
+      const res = await fetch(buildApiUrl('respond_assignment.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ assignment_id: teamId, user_id: userId, response_status: response, role: 'driver' })
@@ -260,11 +311,11 @@ export default function TruckDriverTask() {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-      } catch(_) { 
-        return new Date().toISOString().slice(0,10); 
+      } catch (_) {
+        return new Date().toISOString().slice(0, 10);
       }
     })();
-    
+
     const isToday = (d) => {
       const dateStr = normalizeDate(d);
       return dateStr === todayStr;
@@ -277,7 +328,7 @@ export default function TruckDriverTask() {
       const dateStr = normalizeDate(d);
       return dateStr < todayStr;
     };
-    
+
     // If date filter is set, it takes priority - filter by exact date match only
     if (dateFilter) {
       // HTML date input returns YYYY-MM-DD format directly - use it as-is
@@ -287,14 +338,14 @@ export default function TruckDriverTask() {
         // Invalid date filter format, return empty
         return [];
       }
-      
+
       let validTasks = tasks.filter(t => {
         // Normalize task date to YYYY-MM-DD format
         const taskDate = normalizeDate(t.rawDate);
         // Strict string comparison - must match exactly
         return taskDate === filterDateStr;
       });
-      
+
       // Apply status filter
       if (statusFilter !== 'all') {
         validTasks = validTasks.filter(t => {
@@ -302,12 +353,12 @@ export default function TruckDriverTask() {
           return taskStatus === statusFilter;
         });
       }
-      
+
       // Apply search filter
       if (searchFilter.trim()) {
         const searchLower = searchFilter.toLowerCase().trim();
         validTasks = validTasks.filter(t => {
-          const barangayMatch = (t.barangayList || []).some(b => 
+          const barangayMatch = (t.barangayList || []).some(b =>
             String(b.name || b.barangay || '').toLowerCase().includes(searchLower)
           );
           const truckMatch = String(t.vehicle || '').toLowerCase().includes(searchLower);
@@ -315,13 +366,13 @@ export default function TruckDriverTask() {
           return barangayMatch || truckMatch || routeMatch;
         });
       }
-      
+
       return validTasks;
     }
-    
+
     // No date filter - apply tab-based filtering
     let validTasks = tasks.filter(t => !isPast(t.rawDate));
-    
+
     if (filterTab === 'today') {
       const todayTasks = validTasks.filter(t => isToday(t.rawDate));
       // If no tasks for today, show the earliest future date that has tasks
@@ -334,10 +385,10 @@ export default function TruckDriverTask() {
             validTasks = validTasks.filter(t => normalizeDate(t.rawDate) === earliestDate);
           }
         } else {
-        // If no future tasks, show earliest available (shouldn't happen but fallback)
+          // If no future tasks, show earliest available (shouldn't happen but fallback)
           const sorted = [...validTasks].sort((a, b) => normalizeDate(a.rawDate).localeCompare(normalizeDate(b.rawDate)));
           const earliestDate = normalizeDate(sorted[0]?.rawDate);
-        if (earliestDate) {
+          if (earliestDate) {
             validTasks = validTasks.filter(t => normalizeDate(t.rawDate) === earliestDate);
           }
         }
@@ -347,7 +398,7 @@ export default function TruckDriverTask() {
     } else if (filterTab === 'upcoming') {
       validTasks = validTasks.filter(t => !isToday(t.rawDate));
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       validTasks = validTasks.filter(t => {
@@ -355,12 +406,12 @@ export default function TruckDriverTask() {
         return taskStatus === statusFilter;
       });
     }
-    
+
     // Apply search filter (barangay or truck number)
     if (searchFilter.trim()) {
       const searchLower = searchFilter.toLowerCase().trim();
       validTasks = validTasks.filter(t => {
-        const barangayMatch = (t.barangayList || []).some(b => 
+        const barangayMatch = (t.barangayList || []).some(b =>
           String(b.name || b.barangay || '').toLowerCase().includes(searchLower)
         );
         const truckMatch = String(t.vehicle || '').toLowerCase().includes(searchLower);
@@ -368,7 +419,7 @@ export default function TruckDriverTask() {
         return barangayMatch || truckMatch || routeMatch;
       });
     }
-    
+
     return validTasks;
   }, [tasks, filterTab, statusFilter, dateFilter, searchFilter]);
 
@@ -390,7 +441,7 @@ export default function TruckDriverTask() {
     return 'text-gray-700';
   };
 
-  // Build one card per date with aggregated barangays and team info
+  // Build one card per Date + Truck + Driver (merge schedules for same shift)
   const dailyCards = useMemo(() => {
     const map = {};
     for (const t of filteredTasks) {
@@ -412,14 +463,21 @@ export default function TruckDriverTask() {
           return '';
         }
       };
-      
+
       const dateKey = normalizeDate(t.rawDate);
       if (!dateKey) continue;
-      if (!map[dateKey]) {
-        // Format the dateKey properly for display
+
+      // Group by Date + Truck + Driver to merge schedules for the same shift/team
+      // Use a fallback for missing truck/driver to avoid grouping unrelated tasks
+      const truckKey = (t.vehicle || 'UnknownTruck').trim().toLowerCase();
+      const driverKey = (t.driverName || 'UnknownDriver').trim().toLowerCase();
+      const uniqueKey = `${dateKey}_${truckKey}_${driverKey}`;
+
+      if (!map[uniqueKey]) {
         const formattedDate = formatPrettyDate(dateKey);
-        map[dateKey] = {
-          key: dateKey,
+        map[uniqueKey] = {
+          key: uniqueKey,
+          dateKey: dateKey, // Keep dateKey for sorting/filtering
           dateLabel: formattedDate,
           startTimes: [],
           endTimes: [],
@@ -430,23 +488,38 @@ export default function TruckDriverTask() {
           collectors: [],
           driverName: t.driverName,
           yourResponseStatus: t.yourResponseStatus,
-          taskRouteId: t.route_id ?? null, // Store route_id from task as fallback
+          taskRouteId: t.route_id ?? null,
         };
       }
-      const bucket = map[dateKey];
+      const bucket = map[uniqueKey];
       const [start, end] = String(t.time || '').split(' - ');
       if (start) bucket.startTimes.push(start);
       if (end) bucket.endTimes.push(end);
       bucket.vehicle = bucket.vehicle || t.vehicle;
-      // When adding barangayList, ensure each barangay has route_id (use task route_id as fallback)
-      if (Array.isArray(t.barangayList)) {
+
+      // Add each schedule as a separate barangay entry with its own time
+      if (Array.isArray(t.barangayList) && t.barangayList.length > 0) {
         const enrichedBarangayList = t.barangayList.map(b => ({
           ...b,
           route_id: b.route_id ?? t.route_id ?? null,
           team_id: b.team_id ?? t.teamId ?? null,
+          time: t.time, // Include time for this specific schedule
+          barangay_name: b.barangay_name || b.name || t.route
         }));
         bucket.barangayList.push(...enrichedBarangayList);
+      } else {
+        // Fallback: create entry from task-level data
+        bucket.barangayList.push({
+          name: t.route || t.barangay || 'Route',
+          barangay_name: t.barangay || t.route,
+          route_id: t.route_id,
+          team_id: t.teamId,
+          time: t.time,
+          totalStops: t.totalStops || 0,
+          completedStops: t.completedStops || 0
+        });
       }
+
       bucket.totalStops += Number(t.totalStops || 0);
       bucket.completedStops += Number(t.completedStops || 0);
       for (const c of t.collectors || []) {
@@ -460,47 +533,26 @@ export default function TruckDriverTask() {
         bucket.yourResponseStatus = t.yourResponseStatus;
       }
     }
+
     let cards = Object.values(map).map((d) => {
       const start = d.startTimes.sort()[0] || '';
       const end = d.endTimes.sort().slice(-1)[0] || '';
-      // Prefer dailyByDate barangayList (has route_ids from API), but merge with task-level data
-      const dailyRoutes = dailyByDate[d.key]?.barangayList || [];
-      const baseBarangayList = d.barangayList || [];
-      
-      // If we have daily routes, prefer them (they have route_ids from API)
-      // Otherwise use base list and enrich with route_id
-      let finalBarangayList;
-      if (dailyRoutes.length > 0) {
-        // Use daily routes - they already have route_ids from get_routes.php
-        finalBarangayList = dailyRoutes.map(r => ({
-          ...r,
-          route_id: r.id ?? r.route_id ?? null, // get_routes.php returns 'id' as route_id
-          name: r.barangay_name ?? r.name ?? 'Barangay',
-          barangay_name: r.barangay_name ?? r.name ?? null,
-        }));
-      } else {
-        // Use base list and ensure route_id is set
-        finalBarangayList = baseBarangayList.map(b => ({
-          ...b,
-          route_id: b.route_id ?? b.id ?? b.routeId ?? d.taskRouteId ?? null,
-          team_id: b.team_id ?? d.teamId ?? null,
-        }));
-      }
-      
+
       return {
         ...d,
         time: start && end ? `${start} - ${end}` : start || end || '-',
-        barangayList: finalBarangayList,
-        barangayCount: finalBarangayList.length,
+        barangayCount: d.barangayList.length,
         remainingStops: Math.max(0, Number(d.totalStops) - Number(d.completedStops)),
-        taskRouteId: d.taskRouteId, // Keep for fallback
       };
-    }).sort((a,b) => a.key.localeCompare(b.key));
-    
-    // If dateFilter is set, ensure we only show cards matching that exact date
-    // AND use the dateFilter value for the label (not the task's date)
+    }).sort((a, b) => {
+      // Sort by date first, then by time
+      const dateCompare = a.dateKey.localeCompare(b.dateKey);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+    // If dateFilter is set, filter by date
     if (dateFilter) {
-      // Use the dateFilter value directly (HTML date input format: YYYY-MM-DD)
       const filterDateStr = String(dateFilter).trim().slice(0, 10);
       if (/^\d{4}-\d{2}-\d{2}$/.test(filterDateStr)) {
         const normalizeDate = (dateStr) => {
@@ -510,10 +562,6 @@ export default function TruckDriverTask() {
             return str.slice(0, 10);
           }
           try {
-            const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (match) {
-              return `${match[1]}-${match[2]}-${match[3]}`;
-            }
             const d = new Date(str);
             if (isNaN(d.getTime())) return '';
             const year = d.getFullYear();
@@ -524,28 +572,25 @@ export default function TruckDriverTask() {
             return '';
           }
         };
-        
-        // Filter cards to only show the selected date
+
         cards = cards.filter(card => {
-          const cardDate = normalizeDate(card.key);
+          const cardDate = normalizeDate(card.dateKey);
           return cardDate === filterDateStr;
         });
-        
-        // Update ALL cards to use the filter date for the label
-        // This ensures the label ALWAYS matches what the user selected in the filter
+
         cards = cards.map(card => ({
           ...card,
           dateLabel: formatPrettyDate(filterDateStr)
         }));
       }
     }
-    
+
     return cards;
-  }, [filteredTasks, dailyByDate, dateFilter]);
+  }, [filteredTasks, dateFilter]);
 
   // Fetch daily routes (driver-accepted) for each date shown and prefer their route IDs
   useEffect(() => {
-    const uniqueDates = Array.from(new Set(filteredTasks.map(t => String(t.rawDate||'').slice(0,10)).filter(Boolean)));
+    const uniqueDates = Array.from(new Set(filteredTasks.map(t => String(t.rawDate || '').slice(0, 10)).filter(Boolean)));
     if (uniqueDates.length === 0) return;
     let cancelled = false;
     (async () => {
@@ -562,7 +607,7 @@ export default function TruckDriverTask() {
             name: r.barangay_name || r.name || 'Barangay',
             barangay_name: r.barangay_name || r.name || null,
             barangay_id: r.barangay_id || null, // Include barangay_id for matching
-            time: `${String(r.start_time||'').slice(0,5)} - ${String(r.end_time||'').slice(0,5)}`,
+            time: `${String(r.start_time || '').slice(0, 5)} - ${String(r.end_time || '').slice(0, 5)}`,
             totalStops: Number(r.total_stops || 0),
             completedStops: Number(r.completed_stops || 0),
             status: r.status || 'scheduled',
@@ -594,7 +639,7 @@ export default function TruckDriverTask() {
       <div className="w-full max-w-lg">
         <h1 className="text-[18px] font-semibold text-gray-900 mb-1 pl-1 tracking-tight">ASSIGNED TASK</h1>
         <p className="text-[13px] text-gray-600 mb-4 pl-1">You're all set for today's task</p>
-        
+
         {/* Search Bar */}
         <div className="mb-3 pl-1">
           <div className="relative">
@@ -617,22 +662,28 @@ export default function TruckDriverTask() {
           </div>
         </div>
 
-        {/* Tabs and Filter Toggle */}
+        {/* AM/PM Toggle and Filter */}
         <div className="flex gap-2 mb-3 pl-1 items-center">
           <div className="flex gap-2 flex-1">
-          {['today','upcoming'].map(tab => (
-            <button key={tab} onClick={() => setFilterTab(tab)} className={`px-3 py-1 rounded text-xs font-semibold border ${filterTab===tab?'bg-green-600 text-white border-green-600':'bg-white text-green-700 border-green-200'}`}>
-              {tab === 'today' ? 'Today' : tab === 'upcoming' ? 'Upcoming' : 'All'}
-            </button>
-          ))}
-        </div>
+            {['am', 'pm'].map(period => (
+              <button
+                key={period}
+                onClick={() => setScheduleTimeFilter(period)}
+                className={`px-3 py-1 rounded text-xs font-semibold border ${scheduleTimeFilter === period
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-green-700 border-green-200'
+                  }`}
+              >
+                {period.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-3 py-1 rounded text-xs font-semibold border flex items-center gap-1 ${
-              showFilters || hasActiveFilters
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-white text-green-700 border-green-200'
-            }`}
+            className={`px-3 py-1 rounded text-xs font-semibold border flex items-center gap-1 ${showFilters || hasActiveFilters
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-green-700 border-green-200'
+              }`}
           >
             <FiFilter size={14} />
             Filters
@@ -654,7 +705,7 @@ export default function TruckDriverTask() {
                 </button>
               )}
             </div>
-            
+
             <div className="space-y-3">
               {/* Status Filter */}
               <div>
@@ -708,381 +759,226 @@ export default function TruckDriverTask() {
         )}
 
         <div className="grid gap-4">
-          {dailyCards.map((task) => {
-            return (
-              <div key={task.key} className="rounded-md border border-green-100 bg-green-50 shadow-sm overflow-hidden">
-                {/* Card header - date and priority */}
-                <div className="px-5 pt-4 pb-2 bg-green-100/70 border-b border-green-200 flex items-center justify-between text-[12px]">
-                  <div className="flex items-center gap-2 font-semibold text-gray-900">
-                    <FiCalendar className="text-green-700" />
-                    <span className="uppercase tracking-wide">{task.dateLabel}</span>
-                  </div>
-                  <div className="text-[11px] text-gray-700">Priority Barangay</div>
-                </div>
+          {dailyCards
+            .filter((task) => {
+              // Filter tasks by AM/PM based on their time range
+              const timeStr = task.time || '';
+              const [startStr, endStr] = timeStr.split('-').map(s => s.trim());
 
-                {/* Summary grid (two-column aligned like mock) */}
-                <div className="px-5 pb-3 pt-3">
-                  <div className="grid grid-cols-2 gap-y-2 text-[12px] text-gray-800">
-                    {/* Row: Time on right column */}
-                    <div className="flex items-center">
-                      <span className="text-gray-700">Time:</span>
-                    </div>
-                    <div className="flex items-center justify-end">
-                      <span className="font-medium">{task.time}</span>
-                    </div>
-                    {/* Row: Truck Number | Barangays */}
-                    <div className="flex items-center justify-between pr-3">
-                      <span className="text-gray-700">Truck Number:</span>
-                      <span className="font-medium ml-2">{task.vehicle}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700">Barangays:</span>
-                      <span className="font-medium ml-2">{task.barangayCount ?? '-'}</span>
-                    </div>
-                    {/* Row: Total Stops | Completed */}
-                    <div className="flex items-center justify-between pr-3">
-                      <span className="text-gray-700">Total Stops:</span>
-                      <span className="font-medium ml-2">{task.totalStops ?? 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700">Completed:</span>
-                      <span className="font-medium ml-2">{task.completedStops ?? 0}</span>
-                    </div>
-                    {/* Row: Remaining on left column, value aligned right of left col */}
-                    <div className="flex items-center justify-between pr-3">
-                      <span className="text-gray-700">Remaining:</span>
-                      <span className="font-medium ml-2">{task.remainingStops ?? 0}</span>
-                    </div>
-                    <div></div>
-                  </div>
-                </div>
+              const startHour = parseInt(startStr?.split(':')[0] || '0', 10);
+              // If end time is missing, assume it's the same as start time for filtering purposes
+              const endHour = endStr ? parseInt(endStr.split(':')[0] || '0', 10) : startHour;
 
-                {/* Barangay List */}
-                <div className="px-5 pb-2">
-                  <div className="text-[12px] font-semibold text-gray-700 mb-2">BARANGAY LIST</div>
-                  <div className="grid gap-3">
+              if (scheduleTimeFilter === 'am') {
+                // Show in AM if it starts in AM (before 12:00)
+                return startHour < 12;
+              }
+              if (scheduleTimeFilter === 'pm') {
+                // Show in PM if it ends in PM (12:00 or later) or starts in PM
+                return endHour >= 12 || startHour >= 12;
+              }
+              return true;
+            })
+            .map((task) => {
+              return (
+                <div key={task.key} className="rounded-md border border-green-100 bg-green-50 shadow-sm overflow-hidden">
+                  {/* Card header - date and priority */}
+                  <div className="px-5 pt-4 pb-2 bg-green-100/70 border-b border-green-200 flex items-center justify-between text-[12px]">
+                    <div className="flex items-center gap-2 font-semibold text-gray-900">
+                      <FiCalendar className="text-green-700" />
+                      <span className="uppercase tracking-wide">{task.dateLabel}</span>
+                    </div>
+                    <div className="text-[11px] text-gray-700">Priority Barangay</div>
+                  </div>
+
+                  {/* Summary grid (two-column aligned like mock) */}
+                  <div className="px-5 pb-3 pt-3">
+                    <div className="grid grid-cols-2 gap-y-2 text-[12px] text-gray-800">
+                      {/* Row: Time on right column */}
+                      <div className="flex items-center">
+                        <span className="text-gray-700">Time:</span>
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <span className="font-medium">{task.time}</span>
+                      </div>
+                      {/* Row: Truck Number | Barangays */}
+                      <div className="flex items-center justify-between pr-3">
+                        <span className="text-gray-700">Truck Number:</span>
+                        <span className="font-medium ml-2">{task.vehicle}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700">Barangays:</span>
+                        <span className="font-medium ml-2">{task.barangayCount ?? '-'}</span>
+                      </div>
+                      {/* Row: Total Stops | Completed */}
+                      <div className="flex items-center justify-between pr-3">
+                        <span className="text-gray-700">Total Stops:</span>
+                        <span className="font-medium ml-2">{task.totalStops ?? 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700">Completed:</span>
+                        <span className="font-medium ml-2">{task.completedStops ?? 0}</span>
+                      </div>
+                      {/* Row: Remaining on left column, value aligned right of left col */}
+                      <div className="flex items-center justify-between pr-3">
+                        <span className="text-gray-700">Remaining:</span>
+                        <span className="font-medium ml-2">{task.remainingStops ?? 0}</span>
+                      </div>
+                      <div></div>
+                    </div>
+                  </div>
+
+                  {/* Overall Route Progress */}
+                  <div className="px-5 pb-3">
+                    <div className="text-[11px] font-semibold text-gray-700 mb-1">OVERALL PROGRESS</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-3 bg-green-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-600 rounded-full transition-all duration-300"
+                          style={{ width: `${task.totalStops > 0 ? Math.round((task.completedStops / task.totalStops) * 100) : 0}%` }}
+                        />
+                      </div>
+                      <div className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
+                        {task.completedStops || 0}/{task.totalStops || 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barangay List */}
+                  <div className="px-5 pb-2">
+                    <div className="text-[12px] font-semibold text-gray-700 mb-2">SCHEDULE BREAKDOWN</div>
+                    <div className="grid gap-3">
+                      {(() => {
+                        const barangays = (task.barangayList || [])
+                          .map((b) => {
+                            const routeId = b.route_id ?? b.id ?? b.routeId ?? b.cluster_id ?? task.taskRouteId ?? null;
+                            return { raw: b, routeId };
+                          });
+                        return barangays.map((b2, i) => {
+                          const b = b2.raw;
+                          const routeId = b2.routeId;
+                          return (
+                            <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-2.5 shadow-sm">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-[11px] font-semibold text-gray-900 leading-4">{b.name || b.barangay || `Route ${i + 1}`}</div>
+                                  <div className="text-[10px] text-gray-600">{b.time || task.time}</div>
+                                </div>
+                                <div className="text-green-600 text-sm">
+                                  <FiMap />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                  {/* Single Start Route Button */}
+                  <div className="px-5 pb-3">
                     {(() => {
-                      const barangays = (task.barangayList || []).map((b) => {
-                        const total = Number(b.totalStops ?? b.total ?? 0);
-                        const done = Number(b.completedStops ?? b.completed ?? 0);
-                        const computedPct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
-                        const statusVal = String(b.status || '').toLowerCase();
-                        const isDone = computedPct >= 100 || ['completed','done','visited','finished'].includes(statusVal) || (total === 0 && statusVal === 'completed');
-                        const pct = isDone ? 100 : computedPct;
-                        // Try multiple sources for route_id - prioritize route_id, then id, then task-level route_id
-                        const routeId = b.route_id ?? b.id ?? b.routeId ?? b.cluster_id ?? task.taskRouteId ?? null;
-                        return { raw: b, total, done, pct, isDone, routeId };
-                      });
-                      return barangays.map((b2, i) => {
-                        const canStart = !b2.isDone && (i === 0 || barangays[i-1].isDone);
-                        const b = b2.raw;
-                        const routeId = b2.routeId;
+                      const isFullyCompleted = (task.totalStops || 0) > 0 && (task.completedStops || 0) >= (task.totalStops || 0);
+                      const routeId = task.taskRouteId || task.routeId || task.route_id || (task.barangayList && task.barangayList[0] && (task.barangayList[0].route_id || task.barangayList[0].id));
+
+                      if (isFullyCompleted) {
                         return (
-                        <div key={i} className="bg-green-50 border border-green-200 rounded-lg p-3 shadow-sm">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="text-[12px] font-semibold text-gray-900 leading-4">{b.name || b.barangay || `Route ${i+1}`}</div>
-                              <div className="text-[11px] text-gray-600">{b.time || task.time}</div>
-                            </div>
-                            <div className="text-green-600">
-                              {b2.isDone ? <FiCheckCircle /> : <FiMap />}
-                            </div>
+                          <div className="text-center py-2 text-green-700 font-semibold text-sm">
+                            <FiCheckCircle className="inline mr-1" />
+                            Route Completed
                           </div>
-                          <div className="mt-2">
-                            <div className="h-2.5 w-full bg-green-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full bg-green-600`} style={{ width: `${b2.pct}%` }} />
-                            </div>
-                          </div>
-                          <div className="mt-2 flex items-center justify-end">
-                            {!b2.isDone ? (
-                              <button 
-                                disabled={!canStart} 
-                                className={`text-[11px] px-3 py-1 rounded border font-semibold ${canStart ? 'border-green-300 text-green-700 bg-white' : 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'}`} 
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('=== START BUTTON CLICKED ===');
-                                  console.log('canStart:', canStart);
-                                  console.log('routeId from barangay:', routeId);
-                                  console.log('barangay object (b):', b);
-                                  console.log('barangay object keys:', Object.keys(b));
-                                  console.log('task object:', task);
-                                  console.log('task.taskRouteId:', task.taskRouteId);
-                                  console.log('dailyByDate for this date:', dailyByDate[task.key]);
-                                  console.log('task.key:', task.key);
-                                  
-                                  if (!canStart) {
-                                    console.log('Cannot start - previous barangay not completed');
-                                    return;
-                                  }
-                                
-                                // If routeId is missing, try multiple sources to resolve it
-                                let resolvedRouteId = routeId;
-                                console.log('Initial resolvedRouteId:', resolvedRouteId);
-                                if (resolvedRouteId == null) {
-                                  console.log('routeId is null, trying to resolve...');
-                                  // First, check if we have it in dailyByDate (already fetched)
-                                  const dateKey = task.key;
-                                  console.log('Looking for routes in dailyByDate for date:', dateKey);
-                                  const dailyRoutes = dailyByDate[dateKey]?.barangayList || [];
-                                  console.log('dailyRoutes found:', dailyRoutes);
-                                  
-                                  if (dailyRoutes.length > 0) {
-                                    console.log('Searching in dailyRoutes. Looking for barangay:', b.name || b.barangay_name || b.barangay);
-                                    // Try to find matching route by barangay name, barangay_name, or team_id
-                                    const matchingRoute = dailyRoutes.find(r => {
-                                      const routeName = (r.barangay_name || r.name || '').toLowerCase().trim();
-                                      const barangayName = (b.barangay_name || b.name || b.barangay || '').toLowerCase().trim();
-                                      const nameMatch = routeName && barangayName && routeName === barangayName;
-                                      const teamMatch = r.team_id && b.team_id && Number(r.team_id) === Number(b.team_id);
-                                      const barangayIdMatch = r.barangay_id && b.barangay_id && String(r.barangay_id) === String(b.barangay_id);
-                                      const routeIdMatch = (r.route_id || r.id) && (b.route_id || b.id) && Number(r.route_id || r.id) === Number(b.route_id || b.id);
-                                      const matches = nameMatch || teamMatch || barangayIdMatch || routeIdMatch;
-                                      console.log('Checking route match:', { 
-                                        routeName, 
-                                        barangayName, 
-                                        nameMatch, 
-                                        teamMatch,
-                                        barangayIdMatch,
-                                        routeIdMatch,
-                                        matches, 
-                                        route: r,
-                                        barangay: b
-                                      });
-                                      return matches;
-                                    });
-                                    console.log('matchingRoute from dailyByDate:', matchingRoute);
-                                    if (matchingRoute) {
-                                      // get_routes.php returns 'id' as the route_id
-                                      resolvedRouteId = matchingRoute.id || matchingRoute.route_id;
-                                      console.log('Found route_id from dailyByDate:', resolvedRouteId);
-                                    } else {
-                                      console.log('No matching route found in dailyRoutes. Available routes:', dailyRoutes.map(r => ({ 
-                                        id: r.id, 
-                                        route_id: r.route_id, 
-                                        name: r.barangay_name || r.name,
-                                        team_id: r.team_id 
-                                      })));
-                                    }
-                                  }
-                                  
-                                  // If still not found, fetch from API
-                                  if (resolvedRouteId == null) {
-                                    console.log('Still null, fetching from API...');
-                                    try {
-                                      const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || '';
-                                      const apiUrl = buildApiUrl(`get_routes.php?date=${dateKey}&role=driver&user_id=${encodeURIComponent(user_id)}`);
-                                      console.log('Fetching from:', apiUrl);
-                                      const res = await fetch(apiUrl, { headers: { ...authHeaders() } });
-                                      const data = await res.json();
-                                      console.log('API response:', data);
-                                      if (data?.success && Array.isArray(data.routes)) {
-                                        console.log('Routes from API:', data.routes);
-                                        console.log('Searching for barangay:', b.name || b.barangay_name || b.barangay, 'team_id:', b.team_id);
-                                        // Try to find matching route by barangay name or team_id
-                                        const matchingRoute = data.routes.find(r => {
-                                          const routeName = (r.barangay_name || r.name || '').toLowerCase().trim();
-                                          const barangayName = (b.barangay_name || b.name || b.barangay || '').toLowerCase().trim();
-                                          const nameMatch = routeName && barangayName && routeName === barangayName;
-                                          const teamMatch = r.team_id && b.team_id && Number(r.team_id) === Number(b.team_id);
-                                          const barangayIdMatch = r.barangay_id && b.barangay_id && String(r.barangay_id) === String(b.barangay_id);
-                                          const matches = nameMatch || teamMatch || barangayIdMatch;
-                                          console.log('Checking API route match:', { 
-                                            routeName, 
-                                            barangayName, 
-                                            nameMatch, 
-                                            teamMatch,
-                                            barangayIdMatch,
-                                            matches, 
-                                            route: r,
-                                            barangay: b
-                                          });
-                                          return matches;
-                                        });
-                                        console.log('matchingRoute from API:', matchingRoute);
-                                        if (matchingRoute) {
-                                          // get_routes.php returns 'id' as the route_id
-                                          resolvedRouteId = matchingRoute.id;
-                                          console.log('Found route_id from API:', resolvedRouteId);
-                                        } else {
-                                          console.log('No matching route found in API. Available routes:', data.routes.map(r => ({ 
-                                            id: r.id, 
-                                            name: r.barangay_name || r.name,
-                                            team_id: r.team_id 
-                                          })));
-                                          
-                                          // Last resort: if we have team_id, try to find ANY route with that team_id for this date
-                                          if (b.team_id && data.routes.length > 0) {
-                                            const teamRoute = data.routes.find(r => r.team_id && Number(r.team_id) === Number(b.team_id));
-                                            if (teamRoute && teamRoute.id) {
-                                              resolvedRouteId = teamRoute.id;
-                                              console.log('Found route_id by team_id fallback:', resolvedRouteId);
-                                            }
-                                          }
-                                        }
-                                      } else {
-                                        console.error('API did not return success or routes array:', data);
-                                      }
-                                    } catch (err) {
-                                      console.error('Failed to fetch route_id:', err);
-                                    }
-                                  }
-                                  
-                                  // Final fallback: if we have team_id but no route_id, try to fetch directly from a route lookup API
-                                  if (resolvedRouteId == null && b.team_id) {
-                                    console.log('Trying final fallback with team_id:', b.team_id);
-                                    // We could create a new API endpoint, but for now, let's try to use the first route from get_routes if available
-                                    // This is a temporary workaround
-                                  }
-                                }
-                                
-                                // Last resort: if we still don't have route_id but have team_id, 
-                                // try to fetch routes again without role filter to get all routes for this date
-                                if (resolvedRouteId == null && b.team_id) {
-                                  console.log('Trying to fetch all routes for date without role filter...');
-                                  try {
-                                    const apiUrl = buildApiUrl(`get_routes.php?date=${task.key}`);
-                                    console.log('Fetching all routes from:', apiUrl);
-                                    const res = await fetch(apiUrl, { headers: { ...authHeaders() } });
-                                    const data = await res.json();
-                                    console.log('All routes response:', data);
-                                    if (data?.success && Array.isArray(data.routes)) {
-                                      console.log('Available routes:', data.routes.map(r => ({ id: r.id, team_id: r.team_id, name: r.barangay_name || r.name })));
-                                      // Find by team_id
-                                      const teamRoute = data.routes.find(r => r.team_id && Number(r.team_id) === Number(b.team_id));
-                                      if (teamRoute && teamRoute.id) {
-                                        resolvedRouteId = teamRoute.id;
-                                        console.log('Found route_id by team_id from all routes:', resolvedRouteId);
-                                      } else {
-                                        // Find by barangay name
-                                        const nameRoute = data.routes.find(r => {
-                                          const routeName = (r.barangay_name || r.name || '').toLowerCase().trim();
-                                          const barangayName = (b.barangay_name || b.name || b.barangay || '').toLowerCase().trim();
-                                          return routeName && barangayName && routeName === barangayName;
-                                        });
-                                        if (nameRoute && nameRoute.id) {
-                                          resolvedRouteId = nameRoute.id;
-                                          console.log('Found route_id by name from all routes:', resolvedRouteId);
-                                        }
-                                      }
-                                    }
-                                  } catch (err) {
-                                    console.error('Failed in final fallback:', err);
-                                  }
-                                }
-                                
-                                console.log('Final resolvedRouteId:', resolvedRouteId);
-                                if (resolvedRouteId == null) { 
-                                  console.error('ERROR: Could not resolve route_id after all attempts!');
-                                  console.error('Barangay object (b):', JSON.stringify(b, null, 2));
-                                  console.error('Task object:', JSON.stringify(task, null, 2));
-                                  console.error('dailyByDate for this date:', JSON.stringify(dailyByDate[task.key], null, 2));
-                                  alert(`Missing route id for ${b.name || b.barangay_name || 'this barangay'}. Team ID: ${b.team_id || 'N/A'}. Please contact support.`); 
-                                  return; 
-                                }
-                                
+                        );
+                      }
+
+                      return (
+                        <button
+                          className="w-full px-4 py-2.5 rounded-lg border-2 border-green-600 text-green-700 bg-white font-semibold text-sm hover:bg-green-50 transition-colors"
+                          onClick={async () => {
+                            if (routeId) {
+                              try {
+                                const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null;
+                                await fetch(buildApiUrl('update_route_status.php'), {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                                  body: JSON.stringify({ route_id: Number(routeId), status: 'in_progress', user_id })
+                                });
+                                // Set active route
                                 try {
-                                  const user_id = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null;
-                                  await fetch(buildApiUrl('update_route_status.php'), {
+                                  await fetch(buildApiUrl('set_route_active.php'), {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                                    body: JSON.stringify({ route_id: Number(resolvedRouteId), status: 'in_progress', user_id })
+                                    body: JSON.stringify({ route_id: Number(routeId), team_id: task.team_id || null })
                                   });
-                                  // Set active route for collectors to auto-redirect
-                                  try {
-                                    await fetch(buildApiUrl('set_route_active.php'), {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                                      body: JSON.stringify({ route_id: Number(resolvedRouteId), barangay: b.barangay_name || b.name || '', team_id: b.team_id || task.team_id || null })
-                                    });
-                                  } catch(_) {}
-                                  // Also set in localStorage for same-device collectors
-                                  try {
-                                    const activeRouteData = { route_id: Number(resolvedRouteId), barangay: b.barangay_name || b.name || '', team_id: b.team_id || task.team_id || 1, started_at: new Date().toISOString(), status: 'in_progress' };
-                                    localStorage.setItem('active_route', JSON.stringify(activeRouteData));
-                                    sessionStorage.setItem('active_route', JSON.stringify(activeRouteData));
-                                  } catch(_) {}
-                                } catch(_) { /* ignore, still navigate */ }
+                                } catch (_) { }
+                                // Set in localStorage
                                 try {
-                                  // Optional: user feedback
-                                  // alert(`✅ Route started for ${b.barangay_name || b.name || 'Route'}!`);
-                                  const res = await fetch(buildApiUrl(`get_route_details.php?id=${Number(resolvedRouteId)}`), { headers: { ...authHeaders() } });
-                                  const data = await res.json();
-                                  if (data?.success && data.route?.stops) {
-                                    navigate(`/truckdriver/route/${resolvedRouteId}`, {
-                                      state: {
-                                        barangay: b.barangay_name || b.name || 'Route',
-                                        collectionPoints: data.route.stops,
-                                        routeName: data.route.cluster_id || (b.barangay_name || b.name || 'Route')
-                                      }
-                                    });
-                                    return;
-                                  }
-                                } catch(_) {}
-                                navigate(`/truckdriver/route/${resolvedRouteId}`);
-                              }}>Start</button>
-                            ) : (
-                              <span className="text-[11px] text-green-700 font-semibold">Completed</span>
-                            )}
-                          </div>
-                        </div>
-                        );
-                      });
+                                  const activeRouteData = { route_id: Number(routeId), team_id: task.team_id || 1, started_at: new Date().toISOString(), status: 'in_progress' };
+                                  localStorage.setItem('active_route', JSON.stringify(activeRouteData));
+                                  sessionStorage.setItem('active_route', JSON.stringify(activeRouteData));
+                                } catch (_) { }
+                              } catch (_) { }
+                              // Navigate WITHOUT barangay_id to show all stops
+                              navigate(`/truckdriver/route/${routeId}`);
+                            } else {
+                              alert('Missing route id. Please refresh and try again.');
+                            }
+                          }}
+                        >
+                          Start Route
+                        </button>
+                      );
                     })()}
                   </div>
-                </div>
 
-                {/* Footer: Team Information */
-                }
-                <div className="px-5 pb-4 pt-1">
-                  <div className="text-[12px] font-semibold text-gray-700 mb-2">TEAM INFORMATION</div>
-                  <div className="grid gap-2 text-[12px] bg-white/60 border border-green-100 rounded p-3">
-                    {task.collectors && task.collectors.length > 0 ? (
-                      task.collectors.map((c, i) => {
-                        const collectorName = c.displayName ||
-                          [c.firstname, c.lastname].filter(Boolean).join(' ').trim() ||
-                          [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
-                          c.full_name ||
-                          c.fullname ||
-                          c.name ||
-                          c.username ||
-                          'Collector';
-                        return (
-                          <div
-                            key={c.user_id ?? c.id ?? i}
-                            className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1 last:border-b-0"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-gray-900 shrink-0">Collector Name {i + 1}:</span>
-                              <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
-                            </div>
-                            <span
-                              className={`uppercase font-semibold text-xs sm:text-[11px] ${responseColor(c.response_status)}`}
+                  {/* Footer: Team Information */}
+                  < div className="px-5 pb-4 pt-1" >
+                    <div className="text-[12px] font-semibold text-gray-700 mb-2">TEAM INFORMATION</div>
+                    <div className="grid gap-2 text-[12px] bg-white/60 border border-green-100 rounded p-3">
+                      {task.collectors && task.collectors.length > 0 ? (
+                        task.collectors.map((c, i) => {
+                          const collectorName = c.displayName ||
+                            [c.firstname, c.lastname].filter(Boolean).join(' ').trim() ||
+                            [c.first_name, c.last_name].filter(Boolean).join(' ').trim() ||
+                            c.full_name ||
+                            c.fullname ||
+                            c.name ||
+                            c.username ||
+                            'Collector';
+                          return (
+                            <div
+                              key={c.user_id ?? c.id ?? i}
+                              className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1 last:border-b-0"
                             >
-                              {String(c.response_status || 'pending').toUpperCase()}
-                            </span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="text-gray-500">No collectors listed</div>
-                    )}
-                    <div className="flex items-center justify-between gap-3 pt-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-gray-900 shrink-0">Driver Name:</span>
-                        <span className="font-semibold text-gray-900 truncate">{task.driverName || fallbackDriverName || 'N/A'}</span>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-gray-900 shrink-0">Collector Name {i + 1}:</span>
+                                <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
+                              </div>
+                              <span
+                                className={`uppercase font-semibold text-xs sm:text-[11px] ${responseColor(c.response_status)}`}
+                              >
+                                {String(c.response_status || 'pending').toUpperCase()}
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-gray-500">No collectors listed</div>
+                      )}
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-gray-900 shrink-0">Driver Name:</span>
+                          <span className="font-semibold text-gray-900 truncate">{task.driverName || fallbackDriverName || 'N/A'}</span>
+                        </div>
+                        <span className={`uppercase font-semibold text-xs sm:text-[11px] ${responseColor(task.yourResponseStatus)}`}>
+                          {String(task.yourResponseStatus || 'pending').toUpperCase()}
+                        </span>
                       </div>
-                      <span className={`uppercase font-semibold text-xs sm:text-[11px] ${responseColor(task.yourResponseStatus)}`}>
-                        {String(task.yourResponseStatus || 'pending').toUpperCase()}
-                      </span>
                     </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+                  </div >
+                </div >
+              );
+            })}
+        </div >
+      </div >
+    </div >
   );
 }

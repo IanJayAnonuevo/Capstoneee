@@ -44,6 +44,11 @@ import { buildApiUrl, API_BASE_URL } from '../../config/api';
 
 const PROXIMITY_THRESHOLD_METERS = 75; // must be near stop before allowing completion
 
+const EMERGENCY_IMPACTS = [
+  { value: 'delay', label: 'Delay', caption: 'Collection resumes after the issue is fixed' },
+  { value: 'cancel', label: 'Cancel', caption: 'Collection is cancelled for today' },
+]
+
 const readStoredUserId = () => {
   try {
     const stored = localStorage.getItem('user_id') || sessionStorage.getItem('user_id')
@@ -53,7 +58,7 @@ const readStoredUserId = () => {
   }
 }
 
-export default function CollectorRouteRun(){
+export default function CollectorRouteRun() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [stops, setStops] = React.useState([])
@@ -72,6 +77,7 @@ export default function CollectorRouteRun(){
   const [proofError, setProofError] = React.useState('')
   const [uploadingProof, setUploadingProof] = React.useState(false)
   const [unlockedStopIds, setUnlockedStopIds] = React.useState([])
+  const [emergencyState, setEmergencyState] = React.useState(null)
   const watchIdRef = React.useRef(null)
   const undoTimeoutRef = React.useRef(null)
 
@@ -84,7 +90,7 @@ export default function CollectorRouteRun(){
 
   const fetchRouteDetails = React.useCallback(async () => {
     try {
-  const res = await fetch(buildApiUrl(`get_route_details.php?id=${id}`), { headers: { ...authHeaders() } })
+      const res = await fetch(buildApiUrl(`get_route_details.php?id=${id}`), { headers: { ...authHeaders() } })
       const data = await res.json()
       if (data?.success && data.route?.stops) {
         const normalizedStops = (data.route.stops || []).map((stop) => ({
@@ -93,6 +99,12 @@ export default function CollectorRouteRun(){
         }))
         setStops(normalizedStops)
         setRouteName(data.route.cluster_id || data.route.barangay_name || 'Route')
+        // Extract emergency information
+        if (data.route.emergency) {
+          setEmergencyState(data.route.emergency)
+        } else {
+          setEmergencyState(null)
+        }
       }
     } catch (e) {
       console.error('Failed to load route:', e)
@@ -157,7 +169,7 @@ export default function CollectorRouteRun(){
         (pos) => {
           const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }
           setCurrentPos(newPos)
-          
+
           // Find nearest unvisited stop
           const unvisited = stops.filter(s => (s.status || 'pending') !== 'visited')
           if (unvisited.length > 0) {
@@ -228,7 +240,7 @@ export default function CollectorRouteRun(){
     try {
       const storedId = readStoredUserId()
       if (storedId) payload.user_id = storedId
-    } catch (_) {}
+    } catch (_) { }
     if (proofPhotoUrl) {
       payload.proof_photo_url = proofPhotoUrl
     } else if (clearProof) {
@@ -237,7 +249,7 @@ export default function CollectorRouteRun(){
 
     const res = await fetch(`${API_BASE_URL}/update_stop_status.php`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         ...authHeaders()
       },
@@ -259,7 +271,7 @@ export default function CollectorRouteRun(){
     const previousStops = stops.map((s) => ({ ...s }))
     try {
       setMarkingStopId(stopId)
-      const updatedStops = stops.map(s => 
+      const updatedStops = stops.map(s =>
         s.id === stopId ? { ...s, status: 'visited' } : s
       )
       setStops(updatedStops)
@@ -294,7 +306,7 @@ export default function CollectorRouteRun(){
     formData.append('proof_photo', file)
     const res = await fetch(`${API_BASE_URL}/upload_stop_proof.php`, {
       method: 'POST',
-      headers: { 
+      headers: {
         ...authHeaders()
       },
       body: formData
@@ -312,7 +324,7 @@ export default function CollectorRouteRun(){
     const previousStops = stops.map((s) => ({ ...s }))
     try {
       setUndoingStopId(stopId)
-      const updatedStops = stops.map(s => 
+      const updatedStops = stops.map(s =>
         s.id === stopId ? { ...s, status: 'pending' } : s
       )
       setStops(updatedStops)
@@ -375,7 +387,7 @@ export default function CollectorRouteRun(){
       const collectorId = localStorage.getItem('user_id') || sessionStorage.getItem('user_id') || null
       await fetch(`${API_BASE_URL}/report_truck_full.php`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...authHeaders()
         },
@@ -397,41 +409,59 @@ export default function CollectorRouteRun(){
   const total = stops.length
   const visitedCount = stops.filter(s => (s.status || 'pending') === 'visited').length
   const progress = total > 0 ? (visitedCount / total) * 100 : 0
+  const emergencyActive = Boolean(emergencyState?.active)
+  const emergencyImpactLabel = React.useMemo(() => {
+    if (!emergencyState?.impact) return null
+    return EMERGENCY_IMPACTS.find(opt => opt.value === emergencyState.impact)?.label || emergencyState.impact
+  }, [emergencyState])
+  const emergencyAttachmentUrl = React.useMemo(() => {
+    if (!emergencyState?.attachment) return null
+    return buildApiUrl(`../${emergencyState.attachment}`)
+  }, [emergencyState])
+  const formatTimestamp = (value) => {
+    if (!value) return null
+    try {
+      const d = new Date(value)
+      return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    } catch {
+      return value
+    }
+  }
 
   return (
     <>
-    <div className="fixed inset-0">
-      {/* Full screen map */}
-      <MapContainer
-        center={currentPos || [13.758627, 122.966234]}
-        zoom={15}
-        className="h-full w-full"
-        style={{ zIndex: 0 }}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
-        {/* Collection points */}
-        {stops.map((stop, idx) => (
-          <Marker key={stop.id} position={[parseFloat(stop.lat), parseFloat(stop.lng)]}>
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium">{stop.name || `Stop ${stop.seq || idx + 1}`}</div>
-                <div className="text-gray-600">Seq: {stop.seq || idx + 1}</div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-        
-        {/* Current position with collector icon */}
-        {currentPos && (
-          <Marker 
-            position={[currentPos.lat, currentPos.lng]}
-            icon={L.divIcon({
-              className: 'custom-collector-icon',
-              html: `
+      <div className="fixed inset-0">
+        {/* Full screen map */}
+        <MapContainer
+          center={currentPos || [13.758627, 122.966234]}
+          zoom={15}
+          className="h-full w-full"
+          style={{ zIndex: 0 }}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+
+          {/* Collection points */}
+          {stops.map((stop, idx) => (
+            <Marker key={stop.id} position={[parseFloat(stop.lat), parseFloat(stop.lng)]}>
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-medium">{stop.name || `Stop ${stop.seq || idx + 1}`}</div>
+                  <div className="text-gray-600">Seq: {stop.seq || idx + 1}</div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
+          {/* Current position with collector icon */}
+          {currentPos && (
+            <Marker
+              position={[currentPos.lat, currentPos.lng]}
+              icon={L.divIcon({
+                className: 'custom-collector-icon',
+                html: `
                 <div style="
                   width: 32px;
                   height: 32px;
@@ -449,177 +479,212 @@ export default function CollectorRouteRun(){
                   C
                 </div>
               `,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16],
-            })}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-medium">📍 Collector Location</div>
-                <div className="text-gray-600">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>
-              </div>
-            </Popup>
-          </Marker>
-        )}
-      </MapContainer>
-
-      {/* Overlay panel for stops + controls - Same as truck driver */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(720px,92vw)] bg-white/10 backdrop-blur-[30px] border border-white/30 rounded-[26px] px-5 py-4 shadow-[0_18px_35px_rgba(15,23,42,0.2)]">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-700/70 font-semibold">Route status</p>
-            <p className="text-lg font-semibold text-slate-900 truncate max-w-[280px]">{routeName || 'Route'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-gray-600 border-white/50 hover:bg-white/40 transition"
-              aria-label="Go back"
-              title="Go back"
-              onClick={() => navigate('/garbagecollector')}
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+              })}
             >
-              ↩
+              <Popup>
+                <div className="text-sm">
+                  <div className="font-medium">📍 Collector Location</div>
+                  <div className="text-gray-600">{currentPos.lat.toFixed(6)}, {currentPos.lng.toFixed(6)}</div>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
+
+        {/* Overlay panel for stops + controls - Same as truck driver */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-50 w-[min(720px,92vw)] bg-white/10 backdrop-blur-[30px] border border-white/30 rounded-[26px] px-5 py-4 shadow-[0_18px_35px_rgba(15,23,42,0.2)]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-emerald-700/70 font-semibold">Route status</p>
+              <p className="text-lg font-semibold text-slate-900 truncate max-w-[280px]">{routeName || 'Route'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-xs bg-white/20 text-gray-600 border-white/50 hover:bg-white/40 transition"
+                aria-label="Go back"
+                title="Go back"
+                onClick={() => navigate('/garbagecollector')}
+              >
+                ↩
+              </button>
+            </div>
+          </div>
+          <div className="text-[11px] text-gray-700 mb-3 flex flex-wrap gap-2">
+            {currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
+          </div>
+
+          {/* Progress */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[11px] text-gray-700 mb-2 uppercase tracking-wide">
+              <span>Progress</span>
+              <span>{visitedCount}/{total} stops</span>
+            </div>
+            <div className="w-full bg-white/20 backdrop-blur-sm rounded-full h-2 overflow-hidden border border-white/30">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          {emergencyActive && (
+            <div className="mb-4 rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 via-white to-red-50 p-4 text-sm text-red-800 shadow">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-red-900">Emergency • Not operational</div>
+                {emergencyImpactLabel && (
+                  <span className={`text-[11px] font-semibold px-3 py-1 rounded-full shadow ${emergencyState?.impact === 'cancel' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}`}>
+                    {emergencyImpactLabel}
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 text-lg font-semibold text-red-900">
+                {emergencyState?.type_label || emergencyState?.type || 'Emergency reported'}
+              </div>
+              {emergencyState?.notes && (
+                <p className="mt-1 text-xs text-red-800 whitespace-pre-wrap">{emergencyState.notes}</p>
+              )}
+              <p className="mt-2 text-[11px] text-red-700">
+                {formatTimestamp(emergencyState?.reported_at) || 'Just now'}
+                {emergencyState?.reported_name ? ` • Reporter: ${emergencyState.reported_name}` : ''}
+              </p>
+              {emergencyAttachmentUrl && (
+                <a
+                  className="mt-3 inline-flex text-xs font-semibold text-red-900 underline"
+                  href={emergencyAttachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View attachment
+                </a>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-3 text-sm max-h-[40vh] overflow-y-auto pr-1">
+            {stops.map((s, i) => {
+              const visited = (s.status || 'pending') === 'visited'
+              const isUpdating = markingStopId === s.id || undoingStopId === s.id
+              const distanceToStop = stopDistances[s.id]
+              const isWithinRange = !!currentPos && !visited && distanceToStop != null && distanceToStop <= PROXIMITY_THRESHOLD_METERS
+              const unlocked = unlockedStopIds.includes(s.id)
+              return (
+                <div key={i} className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 shadow-inner">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2 flex-1">
+                      <span className={`w-2.5 h-2.5 mt-1.5 rounded-full inline-block flex-shrink-0 ${visited ? 'bg-emerald-600' : unlocked ? 'bg-emerald-400' : 'bg-gray-400'}`}></span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-900 text-sm">{s.name || `Stop ${s.seq || i + 1}`}</div>
+                        <div className="text-gray-700 text-xs mt-0.5 flex flex-col gap-0.5">
+                          <span>Seq {s.seq || i + 1} • {visited ? 'Visited' : unlocked ? 'Ready' : 'Pending'}</span>
+                          {!visited && (
+                            <span className={`text-[11px] font-medium ${isWithinRange ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              {distanceToStop != null
+                                ? `${distanceToStop < 1000 ? distanceToStop.toFixed(0) + ' m' : (distanceToStop / 1000).toFixed(2) + ' km'} away`
+                                : 'Waiting for GPS...'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      className={`px-3 py-1.5 text-xs rounded-lg font-medium transition ${visited
+                          ? 'bg-emerald-50/60 backdrop-blur-sm text-emerald-700 border border-emerald-200/50 cursor-not-allowed'
+                          : emergencyActive
+                            ? 'bg-gray-200/40 backdrop-blur-sm text-gray-500 cursor-not-allowed'
+                            : unlocked
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                              : 'bg-gray-200/40 backdrop-blur-sm text-gray-500 cursor-not-allowed'
+                        } ${isUpdating ? 'opacity-60 cursor-wait' : ''}`}
+                      onClick={() => !visited && !emergencyActive && unlocked && !isUpdating && openProofModal(s)}
+                      disabled={visited || emergencyActive || !unlocked || isUpdating}
+                      title={emergencyActive ? 'Emergency active — marking disabled' : ''}
+                    >
+                      {visited ? 'Done' : emergencyActive ? 'Emergency' : isUpdating ? 'Saving…' : unlocked ? 'Mark done' : 'Move closer'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-4">
+            <button
+              className="w-full px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-semibold tracking-wide disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-amber-200/50 transition"
+              onClick={notifyTruckFull}
+              disabled={reportingFull}
+            >
+              {reportingFull ? 'Notifying truck driver…' : 'Report truck is full'}
             </button>
           </div>
         </div>
-        <div className="text-[11px] text-gray-700 mb-3 flex flex-wrap gap-2">
-          {currentPos && `You: ${currentPos.lat.toFixed(6)}, ${currentPos.lng.toFixed(6)}`}
-        </div>
-        
-        {/* Progress */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-[11px] text-gray-700 mb-2 uppercase tracking-wide">
-            <span>Progress</span>
-            <span>{visitedCount}/{total} stops</span>
-          </div>
-          <div className="w-full bg-white/20 backdrop-blur-sm rounded-full h-2 overflow-hidden border border-white/30">
-            <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
 
-        <div className="space-y-3 text-sm max-h-[40vh] overflow-y-auto pr-1">
-          {stops.map((s,i)=> {
-            const visited = (s.status||'pending')==='visited'
-            const isUpdating = markingStopId === s.id || undoingStopId === s.id
-            const distanceToStop = stopDistances[s.id]
-            const isWithinRange = !!currentPos && !visited && distanceToStop != null && distanceToStop <= PROXIMITY_THRESHOLD_METERS
-            const unlocked = unlockedStopIds.includes(s.id)
-            return (
-              <div key={i} className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30 shadow-inner">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2 flex-1">
-                    <span className={`w-2.5 h-2.5 mt-1.5 rounded-full inline-block flex-shrink-0 ${visited ? 'bg-emerald-600' : unlocked ? 'bg-emerald-400' : 'bg-gray-400'}`}></span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-slate-900 text-sm">{s.name || `Stop ${s.seq || i + 1}`}</div>
-                      <div className="text-gray-700 text-xs mt-0.5 flex flex-col gap-0.5">
-                        <span>Seq {s.seq || i + 1} • {visited ? 'Visited' : unlocked ? 'Ready' : 'Pending'}</span>
-                        {!visited && (
-                          <span className={`text-[11px] font-medium ${isWithinRange ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            {distanceToStop != null
-                              ? `${distanceToStop < 1000 ? distanceToStop.toFixed(0) + ' m' : (distanceToStop / 1000).toFixed(2) + ' km'} away`
-                              : 'Waiting for GPS...'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+        {proofModalStop && (
+          <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-center justify-center px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-base font-semibold">Proof of collection</h2>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {proofModalStop.name || `Stop ${proofModalStop.seq}`}
+                  </p>
+                </div>
+                <button className="text-sm text-gray-500 hover:text-gray-800" onClick={closeProofModal} disabled={uploadingProof}>
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-3">
+                <label className="block text-xs font-medium text-gray-700">
+                  Kunan o i-upload ang larawan ng aktwal na koleksyon
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    setProofError('')
+                    setProofPhotoFile(e.target.files?.[0] || null)
+                  }}
+                  className="w-full text-xs"
+                  disabled={uploadingProof}
+                />
+                {proofPreviewUrl && (
+                  <div className="rounded-lg overflow-hidden border border-gray-200">
+                    <img src={proofPreviewUrl} alt="Collection proof preview" className="w-full h-48 object-cover" />
                   </div>
-                  <button
-                    className={`px-3 py-1.5 text-xs rounded-lg font-medium transition ${
-                      visited
-                        ? 'bg-emerald-50/60 backdrop-blur-sm text-emerald-700 border border-emerald-200/50 cursor-not-allowed'
-                        : unlocked
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
-                          : 'bg-gray-200/40 backdrop-blur-sm text-gray-500 cursor-not-allowed'
-                    } ${isUpdating ? 'opacity-60 cursor-wait' : ''}`}
-                    onClick={() => !visited && unlocked && !isUpdating && openProofModal(s)}
-                    disabled={visited || !unlocked || isUpdating}
-                  >
-                    {visited ? 'Done' : isUpdating ? 'Saving…' : unlocked ? 'Mark done' : 'Move closer'}
-                  </button>
-                </div>
+                )}
+                {proofError && <p className="text-xs text-red-600">{proofError}</p>}
               </div>
-            )
-          })}
-        </div>
-        <div className="mt-4">
-          <button
-            className="w-full px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-semibold tracking-wide disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-amber-200/50 transition"
-            onClick={notifyTruckFull}
-            disabled={reportingFull}
-          >
-            {reportingFull ? 'Notifying truck driver…' : 'Report truck is full'}
-          </button>
-        </div>
-      </div>
-
-      {proofModalStop && (
-        <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-base font-semibold">Proof of collection</h2>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  {proofModalStop.name || `Stop ${proofModalStop.seq}`}
-                </p>
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 px-4 py-2 text-sm rounded border border-gray-300 text-gray-700"
+                  onClick={closeProofModal}
+                  disabled={uploadingProof}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-4 py-2 text-sm rounded bg-emerald-600 text-white disabled:opacity-60"
+                  onClick={submitProofAndVisit}
+                  disabled={uploadingProof}
+                >
+                  {uploadingProof ? 'Uploading…' : 'Upload & mark done'}
+                </button>
               </div>
-              <button className="text-sm text-gray-500 hover:text-gray-800" onClick={closeProofModal} disabled={uploadingProof}>
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-medium text-gray-700">
-                Kunan o i-upload ang larawan ng aktwal na koleksyon
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => {
-                  setProofError('')
-                  setProofPhotoFile(e.target.files?.[0] || null)
-                }}
-                className="w-full text-xs"
-                disabled={uploadingProof}
-              />
-              {proofPreviewUrl && (
-                <div className="rounded-lg overflow-hidden border border-gray-200">
-                  <img src={proofPreviewUrl} alt="Collection proof preview" className="w-full h-48 object-cover" />
-                </div>
-              )}
-              {proofError && <p className="text-xs text-red-600">{proofError}</p>}
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="flex-1 px-4 py-2 text-sm rounded border border-gray-300 text-gray-700"
-                onClick={closeProofModal}
-                disabled={uploadingProof}
-              >
-                Cancel
-              </button>
-              <button
-                className="flex-1 px-4 py-2 text-sm rounded bg-emerald-600 text-white disabled:opacity-60"
-                onClick={submitProofAndVisit}
-                disabled={uploadingProof}
-              >
-                {uploadingProof ? 'Uploading…' : 'Upload & mark done'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Undo Notification */}
-      {showUndo && (
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-black/80 backdrop-blur-md text-white text-sm px-4 py-2.5 rounded-xl shadow-lg">
-          <span>Marked visited.</span>
-          <button className="ml-3 underline font-medium disabled:opacity-60" onClick={undoLast} disabled={undoingStopId != null}>
-            {undoingStopId != null ? 'Reverting…' : 'Undo'}
-          </button>
-        </div>
-      )}
+        {/* Undo Notification */}
+        {showUndo && (
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-24 z-[60] bg-black/80 backdrop-blur-md text-white text-sm px-4 py-2.5 rounded-xl shadow-lg">
+            <span>Marked visited.</span>
+            <button className="ml-3 underline font-medium disabled:opacity-60" onClick={undoLast} disabled={undoingStopId != null}>
+              {undoingStopId != null ? 'Reverting…' : 'Undo'}
+            </button>
+          </div>
+        )}
 
-      {/* Status Modal removed per request */}
+        {/* Status Modal removed per request */}
 
-    </div>
+      </div>
     </>
   )
 }

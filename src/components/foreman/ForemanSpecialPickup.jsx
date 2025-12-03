@@ -4,6 +4,7 @@ import { IoChevronBack } from 'react-icons/io5';
 import { FiSearch, FiRefreshCw, FiUser, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiX, FiAlertCircle, FiPhone, FiTrash2, FiMessageSquare } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import Skeleton from '../shared/Skeleton';
+import ScheduleAssignmentModal from './ScheduleAssignmentModal';
 
 export default function ForemanSpecialPickup() {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ export default function ForemanSpecialPickup() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [requestToSchedule, setRequestToSchedule] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -41,8 +44,7 @@ export default function ForemanSpecialPickup() {
     const matchesStatus = statusFilter === 'All' || req.status === statusFilter.toLowerCase();
     const matchesSearch =
       req.requester_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.barangay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.waste_type?.toLowerCase().includes(searchTerm.toLowerCase());
+      req.barangay?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -66,32 +68,15 @@ export default function ForemanSpecialPickup() {
     }
   };
 
-  const handleSchedule = async (request) => {
-    try {
-      setActionLoading(true);
-      const response = await authService.updatePickupRequestStatus(
-        request.id || request.request_id,
-        'scheduled',
-        { admin_remarks: 'Request scheduled by foreman' }
-      );
+  const handleSchedule = (request) => {
+    setRequestToSchedule(request);
+    setShowScheduleModal(true);
+  };
 
-      if (response.status === 'success') {
-        setRequests(prev => prev.map(req =>
-          (req.id || req.request_id) === (request.id || request.request_id)
-            ? { ...req, status: 'scheduled' }
-            : req
-        ));
-        setSelectedRequest(prev => ({ ...prev, status: 'scheduled' }));
-        // Don't close modal immediately so user sees the update
-      } else {
-        alert('Failed to schedule: ' + response.message);
-      }
-    } catch (error) {
-      console.error('Error scheduling:', error);
-      alert('Failed to schedule request.');
-    } finally {
-      setActionLoading(false);
-    }
+  const handleScheduleSuccess = () => {
+    // Refresh the requests list
+    fetchData();
+    setShowModal(false);
   };
 
   const handleDecline = async (request) => {
@@ -172,23 +157,15 @@ export default function ForemanSpecialPickup() {
                 )}
               </div>
 
-              {/* Location & Waste */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 p-3 rounded-xl">
-                  <div className="flex items-center gap-2 mb-1 text-gray-500">
-                    <FiMapPin className="w-4 h-4" />
-                    <span className="text-xs font-medium uppercase">Location</span>
-                  </div>
-                  <p className="font-semibold text-gray-900">{selectedRequest.barangay}</p>
+              {/* Location */}
+              <div className="bg-gray-50 p-3 rounded-xl">
+                <div className="flex items-center gap-2 mb-1 text-gray-500">
+                  <FiMapPin className="w-4 h-4" />
+                  <span className="text-xs font-medium uppercase">Location</span>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-xl">
-                  <div className="flex items-center gap-2 mb-1 text-gray-500">
-                    <FiTrash2 className="w-4 h-4" />
-                    <span className="text-xs font-medium uppercase">Waste Type</span>
-                  </div>
-                  <p className="font-semibold text-gray-900">{selectedRequest.waste_type}</p>
-                </div>
+                <p className="font-semibold text-gray-900">{selectedRequest.barangay}</p>
               </div>
+
 
               {/* Date & Notes */}
               <div className="bg-gray-50 p-4 rounded-xl space-y-3">
@@ -381,10 +358,6 @@ export default function ForemanSpecialPickup() {
 
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Waste Type</span>
-                    <span className="font-medium text-gray-900">{req.waste_type}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">Preferred Date</span>
                     <span className="font-medium text-gray-900">
                       {req.pickup_date ? new Date(req.pickup_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}
@@ -405,6 +378,18 @@ export default function ForemanSpecialPickup() {
       </div>
 
       {showModal && <RequestModal />}
+
+      {/* Schedule Assignment Modal */}
+      {showScheduleModal && (
+        <ScheduleAssignmentModal
+          request={requestToSchedule}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setRequestToSchedule(null);
+          }}
+          onSuccess={handleScheduleSuccess}
+        />
+      )}
     </div>
   );
 }

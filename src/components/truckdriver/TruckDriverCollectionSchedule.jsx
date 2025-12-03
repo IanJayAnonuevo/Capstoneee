@@ -8,6 +8,8 @@ const weekdays = [
   { label: 'W', value: 'Wednesday' },
   { label: 'TH', value: 'Thursday' },
   { label: 'F', value: 'Friday' },
+  { label: 'SA', value: 'Saturday' },
+  { label: 'SU', value: 'Sunday' },
 ];
 
 export default function TruckDriverCollectionSchedule() {
@@ -16,26 +18,26 @@ export default function TruckDriverCollectionSchedule() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasAcceptedTasks, setHasAcceptedTasks] = useState(false);
+  const [scheduleType, setScheduleType] = useState('priority'); // 'priority' or 'clustered'
 
   // Get current user from localStorage
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = currentUser.user_id;
 
   useEffect(() => {
-    if (userId) {
-      fetchSchedules();
-    }
-  }, [userId]);
+    fetchSchedules();
+  }, []);
 
   const fetchSchedules = async () => {
     try {
       setLoading(true);
       const token = (() => { try { return localStorage.getItem('access_token'); } catch { return null; } })();
-  const response = await axios.get(buildApiUrl(`get_personnel_schedule.php?user_id=${userId}&role=driver`), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
-      
+      // Fetch ALL schedules, not just assigned to this user
+      const response = await axios.get(buildApiUrl('get_all_schedules.php'), token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+
       if (response.data.success) {
         setSchedules(response.data.schedules);
-        setHasAcceptedTasks(response.data.schedules.length > 0);
+        setHasAcceptedTasks(true); // Always show schedules
       } else {
         setError(response.data.message);
         setHasAcceptedTasks(false);
@@ -54,22 +56,51 @@ export default function TruckDriverCollectionSchedule() {
     return new Date(year, month - 1, day);
   };
 
-  // Group schedules by day of week
+  // Get current week of month (1-5)
+  const getCurrentWeekOfMonth = () => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const dayOfMonth = today.getDate();
+    const weekOfMonth = Math.ceil((dayOfMonth + firstDay.getDay()) / 7);
+    return weekOfMonth;
+  };
+
+  // Group schedules by day of week and remove duplicates
   const getSchedulesByDay = (dayName) => {
-    const dayMap = {
-      'Monday': 1,
-      'Tuesday': 2,
-      'Wednesday': 3,
-      'Thursday': 4,
-      'Friday': 5
-    };
-    
-    return schedules.filter(schedule => {
-      const scheduleDate = parseLocalDate(schedule.date);
-      if (!scheduleDate) return false;
-      const dayOfWeek = scheduleDate.getDay();
-      return dayOfWeek === dayMap[dayName];
-    }).sort((a, b) => a.time.localeCompare(b.time));
+    const currentWeek = getCurrentWeekOfMonth();
+
+    // Filter schedules that match the selected day
+    let filtered = schedules.filter(schedule => schedule.day === dayName);
+
+    // Apply schedule type filter
+    if (scheduleType === 'priority') {
+      // Show ONLY Priority Barangay (no cluster) and 1C-BP
+      filtered = filtered.filter(schedule =>
+        !schedule.cluster_name || schedule.cluster_name === '1C-BP'
+      );
+    } else {
+      // Show clustered schedules (2C-CA, 3C-CB, 4C-CC, 5C-CD)
+      // Only show schedules for the current week
+      filtered = filtered.filter(schedule =>
+        schedule.cluster_name &&
+        ['2C-CA', '3C-CB', '4C-CC', '5C-CD'].includes(schedule.cluster_name) &&
+        (schedule.week_of_month === currentWeek || schedule.week_of_month === null)
+      );
+    }
+
+    // Remove duplicates based on time + barangay combination
+    const uniqueSchedules = [];
+    const seen = new Set();
+
+    filtered.forEach(schedule => {
+      const key = `${schedule.time}-${schedule.barangay}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueSchedules.push(schedule);
+      }
+    });
+
+    return uniqueSchedules.sort((a, b) => a.time.localeCompare(b.time));
   };
 
   // Get current week dates
@@ -77,15 +108,15 @@ export default function TruckDriverCollectionSchedule() {
     const today = new Date();
     const monday = new Date(today);
     monday.setDate(today.getDate() - today.getDay() + 1);
-    
+
     const dates = {};
     weekdays.forEach((day, index) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + index);
-      dates[day.value] = date.toLocaleDateString('en-US', { 
-        month: 'long', 
-        day: 'numeric', 
-        year: 'numeric' 
+      dates[day.value] = date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
       });
     });
     return dates;
@@ -114,7 +145,7 @@ export default function TruckDriverCollectionSchedule() {
         <div className="w-full max-w-md px-4">
           <div className="bg-white rounded-xl shadow p-6 border border-gray-100 text-center">
             <p className="text-red-600 mb-4">{error}</p>
-            <button 
+            <button
               onClick={fetchSchedules}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
@@ -153,31 +184,53 @@ export default function TruckDriverCollectionSchedule() {
       <div className="w-full max-w-md px-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-1 pl-1">COLLECTION SCHEDULE</h2>
         <p className="text-sm text-gray-600 mb-4 pl-1">Welcome, Truck Driver</p>
-        
+
         {/* Day Selector */}
         <div className="flex justify-center gap-2 mb-4 px-1">
           {weekdays.map((day) => (
             <button
               key={day.value}
               onClick={() => setSelectedDay(day.value)}
-              className={`px-4 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none ${
-                selectedDay === day.value
-                  ? 'bg-green-200 text-green-900'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
+              className={`px-4 py-1 rounded-full text-xs font-medium transition-colors focus:outline-none ${selectedDay === day.value
+                ? 'bg-green-200 text-green-900'
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
             >
               {day.label}
             </button>
           ))}
         </div>
-        
+
+        {/* Schedule Type Toggle */}
+        <div className="mb-4 px-1">
+          <div className="bg-white rounded-xl p-1 shadow-sm border border-gray-200 flex gap-1">
+            <button
+              onClick={() => setScheduleType('priority')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${scheduleType === 'priority'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-600 hover:bg-gray-50'
+                }`}
+            >
+              Priority (1C-BP)
+            </button>
+            <button
+              onClick={() => setScheduleType('clustered')}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${scheduleType === 'clustered'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:bg-gray-50'
+                }`}
+            >
+              Clustered (Week {getCurrentWeekOfMonth()})
+            </button>
+          </div>
+        </div>
         {/* Schedule Card */}
         <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
           <div className="text-center mb-4">
             <div className="font-bold text-base pb-1">{selectedDay.toUpperCase()}</div>
             <div className="text-xs text-gray-500 pb-1">{dateDisplay[selectedDay]} | 6:00 AM - 5:00 PM</div>
           </div>
-          
+
           {/* Schedule Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -185,21 +238,33 @@ export default function TruckDriverCollectionSchedule() {
                 <tr>
                   <th className="text-left px-4 py-2 text-gray-600 font-semibold">TIME</th>
                   <th className="text-left px-4 py-2 text-gray-600 font-semibold">BARANGAY</th>
-                  <th className="text-left px-4 py-2 text-gray-600 font-semibold">TRUCK</th>
                 </tr>
               </thead>
               <tbody>
                 {daySchedules.length > 0 ? (
-                  daySchedules.map((schedule, idx) => (
-                    <tr key={idx} className="bg-green-50 hover:bg-green-100 transition-colors">
-                      <td className="px-4 py-2 font-medium">{schedule.time}</td>
-                      <td className="px-4 py-2">{schedule.barangay}</td>
-                      <td className="px-4 py-2 text-xs text-gray-600">{schedule.truck_number}</td>
-                    </tr>
-                  ))
+                  daySchedules.map((schedule, idx) => {
+                    // Determine color based on cluster_name
+                    // Green: Priority Barangay, 1C-BP, or no cluster
+                    // Blue: 2C-CA, 3C-CB, 4C-CC, 5C-CD
+                    const isBlueCluster = schedule.cluster_name &&
+                      ['2C-CA', '3C-CB', '4C-CC', '5C-CD'].includes(schedule.cluster_name);
+
+                    return (
+                      <tr
+                        key={idx}
+                        className={`${isBlueCluster
+                          ? 'bg-blue-50 hover:bg-blue-100'
+                          : 'bg-green-50 hover:bg-green-100'
+                          } transition-colors`}
+                      >
+                        <td className="px-4 py-2 font-medium">{schedule.time}</td>
+                        <td className="px-4 py-2">{schedule.barangay}</td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={3} className="text-center text-gray-400 py-8">No schedule for this day</td>
+                    <td colSpan={2} className="text-center text-gray-400 py-8">No schedule for this day</td>
                   </tr>
                 )}
               </tbody>

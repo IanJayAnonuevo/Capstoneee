@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FiDownload, FiPlay, FiBookOpen, FiCheckCircle, FiChevronRight, FiX } from 'react-icons/fi';
 
+import { API_BASE_URL } from '../../config/api';
+
 const getVideoId = (url) => {
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
   return match ? match[1] : '';
@@ -43,9 +45,9 @@ const materials = {
     {
       title: 'Proper Waste Segregation Guide',
       type: 'pdf',
-      size: '2.5 MB',
+      size: '631 KB',
       description: 'Learn how to properly segregate your household waste',
-      pdfUrl: '/materials/pdf/proper-waste-management-guide.pdf',
+      fileName: 'IEC3_014120.pdf',
     },
     {
       title: 'Waste Segregation Tutorial',
@@ -59,9 +61,9 @@ const materials = {
     {
       title: 'Recyclable Materials Chart',
       type: 'pdf',
-      size: '1.8 MB',
+      size: '904 KB',
       description: 'Complete chart of recyclable materials',
-      pdfUrl: '/materials/pdf/recyclable-materials-chart.pdf',
+      fileName: 'IEC4_025204.pdf',
     },
     {
       title: 'Home Recycling Tips',
@@ -75,9 +77,9 @@ const materials = {
     {
       title: 'Backyard Composting Guide',
       type: 'pdf',
-      size: '3.1 MB',
+      size: '864 KB',
       description: 'Start your own compost pile',
-      pdfUrl: '/materials/pdf/backyard-composting-guide.pdf',
+      fileName: 'IEC5_014150.pdf',
     },
     {
       title: 'Vermicomposting Tutorial',
@@ -91,9 +93,9 @@ const materials = {
     {
       title: 'Hazardous Waste Handling',
       type: 'pdf',
-      size: '2.2 MB',
+      size: '1.2 MB',
       description: 'Safety guidelines for hazardous materials',
-      pdfUrl: '/materials/pdf/hazardous-waste-handling.pdf',
+      fileName: 'IEC2_014244.pdf',
     },
     {
       title: 'Chemical Waste Disposal',
@@ -124,25 +126,19 @@ export default function IEC() {
   }, []);
 
   const handleDownload = (material) => {
-    if (!material.pdfUrl) {
+    if (!material.fileName) {
       alert('PDF file not available yet. Please check back later.');
       return;
     }
 
-    // Check if file exists first
-    fetch(material.pdfUrl)
-      .then(response => {
-        if (response.ok) {
-          // File exists, proceed with download
-          window.open(material.pdfUrl, '_blank');
-        } else {
-          throw new Error('PDF file not found');
-        }
-      })
-      .catch(error => {
-        console.error('Error accessing file:', error);
-        alert('The PDF file is not available at the moment. Please try again later.');
-      });
+    // Construct the full URL to the PDF file
+    // Assumes API_BASE_URL is like 'http://localhost/kolektrash/backend/api'
+    // We want 'http://localhost/kolektrash/iec/[filename]'
+    const baseUrl = API_BASE_URL.replace('/backend/api', '');
+    const fileUrl = `${baseUrl}/iec/${material.fileName}`;
+
+    // Direct open/download to avoid CORS issues with fetch on static files
+    window.open(fileUrl, '_blank');
   };
 
   return (
@@ -163,7 +159,7 @@ export default function IEC() {
             <div className="flex-1 w-full">
               <h2 className="text-lg md:text-2xl font-bold mb-1 md:mb-2 line-clamp-2">{allVideos[featuredIndex].title}</h2>
               <p className="mb-3 md:mb-4 text-green-100 text-sm md:text-base line-clamp-2">{allVideos[featuredIndex].description}</p>
-              <button 
+              <button
                 onClick={() => setSelectedVideo(allVideos[featuredIndex].videoUrl)}
                 className="bg-white text-green-700 px-3 md:px-6 py-1.5 md:py-2 rounded-lg font-semibold flex items-center gap-1.5 md:gap-2 hover:bg-green-50 transition-colors text-sm md:text-base w-full md:w-auto justify-center md:justify-start"
               >
@@ -177,7 +173,7 @@ export default function IEC() {
               <div className="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
                 <FiPlay className="w-8 h-8 md:w-12 md:h-12 text-white opacity-90" />
               </div>
-              <img 
+              <img
                 src={`https://img.youtube.com/vi/${getVideoId(allVideos[featuredIndex].videoUrl)}/maxresdefault.jpg`}
                 alt={`${allVideos[featuredIndex].title} thumbnail`}
                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
@@ -190,11 +186,10 @@ export default function IEC() {
               <button
                 key={index}
                 onClick={() => setFeaturedIndex(index)}
-                className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 ${
-                  index === featuredIndex 
-                    ? 'bg-white scale-100' 
-                    : 'bg-white/50 scale-75 hover:scale-90 hover:bg-white/70'
-                }`}
+                className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 ${index === featuredIndex
+                  ? 'bg-white scale-100'
+                  : 'bg-white/50 scale-75 hover:scale-90 hover:bg-white/70'
+                  }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
             ))}
@@ -226,11 +221,10 @@ export default function IEC() {
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`p-4 md:p-6 rounded-xl md:rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-300 ${
-                selectedCategory === category.id
-                  ? 'bg-green-500 text-white shadow-lg scale-105 transform'
-                  : 'bg-white hover:bg-green-50 border-2 border-gray-100 hover:border-green-400 hover:shadow-md hover:scale-102 transform'
-              }`}
+              className={`p-4 md:p-6 rounded-xl md:rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-300 ${selectedCategory === category.id
+                ? 'bg-green-500 text-white shadow-lg scale-105 transform'
+                : 'bg-white hover:bg-green-50 border-2 border-gray-100 hover:border-green-400 hover:shadow-md hover:scale-102 transform'
+                }`}
             >
               <span className="text-3xl mb-3">{category.icon}</span>
               <span className="text-sm font-semibold tracking-wide uppercase">
@@ -248,12 +242,11 @@ export default function IEC() {
               className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 border-2 border-gray-100 hover:border-green-400 transition-all duration-300 hover:shadow-xl group"
             >
               <div className="flex flex-col gap-6">
-                <div 
-                  className={`relative rounded-2xl overflow-hidden shadow group ${
-                    material.type === 'video' 
-                      ? 'cursor-pointer hover:shadow-md transition-shadow duration-300' 
-                      : 'bg-gradient-to-br from-green-50 to-green-100'
-                  }`}
+                <div
+                  className={`relative rounded-2xl overflow-hidden shadow group ${material.type === 'video'
+                    ? 'cursor-pointer hover:shadow-md transition-shadow duration-300'
+                    : 'bg-gradient-to-br from-green-50 to-green-100'
+                    }`}
                   onClick={() => material.type === 'video' && setSelectedVideo(material.videoUrl)}
                 >
                   {material.type === 'video' ? (
@@ -265,7 +258,7 @@ export default function IEC() {
                           </div>
                         </div>
                       </div>
-                      <img 
+                      <img
                         src={`https://img.youtube.com/vi/${getVideoId(material.videoUrl)}/maxresdefault.jpg`}
                         alt={`${material.title} thumbnail`}
                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
@@ -295,7 +288,7 @@ export default function IEC() {
                     <span className="text-xs md:text-sm font-medium px-2 md:px-3 py-1 rounded-full bg-gray-100 text-gray-700">
                       {material.type === 'pdf' ? `PDF • ${material.size}` : `Video • ${material.duration}`}
                     </span>
-                    <button 
+                    <button
                       className="w-full md:w-auto px-3 md:px-4 py-2 rounded-lg bg-green-100 text-green-700 font-semibold flex items-center justify-center md:justify-start gap-2 hover:bg-green-200 transition-all duration-300 group shadow-sm text-sm"
                       onClick={() => {
                         if (material.type === 'video' && material.videoUrl) {

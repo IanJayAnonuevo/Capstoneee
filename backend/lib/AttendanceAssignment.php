@@ -17,6 +17,8 @@ function getApprovedPersonnelBySession(PDO $db, string $date, string $session): 
             a.user_id,
             a.time_in,
             u.role_id,
+            up.employee_id,
+            up.employment_type,
             COALESCE(CONCAT(up.firstname, ' ', up.lastname), u.username) AS full_name
         FROM attendance a
         JOIN user u ON a.user_id = u.user_id
@@ -26,7 +28,11 @@ function getApprovedPersonnelBySession(PDO $db, string $date, string $session): 
             AND a.session = :session
             AND a.verification_status = 'verified'
             AND u.role_id IN (3,4)
-        ORDER BY a.time_in ASC, a.user_id ASC
+        ORDER BY 
+            -- Prioritize regular personnel over job order
+            CASE WHEN up.employment_type = 'regular' THEN 0 ELSE 1 END,
+            a.time_in ASC, 
+            a.user_id ASC
     ");
 
     $stmt->execute([
@@ -53,19 +59,21 @@ function getApprovedPersonnelBySession(PDO $db, string $date, string $session): 
 
 /**
  * Build frozen team snapshot for a session.
+ * Supports minimal personnel: 1 driver + 1 collector (priority only)
+ * or full personnel: 2 drivers + 2+ collectors (priority + clustered)
  */
 function buildSessionSnapshot(array $drivers, array $collectors): array
 {
-    if (count($drivers) < 2) {
-        throw new RuntimeException('Need at least 2 approved drivers for this session.');
+    if (count($drivers) < 1) {
+        throw new RuntimeException('Need at least 1 approved driver for this session.');
     }
 
-    if (count($collectors) < 2) {
-        throw new RuntimeException('Need at least 2 approved collectors for this session.');
+    if (count($collectors) < 1) {
+        throw new RuntimeException('Need at least 1 approved collector for this session.');
     }
 
     $priorityDriver = $drivers[0];
-    $clusteredDriver = $drivers[1];
+    $clusteredDriver = isset($drivers[1]) ? $drivers[1] : null;
 
     [$priorityCollectors, $clusteredCollectors] = splitCollectorsForSession($collectors);
 
@@ -77,17 +85,24 @@ function buildSessionSnapshot(array $drivers, array $collectors): array
         'collectors' => [
             'priority' => $priorityCollectors,
             'clustered' => $clusteredCollectors
-        ]
+        ],
+        'minimal_mode' => ($clusteredDriver === null || empty($clusteredCollectors))
     ];
 }
 
 /**
  * Split collectors based on even/odd rule with max 4 per team when available.
+ * If only 1 collector, assign to priority team only.
  */
 function splitCollectorsForSession(array $collectors): array
 {
     $total = count($collectors);
     $maxPerTeam = 4;
+
+    // Minimal mode: 1 collector goes to priority team
+    if ($total === 1) {
+        return [[$collectors[0]], []];
+    }
 
     if ($total % 2 === 0) {
         $evenShare = (int)($total / 2);

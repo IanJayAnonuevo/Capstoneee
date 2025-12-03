@@ -6,8 +6,8 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
   const [personnelId, setPersonnelId] = useState(userData?.user_id?.toString() || '');
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [remarks, setRemarks] = useState('');
   const [scheduleId, setScheduleId] = useState('');
+  const [uniqueId, setUniqueId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -132,6 +132,12 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
       return;
     }
 
+    if (!uniqueId.trim()) {
+      setError('Unique ID is required for verification');
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
@@ -143,9 +149,7 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
       const formData = new FormData();
       formData.append('user_id', userData?.user_id || personnelId);
       formData.append('photo', photo);
-      if (remarks.trim()) {
-        formData.append('remarks', remarks.trim());
-      }
+      formData.append('unique_id', uniqueId.trim());
       // If modal opened for time_out, include intent + attendance_date + session so backend can process accordingly
       if (intent) {
         formData.append('intent', intent);
@@ -186,8 +190,8 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
     if (loading) return;
     setPhoto(null);
     setPhotoPreview(null);
-    setRemarks('');
     setScheduleId('');
+    setUniqueId('');
     setError('');
     setSuccess(false);
     onClose();
@@ -212,7 +216,23 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {/* Photo Upload */}
+          {/* Unique ID - First Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Unique ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={uniqueId}
+              onChange={(e) => setUniqueId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="Enter your unique employee ID"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Enter your employee ID for verification</p>
+          </div>
+
+          {/* Photo Upload - Second Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Photo Proof <span className="text-red-500">*</span>
@@ -262,20 +282,6 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
             <p className="text-xs text-gray-500 mt-2">Photo will include date and time watermark</p>
           </div>
 
-          {/* Remarks */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Remarks (Optional)
-            </label>
-            <textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="Add any additional notes..."
-            />
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -295,7 +301,7 @@ export default function TimeInModal({ isOpen, onClose, userData, onSuccess, inte
             </button>
             <button
               type="submit"
-              disabled={loading || !photo}
+              disabled={loading || !photo || !uniqueId.trim()}
               className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (

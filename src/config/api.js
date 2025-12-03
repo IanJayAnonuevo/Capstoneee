@@ -22,7 +22,7 @@ const inferDefaultBaseUrl = () => {
 		}
 	}
 
-	return 'https://koletrash.systemproj.com/backend/api';
+	return 'https://kolektrash.systemproj.com/backend/api';
 };
 
 export const API_BASE_URL = inferDefaultBaseUrl();

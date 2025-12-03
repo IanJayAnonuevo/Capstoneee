@@ -10,70 +10,112 @@ export default function ForemanHome() {
 
     const quickActions = [
         {
-            title: 'Manage Users',
+            title: 'Monitor Attendance',
             description: 'Check attendance of truck drivers and collectors',
             icon: MdPeople,
             to: '/foreman/attendance',
-            color: 'bg-blue-500'
         },
         {
             title: 'Manage Schedule',
             description: 'View and update collection schedules',
             icon: MdCalendarToday,
             to: '/foreman/schedule',
-            color: 'bg-green-500'
         },
         {
             title: 'Task Management',
             description: 'Assign and monitor tasks',
             icon: MdAssignment,
             to: '/foreman/tasks',
-            color: 'bg-purple-500'
-        },
-        {
-            title: 'Special Pickup',
-            description: 'Manage special pickup requests',
-            icon: MdNotificationImportant,
-            to: '/foreman/special-pickup',
-            color: 'bg-indigo-500'
         },
         {
             title: 'Truck Status',
             description: 'Check status of garbage trucks',
             icon: MdLocalShipping,
             to: '/foreman/trucks',
-            color: 'bg-orange-500'
+        },
+        {
+            title: 'Special Pickup',
+            description: 'Manage special pickup requests',
+            icon: MdNotificationImportant,
+            to: '/foreman/special-pickup',
+        },
+        {
+            title: 'Emergency Alerts',
+            description: 'View and manage route emergencies',
+            icon: MdReportProblem,
+            to: '/foreman/emergencies',
         },
         {
             title: 'Issues & Reports',
             description: 'View reported issues and concerns',
             icon: MdReportProblem,
             to: '/foreman/issues',
-            color: 'bg-red-500'
         }
     ];
 
     return (
-        <div className="p-6 bg-gray-50 min-h-full">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-800">Welcome back, {foremanName}!</h1>
-                <p className="text-gray-600">Here's an overview of your operations today.</p>
+        <div className="min-h-full bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 p-6">
+            {/* Header Section */}
+            <div className="mb-10">
+                <h1 className="text-3xl font-light text-gray-800 mb-1">
+                    Welcome back, <span className="font-semibold text-emerald-700">{foremanName}</span>
+                </h1>
+                <p className="text-sm text-gray-500">Here's an overview of your operations today.</p>
             </div>
 
+            {/* Quick Actions Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {quickActions.map((action, index) => (
-                    <div
+                {quickActions.slice(0, -1).map((action, index) => (
+                    <button
                         key={index}
                         onClick={() => navigate(action.to)}
-                        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all p-4 cursor-pointer border border-gray-200 flex flex-col items-center text-center h-full justify-center"
+                        className="group bg-white hover:bg-emerald-50 rounded-2xl p-6 cursor-pointer border border-emerald-100 hover:border-emerald-300 transition-all duration-300 flex flex-col items-center text-center hover:shadow-lg hover:shadow-emerald-100/50"
                     >
-                        <div className={`${action.color} w-10 h-10 rounded-full flex items-center justify-center text-white mb-3 shadow-sm`}>
-                            <action.icon className="w-5 h-5" />
+                        {/* Icon */}
+                        <div className="w-14 h-14 rounded-xl bg-emerald-100 group-hover:bg-emerald-600 flex items-center justify-center text-emerald-600 group-hover:text-white mb-4 transition-all duration-300">
+                            <action.icon className="w-7 h-7" />
                         </div>
-                        <h3 className="text-sm font-semibold text-gray-800 mb-1 leading-tight">{action.title}</h3>
-                        <p className="text-xs text-gray-500 line-clamp-2">{action.description}</p>
-                    </div>
+
+                        {/* Title */}
+                        <h3 className="text-sm font-semibold text-gray-800 mb-2 leading-tight">
+                            {action.title}
+                        </h3>
+
+                        {/* Description */}
+                        <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                            {action.description}
+                        </p>
+                    </button>
                 ))}
+            </div>
+
+            {/* Last Item - Full Width Rectangle */}
+            <div className="mt-4">
+                {(() => {
+                    const lastAction = quickActions[quickActions.length - 1];
+                    const LastIcon = lastAction.icon;
+                    return (
+                        <button
+                            onClick={() => navigate(lastAction.to)}
+                            className="group bg-white hover:bg-emerald-50 rounded-2xl p-6 cursor-pointer border border-emerald-100 hover:border-emerald-300 transition-all duration-300 flex items-center hover:shadow-lg hover:shadow-emerald-100/50 w-full h-[168px]"
+                        >
+                            {/* Icon */}
+                            <div className="w-14 h-14 rounded-xl bg-emerald-100 group-hover:bg-emerald-600 flex items-center justify-center text-emerald-600 group-hover:text-white transition-all duration-300 flex-shrink-0">
+                                <LastIcon className="w-7 h-7" />
+                            </div>
+
+                            {/* Text Content */}
+                            <div className="ml-4 text-left flex-1">
+                                <h3 className="text-sm font-semibold text-gray-800 mb-1">
+                                    {lastAction.title}
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                    {lastAction.description}
+                                </p>
+                            </div>
+                        </button>
+                    );
+                })()}
             </div>
         </div>
     );

@@ -71,7 +71,8 @@ try {
     $apiData = [
         'start_date' => $tomorrow,
         'end_date' => $tomorrow,
-        'overwrite' => false
+        'overwrite' => false,
+        'cron_token' => 'kolektrash_cron_2024' // Authentication bypass for cron
     ];
     if ($sessionFilter) {
         $apiData['session'] = $sessionFilter;
@@ -81,12 +82,19 @@ try {
     // Call the task generation API
     $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'kolektrash.systemproj.com';
-    $apiUrl = $protocol . '://' . $host . '/backend/api/generate_tasks_from_predefined.php';
     
-    // If running via CLI, use localhost
-    if ($isCLI) {
-    $apiUrl = 'http://localhost/kolektrash/backend/api/generate_tasks_from_predefined.php';
+    // For localhost (both CLI and web), include /kolektrash path
+    if ($isCLI || strpos($host, 'localhost') !== false) {
+        if (strpos(__DIR__, 'xampp') === false) {
+             $apiUrl = 'http://localhost/backend/api/generate_tasks_from_predefined.php';
+        } else {
+             $apiUrl = 'http://localhost/kolektrash/backend/api/generate_tasks_from_predefined.php';
+        }
+    } else {
+        // For production (Hostinger)
+        $apiUrl = $protocol . '://' . $host . '/backend/api/generate_tasks_from_predefined.php';
     }
+    
     
     writeLog("Calling task generation API: $apiUrl");
     
@@ -115,6 +123,7 @@ try {
     }
     
     if ($httpCode !== 200) {
+        writeLog("HTTP Error $httpCode. Response body: " . substr($response, 0, 500));
         throw new Exception("Task generation HTTP Error: $httpCode");
     }
     
@@ -131,12 +140,23 @@ try {
     
     $tasksGenerated = $taskResult['total_generated'] ?? 0;
     $tasksSkipped = $taskResult['skipped_duplicates'] ?? 0;
+    $trucksAvailable = $taskResult['trucks_available'] ?? 'N/A';
+    $skippedTrucks = count($taskResult['skipped_insufficient_trucks'] ?? []);
+    $notificationsSent = $taskResult['cancellation_notifications_sent'] ?? 0;
+    
     if (!empty($taskResult['session_issues'])) {
         foreach ($taskResult['session_issues'] as $issue) {
             writeLog("Session issue ({$issue['date']} {$issue['session']}): {$issue['message']}");
         }
     }
+    
     writeLog("Task generation SUCCESS: Generated $tasksGenerated tasks, Skipped $tasksSkipped duplicates");
+    writeLog("Trucks Available: $trucksAvailable");
+    
+    if ($skippedTrucks > 0) {
+        writeLog("WARNING: Skipped $skippedTrucks schedules due to insufficient trucks");
+        writeLog("Cancellation notifications sent: $notificationsSent");
+    }
     
     // STEP 2: Generate Routes (only if tasks were generated)
     $routesGenerated = 0;
@@ -176,6 +196,9 @@ try {
             'message' => "Generated $tasksGenerated tasks and $routesGenerated routes successfully",
             'tasks_generated' => $tasksGenerated,
             'tasks_skipped' => $tasksSkipped,
+            'trucks_available' => $trucksAvailable ?? 'N/A',
+            'skipped_insufficient_trucks' => $skippedTrucks ?? 0,
+            'cancellation_notifications_sent' => $notificationsSent ?? 0,
             'routes_generated' => $routesGenerated,
             'stops_generated' => $stopsGenerated,
             'date' => $tomorrow

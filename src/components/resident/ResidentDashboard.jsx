@@ -163,7 +163,7 @@ const ResidentDashboard = () => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const userData = JSON.parse(storedUser);
-          
+
           // Resolve user id from various possible keys
           const storedUserId = localStorage.getItem('user_id');
           const computedUserId = userData.user_id || userData.id || storedUserId;
@@ -473,6 +473,13 @@ const ResidentDashboard = () => {
       onClick: () => handleNavigation('/resident/report', { closeMenu: false })
     },
     {
+      title: 'View Issue Status',
+      description: 'Track the status of your submitted issue reports.',
+      icon: FiAlertCircle,
+      indicatorLabel: 'Check Status',
+      onClick: () => handleNavigation('/resident/issue-status', { closeMenu: false })
+    },
+    {
       title: 'View Schedule',
       description: 'Check the next pickup day for your barangay at a glance.',
       icon: MdEvent,
@@ -485,6 +492,13 @@ const ResidentDashboard = () => {
       icon: MdMenuBook,
       indicatorLabel: 'Open Library',
       onClick: () => handleNavigation('/resident/iec', { closeMenu: false })
+    },
+    {
+      title: 'Feedback',
+      description: 'Share your thoughts, suggestions, or concerns with us.',
+      icon: FiMessageSquare,
+      indicatorLabel: 'Send Feedback',
+      onClick: () => handleNavigation('/resident/feedback', { closeMenu: false })
     }
   ];
 
@@ -509,7 +523,7 @@ const ResidentDashboard = () => {
       const { authService } = await import('../../services/authService');
       await authService.logout(parseInt(userId));
     }
-    
+
     // Clear user data from localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('user_id');
@@ -581,7 +595,7 @@ const ResidentDashboard = () => {
     setIsTyping(true);
 
     // Find FAQ match
-    const matchedFaq = faqData.find(faq => 
+    const matchedFaq = faqData.find(faq =>
       messageInput.toLowerCase().includes(faq.question.toLowerCase()) ||
       faq.question.toLowerCase().includes(messageInput.toLowerCase())
     );
@@ -590,7 +604,7 @@ const ResidentDashboard = () => {
     setTimeout(() => {
       const botResponse = {
         type: 'bot',
-        content: matchedFaq 
+        content: matchedFaq
           ? matchedFaq.answer
           : "I'm not sure about that. Would you like to know about our collection schedules, reporting issues, or waste segregation guides?"
       };
@@ -692,7 +706,7 @@ const ResidentDashboard = () => {
                 <h2 className="text-white font-semibold text-base truncate">{resident.name}</h2>
                 <p className="text-green-100 text-sm">{resident.role}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setMenuOpen(false)}
                 className="p-2 rounded-full text-red-500 hover:text-red-400 hover:bg-white/10 transition-colors"
               >
@@ -706,8 +720,8 @@ const ResidentDashboard = () => {
                   <button
                     key={link.label}
                     className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors
-                      ${link.label === 'Logout' 
-                        ? 'bg-white hover:bg-red-50 text-red-600 border border-red-100' 
+                      ${link.label === 'Logout'
+                        ? 'bg-white hover:bg-red-50 text-red-600 border border-red-100'
                         : link.label === 'Settings'
                           ? 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
                           : 'bg-white hover:bg-green-50/50 text-[#222222] border border-gray-100'
@@ -787,11 +801,10 @@ const ResidentDashboard = () => {
                 <button
                   type="submit"
                   disabled={!feedbackMessage.trim()}
-                  className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
-                    feedbackMessage.trim()
+                  className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${feedbackMessage.trim()
                       ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   Submit Feedback
                 </button>
@@ -829,7 +842,7 @@ const ResidentDashboard = () => {
         >
           <FiMenu className="w-6 h-6 group-hover:scale-110 group-focus:scale-110 transition-transform duration-150" />
         </button>
-        <span 
+        <span
           className="text-white font-bold text-lg tracking-wide cursor-pointer hover:text-green-200 transition-colors duration-150"
           onClick={() => handleNavigation('/resident', { closeMenu: false })}
         >
@@ -978,8 +991,8 @@ const ResidentDashboard = () => {
           {/* Chat Messages */}
           <div className="p-3 sm:p-4 h-[300px] sm:h-[350px] overflow-y-auto space-y-3 sm:space-y-4 bg-gray-50/50">
             {chatMessages.map((message, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} items-end gap-2`}
               >
                 {message.type === 'bot' && (
@@ -987,12 +1000,11 @@ const ResidentDashboard = () => {
                     <MdQuestionAnswer className="w-4 h-4 text-green-600" />
                   </div>
                 )}
-                <div 
-                  className={`max-w-[80%] p-2.5 sm:p-3 rounded-2xl shadow-sm text-sm ${
-                    message.type === 'user' 
+                <div
+                  className={`max-w-[80%] p-2.5 sm:p-3 rounded-2xl shadow-sm text-sm ${message.type === 'user'
                       ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
                       : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
-                  }`}
+                    }`}
                 >
                   {message.content}
                 </div>
@@ -1045,10 +1057,10 @@ const ResidentDashboard = () => {
                     // Add user message immediately
                     const userMessage = { type: 'user', content: faq.question };
                     setChatMessages(prev => [...prev, userMessage]);
-                    
+
                     // Clear input immediately
                     setMessageInput('');
-                    
+
                     // Add bot response after a short delay
                     setTimeout(() => {
                       const botResponse = {

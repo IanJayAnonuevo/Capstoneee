@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiBell } from 'react-icons/fi';
-import { MdLogout, MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdReportProblem, MdSettings } from 'react-icons/md';
+import { MdLogout, MdPeople, MdCalendarToday, MdAssignment, MdLocalShipping, MdReportProblem, MdSettings, MdHome } from 'react-icons/md';
 import logo from '../../assets/logo/logo.png';
 import { useLoader } from '../../contexts/LoaderContext';
 import { authService } from '../../services/authService';
@@ -28,11 +28,13 @@ export default function ForemanDashboard() {
     : user.username || 'Foreman';
 
   const navLinks = [
+    { label: 'Home', icon: <MdHome className="w-6 h-6" />, to: '/foreman' },
     { label: 'Monitor Attendance', icon: <MdPeople className="w-6 h-6" />, to: '/foreman/attendance' },
     { label: 'Manage Schedule', icon: <MdCalendarToday className="w-6 h-6" />, to: '/foreman/schedule' },
     { label: 'Task Management', icon: <MdAssignment className="w-6 h-6" />, to: '/foreman/tasks' },
     { label: 'Truck Status', icon: <MdLocalShipping className="w-6 h-6" />, to: '/foreman/trucks' },
     { label: 'Special Pickup', icon: <MdReportProblem className="w-6 h-6" />, to: '/foreman/special-pickup' },
+    { label: 'Emergency Alerts', icon: <MdReportProblem className="w-6 h-6" />, to: '/foreman/emergencies' },
     { label: 'Manage Issues', icon: <MdReportProblem className="w-6 h-6" />, to: '/foreman/issues' },
     { label: 'Settings', icon: <MdSettings className="w-6 h-6" />, to: '/foreman/settings' },
   ];
@@ -264,7 +266,7 @@ export default function ForemanDashboard() {
 
           <div className="relative">
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => navigate('/foreman/notifications')}
               aria-label="Notifications"
               className="relative p-2 rounded-full text-white hover:text-green-200 transition-colors"
             >

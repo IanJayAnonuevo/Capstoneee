@@ -1,6 +1,25 @@
 <?php
-require_once __DIR__ . '/_bootstrap.php';
-header('Access-Control-Allow-Origin: *');
+// Check if this is a cron job request with valid token
+// Must check BEFORE loading _bootstrap.php which enforces auth
+$rawInput = file_get_contents('php://input');
+$inputData = json_decode($rawInput, true);
+
+$isCronRequest = false;
+if (isset($inputData['cron_token'])) {
+    $providedToken = $inputData['cron_token'];
+    $expectedToken = 'kolektrash_cron_2024'; // Secure token for cron jobs
+    
+    if ($providedToken === $expectedToken) {
+        $isCronRequest = true;
+    }
+}
+
+// Only enforce authentication if NOT a valid cron request
+if (!$isCronRequest) {
+    require_once __DIR__ . '/_bootstrap.php';
+}
+
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Access-Control-Allow-Headers,Content-Type,Access-Control-Allow-Methods,Authorization,X-Requested-With');
@@ -13,10 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once '../config/database.php';
 require_once __DIR__ . '/../lib/AttendanceAssignment.php';
 
-$data = json_decode(file_get_contents('php://input'), true);
+// Reuse the input data we already read for cron token check
+$data = $inputData ?? json_decode(file_get_contents('php://input'), true);
 $start_date = $data['start_date'] ?? null;
 $end_date = $data['end_date'] ?? null;
 $overwrite = isset($data['overwrite']) ? (bool)$data['overwrite'] : false;
+
 $force_session = isset($data['session']) ? strtoupper($data['session']) : null;
 
 if (!$start_date || !$end_date) {
@@ -43,20 +64,21 @@ try {
         throw new Exception("No available trucks found.");
     }
 
-    if (count($trucks) < 2) {
-        throw new Exception("Need at least 2 available trucks for fixed assignment. Found: " . count($trucks));
-    }
+    // Allow single truck operation (will prioritize Priority barangays)
+    $trucksAvailable = count($trucks);
     
     $generatedTasks = [];
     // Aggregate notifications per recipient per day
     $recipientNotifications = [];
     $skippedDuplicates = 0;
+    $skippedInsufficientTrucks = [];
+    $cancellationNotifications = [];
     $currentDate = new DateTime($start_date);
     $endDateTime = new DateTime($end_date);
     
     // Fixed truck assignment
     $priorityTruck = $trucks[0]; // First truck for priority barangays
-    $clusteredTruck = $trucks[1]; // Second truck for clustered barangays
+    $clusteredTruck = isset($trucks[1]) ? $trucks[1] : null; // Second truck for clustered barangays (null if only 1 truck)
     
     $sessionSnapshots = [];
     $sessionIssues = [];
@@ -66,11 +88,7 @@ try {
         $dayName = $currentDate->format('l');
         $weekOfMonth = ceil($currentDate->format('j') / 7);
         
-        // Skip weekends
-        if ($currentDate->format('w') == 0 || $currentDate->format('w') == 6) {
-            $currentDate->add(new DateInterval('P1D'));
-            continue;
-        }
+
         
         foreach ($predefinedSchedules as $schedule) {
             // Check if schedule matches current day
@@ -128,6 +146,28 @@ try {
                     $truck = $assignmentKey === 'priority' ? $priorityTruck : $clusteredTruck;
                     
                     $teamLabel = ucfirst($assignmentKey) . ' Team';
+                    
+                    // Skip clustered barangays if no truck available (only 1 truck scenario)
+                    if ($assignmentKey === 'clustered' && $clusteredTruck === null) {
+                        $skippedInsufficientTrucks[] = [
+                            'barangay_name' => $schedule['barangay_name'],
+                            'barangay_id' => $schedule['barangay_id'],
+                            'cluster_id' => $schedule['cluster_id'],
+                            'date' => $date,
+                            'time' => $schedule['start_time'],
+                            'reason' => 'Insufficient trucks (only 1 available, reserved for priority)'
+                        ];
+                        
+                        // Track for cancellation notification
+                        $cancellationNotifications[] = [
+                            'barangay_id' => $schedule['barangay_id'],
+                            'barangay_name' => $schedule['barangay_name'],
+                            'date' => $date,
+                            'time' => $schedule['start_time']
+                        ];
+                        
+                        continue; // Skip this schedule
+                    }
                     
                     // Create schedule first
                     $stmt = $db->prepare("INSERT INTO collection_schedule (barangay_id, scheduled_date, session, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'approved')");
@@ -203,6 +243,28 @@ try {
         }
     }
 
+    // Send cancellation notifications to affected barangays
+    if (!empty($cancellationNotifications)) {
+        $stmtNotif = $db->prepare("
+            INSERT INTO notification (recipient_id, message, created_at, response_status) 
+            SELECT u.user_id, ?, NOW(), 'unread'
+            FROM user u
+            WHERE u.barangay_id = ?
+        ");
+        
+        foreach ($cancellationNotifications as $cancellation) {
+            $notifPayload = [
+                'type' => 'collection_cancelled',
+                'barangay_name' => $cancellation['barangay_name'],
+                'date' => $cancellation['date'],
+                'time' => $cancellation['time'],
+                'reason' => 'Insufficient trucks available. Priority barangays are being serviced first.',
+                'message' => "Collection for {$cancellation['barangay_name']} on {$cancellation['date']} at {$cancellation['time']} has been cancelled due to insufficient trucks."
+            ];
+            $stmtNotif->execute([json_encode($notifPayload), $cancellation['barangay_id']]);
+        }
+    }
+
     $db->commit();
     echo json_encode([
         'success' => true,
@@ -210,6 +272,9 @@ try {
         'generated_tasks' => $generatedTasks,
         'total_generated' => count($generatedTasks),
         'skipped_duplicates' => $skippedDuplicates,
+        'skipped_insufficient_trucks' => $skippedInsufficientTrucks,
+        'cancellation_notifications_sent' => count($cancellationNotifications),
+        'trucks_available' => $trucksAvailable,
         'session_issues' => $sessionIssues,
         'overwrite' => $overwrite
     ]);

@@ -22,12 +22,13 @@ const ENV_COLORS = {
   soil: '#8b4513'          // Rich soil brown
 };
 
-const accountTypes = ["All", "Truck Driver", "Garbage Collector", "Barangay Head", "Resident"];
+const accountTypes = ["All", "Truck Driver", "Garbage Collector", "Foreman", "Barangay Head", "Resident"];
 // Color map for roles using tree palette
 const roleColors = {
   "Admin": "bg-purple-800 text-white",
   "Truck Driver": "bg-green-800 text-white",
   "Garbage Collector": "bg-green-600 text-white",
+  "Foreman": "bg-blue-700 text-white",
   "Barangay Head": "bg-amber-800 text-white",
   "Resident": "bg-green-300 text-gray-800",
 };
@@ -36,6 +37,7 @@ const roleDisplay = {
   admin: "Admin",
   truck_driver: "Truck Driver",
   garbage_collector: "Garbage Collector",
+  foreman: "Foreman",
   barangay_head: "Barangay Head",
   resident: "Resident"
 };
@@ -48,17 +50,23 @@ export default function ManageUsers() {
   const [clusterOptions, setClusterOptions] = useState(["All"]);
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [deleteSuccessModal, setDeleteSuccessModal] = useState(false);
+  const [barangays, setBarangays] = useState([]);
   const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
-    role: "Truck Driver", // default
+    role: "truck_driver", // default
     firstname: "",
     lastname: "",
     birthdate: "",
     gender: "",
-    status: "",
-    barangay_id: ""
+    contact_num: "",
+    address: "",
+    barangay_id: "",
+    employee_id: "",
+    employment_type: "job_order" // default
   });
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -130,6 +138,24 @@ export default function ManageUsers() {
     fetchClusters();
   }, []);
 
+  // Fetch barangays for the dropdown
+  useEffect(() => {
+    async function fetchBarangays() {
+      try {
+        const res = await fetch(buildApiUrl('get_barangays.php'), {
+          headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.barangays)) {
+          setBarangays(data.barangays);
+        }
+      } catch (err) {
+        console.error('Error fetching barangays:', err);
+      }
+    }
+    fetchBarangays();
+  }, []);
+
   // Filter users
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -137,11 +163,11 @@ export default function ManageUsers() {
       (u.email && u.email.toLowerCase().includes(search.toLowerCase())) ||
       (u.full_name && u.full_name.toLowerCase().includes(search.toLowerCase()));
     const matchesType = accountType === "All" || (u.user_type && roleDisplay[u.user_type] === accountType);
-    
+
     // Cluster filtering only applies to residents and barangay heads (not staff)
     const isResidentOrBgyHead = u.user_type === 'resident' || u.user_type === 'barangay_head';
     const matchesCluster = cluster === "All" || !isResidentOrBgyHead || (u.cluster_id === cluster || u.barangay === cluster);
-    
+
     return matchesSearch && matchesType && matchesCluster;
   });
 
@@ -171,6 +197,29 @@ export default function ManageUsers() {
     }
   };
 
+  const handleActivateUser = async (user) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch(buildApiUrl("activate_user.php"), {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ user_id: user.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, account_status: 'active' } : u));
+      } else {
+        alert(data.message || "Failed to activate user.");
+      }
+    } catch (err) {
+      alert("Error activating user.");
+    } finally {
+      setActionLoading(false);
+      setConfirmAction(null);
+      setOpenMenuUserId(null);
+    }
+  };
+
   const handleDeleteUser = async (user) => {
     setActionLoading(true);
     try {
@@ -182,6 +231,7 @@ export default function ManageUsers() {
       const data = await res.json();
       if (data.status === "success" || data.success) {
         setUsers(prev => prev.filter(u => u.id !== user.id));
+        setDeleteSuccessModal(true);
       } else {
         alert(data.message || "Failed to delete user.");
       }
@@ -200,6 +250,8 @@ export default function ManageUsers() {
       await handleDeleteUser(confirmAction.user);
     } else if (confirmAction.type === 'deactivate') {
       await handleDeactivateUser(confirmAction.user);
+    } else if (confirmAction.type === 'activate') {
+      await handleActivateUser(confirmAction.user);
     }
   };
 
@@ -209,8 +261,12 @@ export default function ManageUsers() {
       description: "This permanently removes the user and their profile data."
     },
     deactivate: {
-      title: "Deactivate account",
-      description: "This will force the user offline until they log back in."
+      title: "Suspend account",
+      description: "This will suspend the account and prevent the user from logging in."
+    },
+    activate: {
+      title: "Activate account",
+      description: "This will reactivate the suspended account and allow the user to log in again."
     }
   };
 
@@ -247,9 +303,9 @@ export default function ManageUsers() {
             className="w-full pl-10 pr-3 py-2 rounded-md border border-gray-200 text-sm bg-white text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
           />
         </div>
-        <select 
-          value={accountType} 
-          onChange={(e) => setAccountType(e.target.value)} 
+        <select
+          value={accountType}
+          onChange={(e) => setAccountType(e.target.value)}
           className="px-3 py-2 rounded-md border border-gray-200 text-sm min-w-fit bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           {accountTypes.map((t) => (
@@ -259,16 +315,16 @@ export default function ManageUsers() {
         {(
           accountType === 'Barangay Head' || accountType === 'Resident'
         ) && (
-          <select 
-            value={cluster} 
-            onChange={(e) => setCluster(e.target.value)} 
-            className="px-3 py-2 rounded-md border border-gray-200 text-sm min-w-fit bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
-          >
-            {clusterOptions.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        )}
+            <select
+              value={cluster}
+              onChange={(e) => setCluster(e.target.value)}
+              className="px-3 py-2 rounded-md border border-gray-200 text-sm min-w-fit bg-white text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
+            >
+              {clusterOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
       </div>
 
       {/* Summary Cards - Minimal Design */}
@@ -317,12 +373,21 @@ export default function ManageUsers() {
                   </button>
                   {openMenuUserId === user.id && (
                     <div className="absolute right-2 top-8 bg-white border border-gray-200 rounded shadow z-10 text-left w-40">
-                      <button
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
-                        onClick={() => openActionConfirm('deactivate', user)}
-                      >
-                        Deactivate
-                      </button>
+                      {user.account_status === 'suspended' ? (
+                        <button
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 text-green-600 border-0 bg-transparent cursor-pointer"
+                          onClick={() => openActionConfirm('activate', user)}
+                        >
+                          Activate
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-0 bg-transparent cursor-pointer"
+                          onClick={() => openActionConfirm('deactivate', user)}
+                        >
+                          Suspend
+                        </button>
+                      )}
                       <button
                         className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-600 border-0 bg-transparent cursor-pointer"
                         onClick={() => openActionConfirm('delete', user)}
@@ -331,9 +396,8 @@ export default function ManageUsers() {
                       </button>
                     </div>
                   )}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${
-                    roleColors[roleDisplay[user.user_type]] || 'bg-gray-400 text-white'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mx-auto mb-3 ${roleColors[roleDisplay[user.user_type]] || 'bg-gray-400 text-white'
+                    }`}>
                     <FiUser />
                   </div>
                   <div className="font-medium text-sm text-gray-800 mb-1">
@@ -348,17 +412,21 @@ export default function ManageUsers() {
                   <div className="text-xs text-gray-500 mb-2">
                     {user.barangay}
                   </div>
-                  
-                  <div className="mb-2">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      user.online_status === "online"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}>
+
+                  <div className="mb-2 flex gap-2 justify-center flex-wrap">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${user.online_status === "online"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
+                      }`}>
                       {user.online_status === "online" ? "Online" : "Offline"}
                     </span>
+                    {user.account_status === 'suspended' && (
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                        Suspended
+                      </span>
+                    )}
                   </div>
-                  
+
                 </div>
               ))}
             </div>
@@ -377,15 +445,20 @@ export default function ManageUsers() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <button
-                className={`flex-1 px-4 py-2 rounded-lg text-white text-sm font-semibold ${
-                  confirmAction.type === 'delete'
-                    ? 'bg-red-600 hover:bg-red-700'
+                className={`flex-1 px-4 py-2 rounded-lg text-white text-sm font-semibold ${confirmAction.type === 'delete'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : confirmAction.type === 'activate'
+                    ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-yellow-600 hover:bg-yellow-700'
-                }`}
+                  }`}
                 onClick={handleConfirmAction}
                 disabled={actionLoading}
               >
-                {actionLoading ? "Processing..." : (confirmAction.type === 'delete' ? 'Delete Account' : 'Deactivate User')}
+                {actionLoading ? "Processing..." : (
+                  confirmAction.type === 'delete' ? 'Delete Account' :
+                    confirmAction.type === 'activate' ? 'Activate Account' :
+                      'Suspend Account'
+                )}
               </button>
               <button
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50"
@@ -408,16 +481,38 @@ export default function ManageUsers() {
                 e.preventDefault();
                 // Send POST request to your backend API
                 try {
+                  // Add online_status as offline automatically
+                  const formData = {
+                    ...form,
+                    online_status: 'offline'
+                  };
                   const res = await fetch(buildApiUrl("register_personnel.php"), {
                     method: "POST",
                     headers: getAuthHeaders(),
-                    body: JSON.stringify(form),
+                    body: JSON.stringify(formData),
                   });
                   const data = await res.json();
                   if (data.success) {
-                    alert("Account created!");
                     setShowModal(false);
-                    // Optionally refresh user list here
+                    setShowSuccessModal(true);
+                    // Reset form
+                    setForm({
+                      username: "",
+                      email: "",
+                      password: "",
+                      role: "truck_driver",
+                      firstname: "",
+                      lastname: "",
+                      birthdate: "",
+                      gender: "",
+                      contact_num: "",
+                      address: "",
+                      barangay_id: "",
+                      employee_id: "",
+                      employment_type: "job_order"
+                    });
+                    // Refresh user list
+                    fetchUsers();
                   } else {
                     alert(data.message || "Failed to create account.");
                   }
@@ -499,29 +594,21 @@ export default function ManageUsers() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Barangay</label>
                     <select
-                      className="w-full p-2 border rounded"
-                      name="status"
-                      value={form.status}
-                      onChange={e => setForm({ ...form, status: e.target.value })}
-                    >
-                      <option value="">Select Status</option>
-                      <option value="online">Online</option>
-                      <option value="offline">Offline</option>
-                      <option value="on_leave">On Leave</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Barangay ID</label>
-                    <input
-                      className="w-full p-2 border rounded"
+                      className="w-full p-2 border border-gray-300 rounded"
                       name="barangay_id"
-                      placeholder="Barangay ID"
                       value={form.barangay_id}
                       onChange={e => setForm({ ...form, barangay_id: e.target.value })}
                       required
-                    />
+                    >
+                      <option value="">Select Barangay</option>
+                      {barangays.map((barangay) => (
+                        <option key={barangay.barangay_id} value={barangay.barangay_id}>
+                          {barangay.barangay_name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -576,10 +663,41 @@ export default function ManageUsers() {
                       <option value="admin">Admin</option>
                       <option value="truck_driver">Truck Driver</option>
                       <option value="garbage_collector">Garbage Collector</option>
+                      <option value="foreman">Foreman</option>
                       <option value="barangay_head">Barangay Head</option>
                       <option value="resident">Resident</option>
                     </select>
                   </div>
+                  {/* Employee ID field - only for truck drivers, garbage collectors, and foreman */}
+                  {(form.role === 'truck_driver' || form.role === 'garbage_collector' || form.role === 'foreman') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                      <input
+                        className="w-full p-2 border border-gray-300 rounded"
+                        name="employee_id"
+                        placeholder="Employee ID"
+                        value={form.employee_id}
+                        onChange={e => setForm({ ...form, employee_id: e.target.value })}
+                        required
+                      />
+                    </div>
+                  )}
+                  {/* Employment Type field - only for truck drivers, garbage collectors, and foreman */}
+                  {(form.role === 'truck_driver' || form.role === 'garbage_collector' || form.role === 'foreman') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Employment Type</label>
+                      <select
+                        className="w-full p-2 border border-gray-300 rounded"
+                        name="employment_type"
+                        value={form.employment_type}
+                        onChange={e => setForm({ ...form, employment_type: e.target.value })}
+                        required
+                      >
+                        <option value="job_order">Job Order</option>
+                        <option value="regular">Regular</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-between items-center mt-6">
@@ -598,6 +716,48 @@ export default function ManageUsers() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - Create Account */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 px-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Account Created!</h3>
+            <p className="text-gray-600 mb-6">The user account has been successfully created.</p>
+            <button
+              className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 font-medium"
+              onClick={() => setShowSuccessModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - Delete Account */}
+      {deleteSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 px-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Account Deleted!</h3>
+            <p className="text-gray-600 mb-6">The user account has been successfully deleted.</p>
+            <button
+              className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 font-medium"
+              onClick={() => setDeleteSuccessModal(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

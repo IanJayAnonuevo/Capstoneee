@@ -89,30 +89,21 @@ try {
     foreach ($attendance as $record) {
         $role = $record['role_id'] == 3 ? 'driver' : 'collector';
         $session_key = strtolower($record['session']);
-        $status = str_replace('-', '_', $record['status']);
+        $status = strtolower(str_replace('-', '_', $record['verification_status']));
+        
+        // Map 'verified' to 'present' for summary
+        if ($status === 'verified') {
+            $status = 'present';
+        }
         
         if (isset($summary[$role][$session_key][$status])) {
             $summary[$role][$session_key][$status]++;
         }
     }
 
-    // Count personnel not in attendance as pending
-    foreach ($personnel as $person) {
-        $role = $person['role_id'] == 3 ? 'driver' : 'collector';
-        foreach (['AM', 'PM'] as $sess) {
-            $found = false;
-            foreach ($attendance as $record) {
-                if ($record['user_id'] == $person['user_id'] && $record['session'] == $sess) {
-                    $found = true;
-                    break;
-                }
-            }
-            if (!$found) {
-                $session_key = strtolower($sess);
-                $summary[$role][$session_key]['pending']++;
-            }
-        }
-    }
+    // Note: We no longer count personnel without records in the summary
+    // The summary only reflects actual database records
+    // Personnel without records will simply not appear in any count
 
     echo json_encode([
         'success' => true,

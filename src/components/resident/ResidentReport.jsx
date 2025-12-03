@@ -353,16 +353,20 @@ export default function ResidentReport() {
       formData.append('reporter_name', pendingSubmission.reporterName);
       formData.append('barangay', pendingSubmission.barangay);
       formData.append('issue_type', pendingSubmission.issueType);
-  formData.append('exact_location', pendingSubmission.exactLocation);
+      formData.append('exact_location', pendingSubmission.exactLocation);
       formData.append('description', pendingSubmission.description);
       formData.append('table', 'issue_reports');
       if (pendingSubmission.photo) {
         formData.append('photo', pendingSubmission.photo);
       }
 
-  const response = await axios.post(buildApiUrl('submit_issue_report.php'), formData, {
+      // Get token from local storage
+      const token = localStorage.getItem('access_token');
+
+      const response = await axios.post(buildApiUrl('submit_issue_report.php'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': token ? `Bearer ${token}` : '',
         },
       });
 
@@ -422,12 +426,12 @@ export default function ResidentReport() {
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
             <FiUser className="text-green-500" /> Name
           </label>
-          <input 
-            type="text" 
-            name="name" 
-            value={form.name} 
-            disabled 
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base" 
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            disabled
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base"
           />
         </div>
 
@@ -436,12 +440,12 @@ export default function ResidentReport() {
           <label className="text-sm font-medium text-gray-700 flex items-center gap-1 mb-0.5">
             <FiMapPin className="text-green-500" /> Barangay
           </label>
-          <input 
-            type="text" 
-            name="barangay" 
-            value={form.barangay || 'Not assigned'} 
-            disabled 
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base" 
+          <input
+            type="text"
+            name="barangay"
+            value={form.barangay || 'Not assigned'}
+            disabled
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none text-base"
           />
           <p className="text-xs text-gray-500 mt-1">Your assigned barangay (cannot be changed)</p>
         </div>
@@ -552,11 +556,10 @@ export default function ResidentReport() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full flex justify-center items-center gap-2 py-2 px-4 rounded-lg text-base font-bold text-white transition-colors duration-150 shadow-md mt-2 ${
-            isSubmitting
+          className={`w-full flex justify-center items-center gap-2 py-2 px-4 rounded-lg text-base font-bold text-white transition-colors duration-150 shadow-md mt-2 ${isSubmitting
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300'
-          }`}
+            }`}
         >
           Submit
         </button>
