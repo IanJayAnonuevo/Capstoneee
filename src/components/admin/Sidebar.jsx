@@ -27,6 +27,7 @@ const navItems = [
     Icon: FaTasks,
     children: [
       { to: '/admin/task-management/today', label: "Today's tasks" },
+      { to: '/admin/task-management/special', label: 'Special Tasks' },
       { to: '/admin/task-management/past', label: 'Past tasks' }
     ]
   },

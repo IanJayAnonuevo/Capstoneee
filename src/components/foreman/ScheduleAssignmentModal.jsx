@@ -99,6 +99,46 @@ export default function ScheduleAssignmentModal({ request, onClose, onSuccess })
         try {
             setLoading(true);
 
+            // Check for conflicting predefined schedules
+            const selectedDate = new Date(scheduleDate);
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayOfWeek = dayNames[selectedDate.getDay()];
+
+            // Fetch predefined schedules for the selected day and time
+            const checkResponse = await fetch(
+                `${window.location.origin}/kolektrash/backend/api/get_predefined_schedules.php?day_of_week=${dayOfWeek}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const checkData = await checkResponse.json();
+
+            if (checkData.success && checkData.schedules) {
+                // Check if any predefined schedule conflicts with the selected time
+                const conflictingSchedule = checkData.schedules.find(schedule => {
+                    const scheduleStart = schedule.start_time.substring(0, 5);
+                    const scheduleEnd = schedule.end_time ? schedule.end_time.substring(0, 5) : null;
+                    const selectedTime = scheduleTime.substring(0, 5);
+
+                    // Check if selected time falls within any predefined schedule
+                    if (scheduleEnd) {
+                        return selectedTime >= scheduleStart && selectedTime < scheduleEnd;
+                    } else {
+                        return selectedTime === scheduleStart;
+                    }
+                });
+
+                if (conflictingSchedule) {
+                    alert(`Cannot schedule at this time. There is already a predefined ${conflictingSchedule.schedule_type} schedule for ${conflictingSchedule.barangay_name} at ${conflictingSchedule.start_time.substring(0, 5)}.`);
+                    setLoading(false);
+                    return;
+                }
+            }
+
             const assignmentData = {
                 request_id: request.id || request.request_id,
                 schedule_date: scheduleDate,
@@ -107,6 +147,8 @@ export default function ScheduleAssignmentModal({ request, onClose, onSuccess })
                 driver_id: selectedDriver,
                 collector_ids: selectedCollectors,
             };
+
+            console.log('Sending assignment data:', assignmentData);
 
             const response = await authService.updatePickupRequestStatus(
                 request.id || request.request_id,
@@ -117,18 +159,22 @@ export default function ScheduleAssignmentModal({ request, onClose, onSuccess })
                 }
             );
 
+            console.log('API Response:', response);
+
             if (response.status === 'success') {
+                console.log('Success! Showing alert...');
                 alert('Pickup request scheduled successfully!');
                 onSuccess();
                 onClose();
                 // Navigate to schedule page
                 navigate('/foreman/schedule');
             } else {
-                alert('Failed to schedule: ' + response.message);
+                console.error('API returned error:', response);
+                alert('Failed to schedule: ' + (response.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error scheduling:', error);
-            alert('Failed to schedule request.');
+            alert('Failed to schedule request: ' + error.message);
         } finally {
             setLoading(false);
         }

@@ -1,12 +1,16 @@
 <?php
+// Simple test endpoint to check trucks without authentication
 require_once __DIR__ . '/_bootstrap.php';
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
-require_once '../config/database.php';
 
 try {
     $database = new Database();
     $pdo = $database->connect();
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM truck");
+    $stmt->execute();
+    $count = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $stmt = $pdo->prepare("
         SELECT 
@@ -16,25 +20,15 @@ try {
             truck_type, 
             status 
         FROM truck
+        LIMIT 10
     ");
     $stmt->execute();
     $trucks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Map database columns to expected frontend field names
-    $formattedTrucks = array_map(function($truck) {
-        return [
-            'id' => $truck['truck_id'],
-            'truck_number' => 'TRUCK-' . str_pad($truck['truck_id'], 3, '0', STR_PAD_LEFT),
-            'plate_number' => $truck['plate_num'],
-            'capacity' => $truck['capacity'],
-            'truck_type' => $truck['truck_type'],
-            'status' => $truck['status']
-        ];
-    }, $trucks);
-
     echo json_encode([
         "status" => "success",
-        "data" => $formattedTrucks
+        "count" => $count['count'],
+        "trucks" => $trucks
     ]);
 } catch (Exception $e) {
     echo json_encode([
@@ -42,4 +36,4 @@ try {
         "message" => $e->getMessage()
     ]);
 }
-?> 
+?>

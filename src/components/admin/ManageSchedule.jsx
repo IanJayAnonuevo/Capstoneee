@@ -215,18 +215,47 @@ export default function ManageSchedule() {
       }
       // Limit to visible days (Monday to Sunday)
       params.set('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].join(','));
+
+      // Fetch predefined schedules
       const url = `${buildApiUrl('get_predefined_schedules.php')}?${params.toString()}`;
       const res = await fetch(url, {
         headers: getAuthHeaders()
       });
       const data = await res.json();
+
+      let allSchedules = [];
       if (data.success) {
-        setPredefinedSchedules(Array.isArray(data.schedules) ? data.schedules : []);
-        setSchedulesError(null);
-      } else {
-        setPredefinedSchedules([]);
-        setSchedulesError(data.message || 'Failed to fetch predefined schedules.');
+        allSchedules = Array.isArray(data.schedules) ? data.schedules : [];
       }
+
+      // Also fetch special pickup schedules for the current week
+      try {
+        const weekStart = getWeekStart(currentWeek);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+
+        const calendarParams = new URLSearchParams({
+          start_date: weekStart.toISOString().split('T')[0],
+          end_date: weekEnd.toISOString().split('T')[0],
+          schedule_type: 'special_pickup'
+        });
+
+        const specialRes = await fetch(
+          `${buildApiUrl('get_calendar_schedules.php')}?${calendarParams}`,
+          { headers: getAuthHeaders() }
+        );
+        const specialData = await specialRes.json();
+
+        if (specialData.success && Array.isArray(specialData.schedules)) {
+          // Add special pickups to the schedule list
+          allSchedules = [...allSchedules, ...specialData.schedules];
+        }
+      } catch (err) {
+        console.error('Failed to fetch special pickups:', err);
+      }
+
+      setPredefinedSchedules(allSchedules);
+      setSchedulesError(null);
     } catch (err) {
       setPredefinedSchedules([]);
       setSchedulesError('Failed to fetch predefined schedules.');
@@ -250,13 +279,46 @@ export default function ManageSchedule() {
         headers: getAuthHeaders()
       });
       const data = await res.json();
+
+      let allHistory = [];
       if (data.success) {
-        setHistoryData(Array.isArray(data.history) ? data.history : []);
-        setHistoryTotal(data.total || 0);
-      } else {
-        setHistoryError(data.message || 'Failed to fetch schedule history.');
-        setHistoryData([]);
+        allHistory = Array.isArray(data.history) ? data.history : [];
       }
+
+      // Also fetch completed special pickup schedules
+      try {
+        const specialParams = new URLSearchParams({
+          show_completed: 'true',
+          schedule_type: 'special_pickup'
+        });
+
+        const specialRes = await fetch(
+          `${buildApiUrl('get_calendar_schedules.php')}?${specialParams}`,
+          { headers: getAuthHeaders() }
+        );
+        const specialData = await specialRes.json();
+
+        if (specialData.success && Array.isArray(specialData.schedules)) {
+          const specialHistory = specialData.schedules.map(s => ({
+            ...s,
+            action: 'completed',
+            changed_at: s.updated_at || s.created_at,
+            schedule_type: 'special_pickup'
+          }));
+          allHistory = [...allHistory, ...specialHistory];
+        }
+      } catch (err) {
+        console.error('Failed to fetch special pickup history:', err);
+      }
+
+      allHistory.sort((a, b) => {
+        const dateA = new Date(a.changed_at || a.updated_at || a.created_at);
+        const dateB = new Date(b.changed_at || b.updated_at || b.created_at);
+        return dateB - dateA;
+      });
+
+      setHistoryData(allHistory);
+      setHistoryTotal(allHistory.length);
     } catch (err) {
       setHistoryError('Failed to fetch schedule history.');
       setHistoryData([]);
@@ -283,22 +345,29 @@ export default function ManageSchedule() {
 
   // Filter schedules based on truck selection
   const getFilteredSchedules = () => {
+    // First, separate special pickups from regular schedules
+    const specialPickups = predefinedSchedules.filter(s => s.schedule_type === 'special_pickup');
+    const regularSchedules = predefinedSchedules.filter(s => s.schedule_type !== 'special_pickup');
+
+    let filtered = [];
     if (isPriorityView) {
       // Priority: Show priority barangays (cluster_id = 1C-PB) with daily_priority or fixed_days schedule types
-      return predefinedSchedules.filter(schedule =>
+      filtered = regularSchedules.filter(schedule =>
         schedule.cluster_id === '1C-PB' &&
         (schedule.schedule_type === 'daily_priority' || schedule.schedule_type === 'fixed_days')
       );
     } else {
       // Clustered view: Show barangays for the selected cluster
       const weekNumber = getWeekOfMonth(getWeekStart(currentWeek));
-      const filtered = predefinedSchedules.filter(schedule => (
+      filtered = regularSchedules.filter(schedule => (
         schedule.cluster_id === selectedClusterId &&
         schedule.schedule_type === 'weekly_cluster' &&
         Number(schedule.week_of_month) === Number(weekNumber)
       ));
-      return filtered;
     }
+
+    // Always include special pickups regardless of view
+    return [...filtered, ...specialPickups];
   };
 
   const filteredSchedules = getFilteredSchedules();
@@ -325,24 +394,36 @@ export default function ManageSchedule() {
     };
 
     // Create event object for predefined schedule
+    const isSpecialPickup = schedule.schedule_type === 'special_pickup';
     const predefinedEvent = {
       label: schedule.barangay_name,
       time: schedule.start_time,
       end: schedule.end_time,
-      // Green for daily_priority and fixed_days, blue for weekly_cluster
-      color: schedule.schedule_type === 'weekly_cluster'
-        ? 'bg-gradient-to-br from-blue-100 to-blue-200'
-        : 'bg-gradient-to-br from-green-100 to-emerald-100',
-      border: schedule.schedule_type === 'weekly_cluster'
-        ? 'border-l-4 border-blue-500 shadow-blue-200'
-        : 'border-l-4 border-green-500 shadow-green-200',
-      text: schedule.schedule_type === 'weekly_cluster' ? 'text-blue-900' : 'text-green-900',
-      shadow: schedule.schedule_type === 'weekly_cluster' ? 'shadow-md shadow-blue-200/50' : 'shadow-md shadow-green-200/50',
+      // Orange for special_pickup, Green for daily_priority/fixed_days, blue for weekly_cluster
+      color: isSpecialPickup
+        ? 'bg-gradient-to-br from-orange-100 to-amber-100'
+        : schedule.schedule_type === 'weekly_cluster'
+          ? 'bg-gradient-to-br from-blue-100 to-blue-200'
+          : 'bg-gradient-to-br from-green-100 to-emerald-100',
+      border: isSpecialPickup
+        ? 'border-l-4 border-orange-500 shadow-orange-200'
+        : schedule.schedule_type === 'weekly_cluster'
+          ? 'border-l-4 border-blue-500 shadow-blue-200'
+          : 'border-l-4 border-green-500 shadow-green-200',
+      text: isSpecialPickup
+        ? 'text-orange-900'
+        : schedule.schedule_type === 'weekly_cluster' ? 'text-blue-900' : 'text-green-900',
+      shadow: isSpecialPickup
+        ? 'shadow-md shadow-orange-200/50'
+        : schedule.schedule_type === 'weekly_cluster' ? 'shadow-md shadow-blue-200/50' : 'shadow-md shadow-green-200/50',
       isNew: isNew(schedule.created_at),
-      badgeColor: schedule.schedule_type === 'weekly_cluster'
-        ? 'bg-gradient-to-r from-blue-600 to-blue-700'
-        : 'bg-gradient-to-r from-emerald-500 to-green-600',
+      badgeColor: isSpecialPickup
+        ? 'bg-gradient-to-r from-orange-500 to-amber-600'
+        : schedule.schedule_type === 'weekly_cluster'
+          ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+          : 'bg-gradient-to-r from-emerald-500 to-green-600',
       isPredefinedSchedule: true,
+      isSpecialPickup: isSpecialPickup,
       scheduleType: schedule.schedule_type,
       weekOfMonth: schedule.week_of_month,
       barangayId: schedule.barangay_id,
@@ -724,7 +805,7 @@ export default function ManageSchedule() {
                                 return (
                                   <div key={eventKey} className="mb-2">
                                     <div
-                                      className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center p-2.5 hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer ${selectedIds.has(event.id) ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}
+                                      className={`relative rounded-lg ${event.color} ${event.border} ${event.shadow} flex flex-col items-center justify-center p-2.5 transition-all duration-200 ${event.isSpecialPickup ? 'cursor-not-allowed opacity-80' : 'hover:scale-105 hover:shadow-lg cursor-pointer'} ${selectedIds.has(event.id) ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}
                                       style={{
                                         width: eventWidth,
                                         height: eventHeight,
@@ -736,6 +817,13 @@ export default function ManageSchedule() {
                                       }}
                                       title={formatTooltip(event)}
                                       onClick={(e) => {
+                                        // Block all interactions with special pickups
+                                        if (event.isSpecialPickup || event.scheduleType === 'special_pickup') {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          return;
+                                        }
+
                                         // If Ctrl/Meta is held, toggle selection; otherwise open edit
                                         if (e.ctrlKey || e.metaKey || ctrlPressed) {
                                           toggleSelected(event.id);
@@ -761,12 +849,12 @@ export default function ManageSchedule() {
                                       )}
 
                                       {/* Decorative corner accent */}
-                                      <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
+                                      <div className={`absolute top-0 right-0 w-0 h-0 border-t-[12px] border-r-[12px] border-t-transparent ${event.scheduleType === 'special_pickup' ? 'border-r-orange-400' : event.scheduleType === 'weekly_cluster' ? 'border-r-blue-400' : 'border-r-green-400'} rounded-bl-lg opacity-60`}></div>
 
                                       {/* Main content */}
                                       <div className="flex items-center justify-center w-full gap-2 min-w-0 relative z-10">
                                         {/* Icon indicator */}
-                                        <div className={`flex-shrink-0 w-2 h-2 rounded-full ${event.scheduleType === 'weekly_cluster' ? 'bg-blue-500' : 'bg-green-500'} shadow-sm`}></div>
+                                        <div className={`flex-shrink-0 w-2 h-2 rounded-full ${event.scheduleType === 'special_pickup' ? 'bg-orange-500' : event.scheduleType === 'weekly_cluster' ? 'bg-blue-500' : 'bg-green-500'} shadow-sm`}></div>
 
                                         <span
                                           className={`text-sm font-bold ${event.text} truncate flex-1 text-center`}
@@ -825,41 +913,50 @@ export default function ManageSchedule() {
                                       <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-b border-gray-100">
                                         {event.label}
                                       </div>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenMenuId(null);
-                                          const s = event.schedule;
-                                          setEditingSchedule(s);
-                                          setEditForm({
-                                            barangay_id: s.barangay_id,
-                                            barangay_name: s.barangay_name,
-                                            day_of_week: s.day_of_week,
-                                            start_time: s.start_time?.substring(0, 5) || '',
-                                            end_time: s.end_time?.substring(0, 5) || '',
-                                            week_of_month: s.week_of_month || ''
-                                          });
-                                          setEditError(null);
-                                          setEditOpen(true);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                                      >
-                                        <FiEdit2 className="w-3 h-3" />
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenMenuId(null);
-                                          setScheduleToDelete(event.schedule);
-                                          setDeleteError(null);
-                                          setDeleteOpen(true);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-b border-gray-100 last:border-b-0"
-                                      >
-                                        <FiTrash2 className="w-3 h-3" />
-                                        Delete
-                                      </button>
+                                      {/* Conditional rendering based on schedule type */}
+                                      {event.isSpecialPickup || event.scheduleType === 'special_pickup' ? (
+                                        <div className="px-3 py-2 text-xs text-gray-500 italic">
+                                          Cannot edit/delete special pickup schedules from calendar
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenMenuId(null);
+                                              const s = event.schedule;
+                                              setEditingSchedule(s);
+                                              setEditForm({
+                                                barangay_id: s.barangay_id,
+                                                barangay_name: s.barangay_name,
+                                                day_of_week: s.day_of_week,
+                                                start_time: s.start_time?.substring(0, 5) || '',
+                                                end_time: s.end_time?.substring(0, 5) || '',
+                                                week_of_month: s.week_of_month || ''
+                                              });
+                                              setEditError(null);
+                                              setEditOpen(true);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                          >
+                                            <FiEdit2 className="w-3 h-3" />
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenMenuId(null);
+                                              setScheduleToDelete(event.schedule);
+                                              setDeleteError(null);
+                                              setDeleteOpen(true);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 border-b border-gray-100 last:border-b-0"
+                                          >
+                                            <FiTrash2 className="w-3 h-3" />
+                                            Delete
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   ))}
                                 </div>

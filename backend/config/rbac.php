@@ -13,7 +13,13 @@ return [
         'check_cron_logs.php',
         'check_absent_timing.php',
         'manual_trigger_absent.php',
-        'reset_today_attendance.php'
+        'reset_today_attendance.php',
+        'run_migration_special_pickup.php',
+        'debug_special_pickup_data.php',
+        'check_schedule_table.php',
+        'add_schedule_columns.php',
+        'create_notifications_table.php',
+        'view_error_logs.php'
     ],
     'role_groups' => [
         'admin_only' => [
@@ -76,6 +82,7 @@ return [
         'get_barangay_details.php' => ['admin', 'barangay_head', 'resident'],
         'get_barangay_head.php' => ['admin', 'barangay_head'],
         'get_barangays.php' => ['admin', 'foreman'],
+        'get_calendar_schedules.php' => ['admin', 'foreman', 'truck_driver', 'garbage_collector'],
         'get_garbage_collector.php' => ['admin', 'garbage_collector'],
         'get_notifications.php' => ['admin', 'resident', 'barangay_head', 'truck_driver', 'garbage_collector', 'foreman'],
         'get_personnel_schedule.php' => ['admin', 'truck_driver', 'garbage_collector'],

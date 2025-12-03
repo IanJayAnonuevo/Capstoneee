@@ -61,14 +61,35 @@ export default function TodaysTasks() {
         fetchTasks();
     }, []);
 
+    // Check if task should be marked as unfinished
+    const isTaskUnfinished = (task) => {
+        const status = (task.status || '').toLowerCase();
+        if (status === 'completed' || status === 'cancelled') return false;
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        const isAm = task.time && parseInt(task.time.split(':')[0]) < 12;
+        const expectedEndHour = isAm ? 12 : 17;
+        const expectedEndMinute = 0;
+
+        if (currentHour > expectedEndHour) return true;
+        if (currentHour === expectedEndHour && currentMinute >= expectedEndMinute) return true;
+
+        return false;
+    };
+
     // Format status for display
-    const formatStatus = (status) => {
+    const formatStatus = (status, task) => {
+        if (isTaskUnfinished(task)) return 'UNFINISHED';
         if (!status) return 'SCHEDULED';
         const s = status.toLowerCase();
         if (s === 'scheduled') return 'SCHEDULED';
         if (s === 'in_progress' || s === 'in progress') return 'IN PROGRESS';
         if (s === 'completed') return 'COMPLETED';
         if (s === 'emergency') return 'EMERGENCY';
+        if (s === 'cancelled') return 'CANCELLED';
         return status.toUpperCase();
     };
 
@@ -80,6 +101,8 @@ export default function TodaysTasks() {
         if (s === 'in_progress' || s === 'in progress') return 'bg-yellow-500';
         if (s === 'completed') return 'bg-green-500';
         if (s === 'emergency') return 'bg-red-600';
+        if (s === 'cancelled') return 'bg-gray-400';
+        if (s === 'unfinished') return 'bg-orange-500';
         return 'bg-gray-400';
     };
 
@@ -89,7 +112,7 @@ export default function TodaysTasks() {
     tasks.forEach(task => {
         const isAm = task.time && parseInt(task.time.split(':')[0]) < 12;
         const timeSlot = isAm ? 'AM' : 'PM';
-        const status = formatStatus(task.status);
+        const status = formatStatus(task.status, task);
 
         // Process Driver
         if (task.driver) {
@@ -220,6 +243,10 @@ export default function TodaysTasks() {
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-red-600"></div>
                             <span className="text-xs text-gray-700">Emergency</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                            <span className="text-xs text-gray-700">Unfinished</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-gray-400"></div>

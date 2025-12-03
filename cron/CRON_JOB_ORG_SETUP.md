@@ -9,7 +9,9 @@ This guide explains how to set up automated task and route generation using cron
 | Time | Job Name | Endpoint | Purpose |
 |------|----------|----------|---------|
 | 6:00 AM | Morning Generation | `morning_generate_http.php` | Generate AM session tasks for today |
+| 6:05 AM | Auto-Mark Absent (AM) | `auto_mark_absent_am_http.php` | Mark absent personnel who didn't time in for AM session |
 | 2:00 PM | Afternoon Generation | `afternoon_generate_http.php` | Generate PM session tasks for today |
+| 2:05 PM | Auto-Mark Absent (PM) | `auto_mark_absent_pm_http.php` | Mark absent personnel who didn't time in for PM session |
 
 ## Setup Instructions
 
@@ -43,6 +45,36 @@ This guide explains how to set up automated task and route generation using cron
    - **Schedule**:
      - Every day
      - At 2:00 PM (14:00)
+     - Timezone: **Asia/Manila (GMT+8)**
+   - **Notifications**:
+     - ✅ Enable failure notifications
+     - Email: your email
+3. Click **"Create cronjob"**
+
+### 4. Add Auto-Mark Absent AM Job (6:05 AM)
+
+1. Click **"Create cronjob"**
+2. Fill in the details:
+   - **Title**: `KolekTrash - Auto Mark Absent AM (6:05 AM)`
+   - **Address (URL)**: `https://kolektrash.systemproj.com/cron/auto_mark_absent_am_http.php`
+   - **Schedule**:
+     - Every day
+     - At 6:05 AM
+     - Timezone: **Asia/Manila (GMT+8)**
+   - **Notifications**:
+     - ✅ Enable failure notifications
+     - Email: your email
+3. Click **"Create cronjob"**
+
+### 5. Add Auto-Mark Absent PM Job (2:05 PM)
+
+1. Click **"Create cronjob"**
+2. Fill in the details:
+   - **Title**: `KolekTrash - Auto Mark Absent PM (2:05 PM)`
+   - **Address (URL)**: `https://kolektrash.systemproj.com/cron/auto_mark_absent_pm_http.php`
+   - **Schedule**:
+     - Every day
+     - At 2:05 PM (14:05)
      - Timezone: **Asia/Manila (GMT+8)**
    - **Notifications**:
      - ✅ Enable failure notifications

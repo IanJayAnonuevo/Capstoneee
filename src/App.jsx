@@ -16,6 +16,7 @@ import BarangayActivity from './components/admin/BarangayActivity'
 import BarangayActivityNew from './components/admin/BarangayActivityNew'
 import TaskManagement from './components/admin/TaskManagement'
 import TodaysTasks from './components/admin/TodaysTasks'
+import SpecialTasks from './components/admin/SpecialTasks'
 import PastTasks from './components/admin/PastTasks'
 import LandingPage from './components/landingpage/LandingPage'
 import Navbar from './components/landingpage/Navbar'
@@ -77,6 +78,7 @@ import ForemanHome from './components/foreman/ForemanHome'
 import ForemanAttendance from './components/foreman/ForemanAttendance'
 import ForemanSchedule from './components/foreman/ForemanSchedule'
 import ForemanTasks from './components/foreman/ForemanTasks'
+import SpecialPickupTasks from './components/foreman/SpecialPickupTasks'
 import ForemanTrucks from './components/foreman/ForemanTrucks'
 import ForemanSpecialPickup from './components/foreman/ForemanSpecialPickup'
 import ForemanIssues from './components/foreman/ForemanIssues'
@@ -339,6 +341,7 @@ function App() {
               <Route path="schedule" element={<ForemanSchedule />} />
               <Route path="tasks" element={<ForemanTasks />} />
               <Route path="tasks/today" element={<TodaysTasks />} />
+              <Route path="tasks/special-pickup" element={<SpecialPickupTasks />} />
               <Route path="tasks/past" element={<PastTasks />} />
               <Route path="tasks/manual" element={<TaskManagement />} />
               <Route path="trucks" element={<ForemanTrucks />} />

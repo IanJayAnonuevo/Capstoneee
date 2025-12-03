@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
 import { MdToday, MdHistory } from 'react-icons/md';
+import { FaTruckPickup } from 'react-icons/fa';
 
 export default function ForemanTasks() {
     const navigate = useNavigate();
@@ -12,6 +13,12 @@ export default function ForemanTasks() {
             description: "View and manage tasks for today",
             to: '/foreman/tasks/today',
             icon: MdToday
+        },
+        {
+            label: "Special Pickup Tasks",
+            description: "Manage one-time special pickup requests",
+            to: '/foreman/tasks/special-pickup',
+            icon: FaTruckPickup
         },
         {
             label: "Past Tasks",
