@@ -54,7 +54,6 @@ const EMERGENCY_TYPES = [
 
 const EMERGENCY_IMPACTS = [
   { value: 'delay', label: 'Delay', caption: 'Collection resumes after the issue is fixed' },
-  { value: 'cancel', label: 'Cancel', caption: 'Collection is cancelled for today' },
 ]
 
 const createEmergencyFormState = () => ({
@@ -97,6 +96,7 @@ export default function RouteRun() {
   const [emergencyForm, setEmergencyForm] = React.useState(() => createEmergencyFormState())
   const [emergencySubmitting, setEmergencySubmitting] = React.useState(false)
   const [emergencyError, setEmergencyError] = React.useState(null)
+  const [showEmergencySuccess, setShowEmergencySuccess] = React.useState(false)
   const emergencyFileInputRef = React.useRef(null)
 
   const MIN_INTERVAL_MS = 5000
@@ -752,7 +752,7 @@ export default function RouteRun() {
       if (data?.emergency) {
         setEmergencyState(data.emergency)
       }
-      alert('Emergency alert sent. Residents and officials have been notified.')
+      setShowEmergencySuccess(true)
     } catch (e) {
       setEmergencyError(e?.message || 'Failed to send emergency alert')
     } finally {
@@ -916,10 +916,14 @@ export default function RouteRun() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs tracking-wide transition ${emergencyActive ? 'bg-red-600 text-white border-red-600 shadow shadow-red-200/70 animate-pulse' : 'bg-white/25 text-red-600 border-white/50 hover:bg-white/40'}`}
+                className={`w-10 h-10 rounded-full border flex items-center justify-center text-xs tracking-wide transition ${emergencyActive
+                  ? 'bg-red-600 text-white border-red-600 shadow shadow-red-200/70 animate-pulse cursor-not-allowed opacity-75'
+                  : 'bg-white/25 text-red-600 border-white/50 hover:bg-white/40'
+                  }`}
                 aria-label={emergencyActive ? 'Emergency active' : 'Report emergency'}
-                title={emergencyActive ? 'Emergency active' : 'Report emergency'}
-                onClick={() => setShowEmergencyForm(true)}
+                title={emergencyActive ? 'Emergency already active - cannot report another' : 'Report emergency'}
+                onClick={() => !emergencyActive && setShowEmergencyForm(true)}
+                disabled={emergencyActive}
               >
                 ▲
               </button>
@@ -1063,33 +1067,35 @@ export default function RouteRun() {
       </div>
 
       {showEmergencyForm && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between border-b px-5 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-600">Emergency alert</p>
-                <p className="text-base font-semibold text-gray-900">Report truck emergency</p>
-                <p className="text-xs text-gray-500">Residents, barangay head, and foreman will be notified instantly.</p>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="bg-red-600 px-5 py-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-white/90">EMERGENCY ALERT</p>
+                  <p className="text-lg font-bold text-white mt-0.5">Report truck emergency</p>
+                  <p className="text-xs text-white/80 mt-1">Residents, barangay head, and foreman will be notified instantly.</p>
+                </div>
+                <button
+                  className="rounded-full p-1.5 text-white/80 hover:bg-white/20 transition"
+                  onClick={closeEmergencyForm}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100"
-                onClick={closeEmergencyForm}
-                aria-label="Close emergency modal"
-              >
-                ✕
-              </button>
             </div>
 
-            <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4 text-sm text-gray-700">
+            <div className="max-h-[65vh] overflow-y-auto px-5 py-5 space-y-5">
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Reason</p>
+                <p className="text-xs font-bold uppercase text-gray-600 mb-2.5">REASON</p>
                 <div className="grid grid-cols-2 gap-2">
                   {EMERGENCY_TYPES.map((option) => {
                     const isActive = emergencyForm.type === option.value
                     return (
                       <label
                         key={option.value}
-                        className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${isActive ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                        className={`cursor-pointer rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition ${isActive ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
                       >
                         <input
                           type="radio"
@@ -1107,14 +1113,17 @@ export default function RouteRun() {
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Impact</p>
-                <div className="grid grid-cols-2 gap-2">
+                <p className="text-xs font-bold uppercase text-gray-600 mb-2.5">IMPACT</p>
+                <div className="space-y-2">
                   {EMERGENCY_IMPACTS.map((option) => {
                     const isActive = emergencyForm.impact === option.value
                     return (
                       <label
                         key={option.value}
-                        className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${isActive ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                        className={`cursor-pointer rounded-lg border-2 px-4 py-3 block transition ${isActive
+                          ? 'border-yellow-500 bg-yellow-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                          }`}
                       >
                         <input
                           type="radio"
@@ -1124,8 +1133,12 @@ export default function RouteRun() {
                           onChange={() => updateEmergencyForm('impact', option.value)}
                           className="sr-only"
                         />
-                        <div className="font-semibold">{option.label}</div>
-                        <p className="text-[11px] text-gray-500">{option.caption}</p>
+                        <p className={`text-sm font-bold ${isActive ? 'text-yellow-700' : 'text-gray-900'}`}>
+                          {option.label}
+                        </p>
+                        <p className={`text-xs mt-0.5 ${isActive ? 'text-yellow-600' : 'text-gray-500'}`}>
+                          {option.caption}
+                        </p>
                       </label>
                     )
                   })}
@@ -1133,19 +1146,19 @@ export default function RouteRun() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">Notes</label>
+                <p className="text-xs font-bold uppercase text-gray-600 mb-2.5">NOTES</p>
                 <textarea
-                  className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  className="w-full rounded-lg border-2 border-gray-200 px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-red-500 focus:outline-none resize-none transition"
                   placeholder="Describe what happened and if assistance is needed."
                   rows={3}
                   value={emergencyForm.notes}
                   onChange={(e) => updateEmergencyForm('notes', e.target.value)}
                 />
-                <p className="mt-1 text-[11px] text-gray-500">Keep it short so barangay head and foreman can react quickly.</p>
+                <p className="text-xs text-gray-500 mt-1.5">Keep it short so barangay head and foreman can react quickly.</p>
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500 mb-2">Evidence (optional)</p>
+                <p className="text-xs font-bold uppercase text-gray-600 mb-2.5">EVIDENCE (OPTIONAL)</p>
                 <input
                   ref={emergencyFileInputRef}
                   id="emergency-evidence-input"
@@ -1156,20 +1169,20 @@ export default function RouteRun() {
                 />
                 <label
                   htmlFor="emergency-evidence-input"
-                  className="flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-3 py-3 text-xs font-semibold text-gray-600 hover:border-emerald-400 hover:text-emerald-600"
+                  className="flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-4 text-sm font-semibold text-gray-600 hover:border-red-400 hover:text-red-600 hover:bg-red-50/50 transition"
                 >
                   Upload photo or short video
                 </label>
                 {emergencyForm.file && (
-                  <div className="mt-2 flex items-center justify-between rounded border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                    <span className="truncate pr-2">{emergencyForm.file.name}</span>
-                    <button type="button" className="font-semibold text-red-600" onClick={clearEmergencyAttachment}>Remove</button>
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm">
+                    <span className="truncate pr-2 text-gray-700">{emergencyForm.file.name}</span>
+                    <button type="button" className="font-semibold text-red-600 hover:text-red-700" onClick={clearEmergencyAttachment}>Remove</button>
                   </div>
                 )}
               </div>
 
               {emergencyError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {emergencyError}
                 </div>
               )}
@@ -1179,9 +1192,9 @@ export default function RouteRun() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t px-5 py-4">
+            <div className="flex items-center gap-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
               <button
-                className="w-1/3 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                className="flex-1 rounded-lg border-2 border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition disabled:opacity-50"
                 onClick={closeEmergencyForm}
                 disabled={emergencySubmitting}
               >
@@ -1193,6 +1206,35 @@ export default function RouteRun() {
                 disabled={emergencySubmitting}
               >
                 {emergencySubmitting ? 'Sending…' : 'Send emergency alert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Success Modal */}
+      {showEmergencySuccess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-5 bg-green-600">
+              <div className="flex items-center gap-2">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-white font-bold text-lg">Emergency Alert Sent</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-800 text-base font-medium">
+                Residents and officials have been notified about the delay.
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setShowEmergencySuccess(false)}
+                className="px-6 py-2.5 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition-all"
+              >
+                OK
               </button>
             </div>
           </div>

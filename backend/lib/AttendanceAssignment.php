@@ -59,10 +59,16 @@ function getApprovedPersonnelBySession(PDO $db, string $date, string $session): 
 
 /**
  * Build frozen team snapshot for a session.
- * Supports minimal personnel: 1 driver + 1 collector (priority only)
- * or full personnel: 2 drivers + 2+ collectors (priority + clustered)
+ * Supports flexible team sizes based on available trucks:
+ * - 1 truck: 1 team with 1 driver + up to 4 collectors
+ * - 2 trucks: 2 teams, each with 1 driver + up to 4 collectors
+ * 
+ * @param array $drivers Available drivers (sorted by priority)
+ * @param array $collectors Available collectors (sorted by priority)
+ * @param int $truckCount Number of available trucks (1 or 2)
+ * @return array Team snapshot with drivers, collectors, and mode flags
  */
-function buildSessionSnapshot(array $drivers, array $collectors): array
+function buildSessionSnapshot(array $drivers, array $collectors, int $truckCount = 2): array
 {
     if (count($drivers) < 1) {
         throw new RuntimeException('Need at least 1 approved driver for this session.');
@@ -72,10 +78,15 @@ function buildSessionSnapshot(array $drivers, array $collectors): array
         throw new RuntimeException('Need at least 1 approved collector for this session.');
     }
 
+    // Limit to available trucks (max 2)
+    $effectiveTruckCount = min($truckCount, 2);
+    
+    // Assign drivers based on available trucks
     $priorityDriver = $drivers[0];
-    $clusteredDriver = isset($drivers[1]) ? $drivers[1] : null;
+    $clusteredDriver = ($effectiveTruckCount >= 2 && isset($drivers[1])) ? $drivers[1] : null;
 
-    [$priorityCollectors, $clusteredCollectors] = splitCollectorsForSession($collectors);
+    // Split collectors based on truck count and available personnel
+    [$priorityCollectors, $clusteredCollectors] = splitCollectorsForSession($collectors, $effectiveTruckCount, $clusteredDriver !== null);
 
     return [
         'drivers' => [
@@ -86,33 +97,51 @@ function buildSessionSnapshot(array $drivers, array $collectors): array
             'priority' => $priorityCollectors,
             'clustered' => $clusteredCollectors
         ],
-        'minimal_mode' => ($clusteredDriver === null || empty($clusteredCollectors))
+        'minimal_mode' => ($clusteredDriver === null || empty($clusteredCollectors)),
+        'truck_count' => $effectiveTruckCount
     ];
 }
 
 /**
- * Split collectors based on even/odd rule with max 4 per team when available.
- * If only 1 collector, assign to priority team only.
+ * Split collectors based on available trucks and drivers.
+ * - If only 1 truck/driver: assign all collectors (up to 4) to priority team
+ * - If 2 trucks/drivers: split collectors between teams (max 4 per team)
+ * 
+ * @param array $collectors Available collectors
+ * @param int $truckCount Number of available trucks
+ * @param bool $hasClusteredDriver Whether a second driver is available
+ * @return array [priorityCollectors, clusteredCollectors]
  */
-function splitCollectorsForSession(array $collectors): array
+function splitCollectorsForSession(array $collectors, int $truckCount = 2, bool $hasClusteredDriver = true): array
 {
     $total = count($collectors);
     $maxPerTeam = 4;
 
-    // Minimal mode: 1 collector goes to priority team
+    // If only 1 truck or no clustered driver, assign all to priority (up to max)
+    if ($truckCount === 1 || !$hasClusteredDriver) {
+        $priorityCount = min($maxPerTeam, $total);
+        return [array_slice($collectors, 0, $priorityCount), []];
+    }
+
+    // 2 trucks available: split collectors between teams
     if ($total === 1) {
+        // Only 1 collector: goes to priority team
         return [[$collectors[0]], []];
     }
 
+    // Distribute collectors between two teams
     if ($total % 2 === 0) {
+        // Even number: split evenly (max 4 per team)
         $evenShare = (int)($total / 2);
         $priorityCount = min($maxPerTeam, $evenShare);
         $clusteredCount = min($maxPerTeam, min($evenShare, $total - $priorityCount));
     } else {
+        // Odd number: priority gets one more (max 4 per team)
         $priorityCount = min($maxPerTeam, (int)ceil($total / 2));
         $clusteredCount = min($maxPerTeam, max(1, $total - $priorityCount));
     }
 
+    // Ensure we don't exceed total collectors
     if ($priorityCount + $clusteredCount > $total) {
         $clusteredCount = max(0, $total - $priorityCount);
     }

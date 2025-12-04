@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiBarChart2, FiClipboard } from 'react-icons/fi';
+import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiBarChart2, FiClipboard, FiEye } from 'react-icons/fi';
 import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson, MdQuestionAnswer } from 'react-icons/md';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -475,6 +475,7 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
     { label: 'Submit Report Issue', icon: <MdReport className="w-6 h-6" />, to: '/barangayhead/report', showLoading: true },
     { label: 'View Issue Status', icon: <FiClipboard className="w-6 h-6" />, to: '/barangayhead/issue-status', showLoading: true },
     { label: 'Submit Special Pick-up Request', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/pickup', showLoading: true },
+    { label: 'View Special Pick-up Request', icon: <FiEye className="w-6 h-6" />, to: '/barangayhead/view-pickup', showLoading: true },
     { label: 'View Collection Schedule', icon: <MdEvent className="w-6 h-6" />, to: '/barangayhead/schedule', showLoading: true },
     { label: 'Access IEC Materials', icon: <MdMenuBook className="w-6 h-6" />, to: '/barangayhead/iec', showLoading: true },
     { label: 'Feedback', icon: <FiMessageSquare className="w-6 h-6" />, to: '/barangayhead/feedback', showLoading: true },
@@ -509,6 +510,14 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
       icon: MdEvent,
       indicatorLabel: 'Submit Request',
       onClick: () => handleNavigation('/barangayhead/pickup', { closeMenu: false }),
+    },
+    {
+      id: 'view-pickup',
+      title: 'View Special Pick-up Request',
+      description: 'Track the status of your special pickup requests.',
+      icon: FiEye,
+      indicatorLabel: 'View Requests',
+      onClick: () => handleNavigation('/barangayhead/view-pickup', { closeMenu: false }),
     },
     {
       id: 'schedule',
@@ -657,8 +666,8 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                     <button
                       key={link.label}
                       className={`flex items-center w-full px-4 py-3 rounded-xl text-left transition-colors ${link.label === 'Logout'
-                          ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
-                          : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
+                        ? 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-100'
+                        : 'bg-green-50/80 hover:bg-green-100 text-green-900 border border-green-100'
                         } ${isActive ? 'border-2' : 'border'}`}
                       onClick={() => handleNavigation(link.to, {
                         skipLoading: link.showLoading === false,
@@ -852,8 +861,8 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
                 )}
                 <div
                   className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${message.type === 'user'
-                      ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
-                      : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
+                    ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
+                    : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                     }`}
                 >
                   {message.content}

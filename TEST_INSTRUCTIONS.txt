@@ -1,0 +1,21 @@
+Simple test: Just open this URL in your browser:
+
+http://localhost/kolektrash/backend/api/debug_task_generation.php
+
+This will show you the current team formation.
+
+For December 4, 2025, use these SQL commands in phpMyAdmin:
+
+```sql
+-- Scenario 2: 2 drivers, 3 collectors, 1 truck
+UPDATE truck SET status = 'maintenance' WHERE truck_id != 1;
+UPDATE truck SET status = 'available' WHERE truck_id = 1;
+
+UPDATE attendance 
+SET verification_status = 'verified' 
+WHERE attendance_date = '2025-12-04' 
+  AND session = 'AM' 
+  AND user_id IN (17, 94, 28, 29, 31);
+```
+
+Then run the debug URL again to see the team formation.

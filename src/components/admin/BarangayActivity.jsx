@@ -24,7 +24,7 @@ function Spinner() {
 
 export default function BarangayActivity() {
   console.log('BarangayActivity component rendering');
-  
+
   const [selectedBarangay, setSelectedBarangay] = useState('All');
   const [activityType, setActivityType] = useState('All');
   const [status, setStatus] = useState('All');
@@ -35,7 +35,6 @@ export default function BarangayActivity() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -214,7 +213,7 @@ export default function BarangayActivity() {
   // Filter data based on search and filters
   const filteredData = MOCK_BARANGAY_DATA.filter(barangay => {
     const matchesSearch = barangay.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         barangay.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
+      barangay.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBarangay = selectedBarangay === 'All' || barangay.name === selectedBarangay;
     const matchesActivity = activityType === 'All' || true; // Simplified for demo
     const matchesStatus = status === 'All' || barangay.status === status;
@@ -247,13 +246,6 @@ export default function BarangayActivity() {
     setSelectedBarangayData(null);
   }
 
-  function exportData() {
-    setShowExportModal(true);
-  }
-
-  function closeExportModal() {
-    setShowExportModal(false);
-  }
 
   function getNotificationIcon(type) {
     switch (type) {
@@ -328,17 +320,6 @@ export default function BarangayActivity() {
     setShowAdvisoryModal(true);
   }
 
-  function handleExportCSV() {
-    exportToCSV();
-  }
-
-  function handlePrint() {
-    setShowPrintConfirm(true);
-  }
-
-  function handleExportData() {
-    exportData();
-  }
 
   function handleNotice() {
     setSnackbar('Notice sent successfully!');
@@ -363,10 +344,6 @@ export default function BarangayActivity() {
     setShowPrintConfirm(false);
   }
 
-  function handleExportFormat(format) {
-    setSnackbar(`Data exported in ${format} format!`);
-    setShowExportModal(false);
-  }
 
   function handleActivityFormChange(e) {
     const { name, value } = e.target;
@@ -438,35 +415,23 @@ export default function BarangayActivity() {
 
       {/* Action Buttons - Minimal Design */}
       <div className="flex gap-3 my-3 flex-wrap justify-start">
-        <button 
+        <button
           onClick={handleAddActivity}
           className="px-4 py-2 bg-green-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-600"
         >
           Log New Activity
         </button>
-        <button 
+        <button
           onClick={handleSendAdvisory}
           className="px-4 py-2 bg-green-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-500"
         >
           Send Advisory
         </button>
-        <button 
-          onClick={handleExportCSV}
-          className="px-4 py-2 bg-green-400 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-300"
-        >
-          Export CSV
-        </button>
-        <button 
-          onClick={handlePrint}
+        <button
+          onClick={() => setShowPrintConfirm(true)}
           className="px-4 py-2 bg-amber-800 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-amber-700"
         >
           Print
-        </button>
-        <button 
-          onClick={handleExportData}
-          className="px-4 py-2 bg-purple-600 text-white border-none rounded-lg font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-purple-500"
-        >
-          Export Data
         </button>
       </div>
 
@@ -481,24 +446,24 @@ export default function BarangayActivity() {
             className="w-full px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none transition-all duration-200 focus:border-green-800"
           />
         </div>
-        <select 
-          value={selectedBarangay} 
-          onChange={e => setSelectedBarangay(e.target.value)} 
+        <select
+          value={selectedBarangay}
+          onChange={e => setSelectedBarangay(e.target.value)}
           className="flex-1 min-w-[150px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           <option value="All">All Barangays</option>
           {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
-        <select 
-          value={activityType} 
-          onChange={e => setActivityType(e.target.value)} 
+        <select
+          value={activityType}
+          onChange={e => setActivityType(e.target.value)}
           className="flex-1 min-w-[150px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           {ACTIVITY_TYPES.map(type => <option key={type}>{type}</option>)}
         </select>
-        <select 
-          value={status} 
-          onChange={e => setStatus(e.target.value)} 
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
           className="flex-1 min-w-[150px] px-3 py-2 rounded-md border border-green-200 text-sm bg-green-50 text-gray-800 outline-none cursor-pointer transition-all duration-200 focus:border-green-800"
         >
           {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
@@ -563,11 +528,10 @@ export default function BarangayActivity() {
                   </thead>
                   <tbody>
                     {currentData.map((barangay, idx) => (
-                      <tr 
-                        key={barangay.id} 
-                        className={`cursor-pointer border-b border-green-200 transition-all duration-200 ${
-                          idx % 2 === 0 ? 'bg-green-50' : 'hover:bg-green-50'
-                        }`}
+                      <tr
+                        key={barangay.id}
+                        className={`cursor-pointer border-b border-green-200 transition-all duration-200 ${idx % 2 === 0 ? 'bg-green-50' : 'hover:bg-green-50'
+                          }`}
                       >
                         <td className="p-2 text-gray-800 font-medium">{barangay.name}</td>
                         <td className="p-2 text-gray-600">{barangay.lastCollection}</td>
@@ -575,29 +539,28 @@ export default function BarangayActivity() {
                         <td className="p-2 text-gray-800">{barangay.segregationRate}%</td>
                         <td className="p-2 text-gray-800">{barangay.complaints}</td>
                         <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            barangay.status === "Active" ? "bg-green-100 text-green-700" :
-                            barangay.status === "Warning" ? "bg-yellow-100 text-yellow-700" :
-                            "bg-red-100 text-red-700"
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${barangay.status === "Active" ? "bg-green-100 text-green-700" :
+                              barangay.status === "Warning" ? "bg-yellow-100 text-yellow-700" :
+                                "bg-red-100 text-red-700"
+                            }`}>
                             {barangay.status}
                           </span>
                         </td>
                         <td className="p-2">
                           <div className="flex gap-1 flex-wrap">
-                            <button 
+                            <button
                               onClick={() => openModal(barangay)}
                               className="px-2 py-1 bg-green-600 text-white border-none rounded text-xs cursor-pointer transition-all duration-200 hover:bg-green-700"
                             >
                               View
                             </button>
-                            <button 
+                            <button
                               onClick={handleNotice}
                               className="px-2 py-1 bg-blue-600 text-white border-none rounded text-xs cursor-pointer transition-all duration-200 hover:bg-blue-700"
                             >
                               Notice
                             </button>
-                            <button 
+                            <button
                               onClick={handleReport}
                               className="px-2 py-1 bg-purple-600 text-white border-none rounded text-xs cursor-pointer transition-all duration-200 hover:bg-purple-700"
                             >
@@ -622,40 +585,37 @@ export default function BarangayActivity() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="pt-4 border-t border-green-200 flex justify-center items-center gap-2 flex-wrap">
-                <button 
+                <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${
-                    currentPage === 1 
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                  className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer'
-                  }`}
+                    }`}
                 >
                   Previous
                 </button>
-                
+
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button 
+                  <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${
-                      currentPage === page 
-                        ? 'bg-green-800 text-white border-green-800' 
+                    className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${currentPage === page
+                        ? 'bg-green-800 text-white border-green-800'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
                 ))}
-                
-                <button 
+
+                <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${
-                    currentPage === totalPages 
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                  className={`px-3 py-2 rounded border text-xs transition-all duration-200 ${currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                       : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer'
-                  }`}
+                    }`}
                 >
                   Next
                 </button>

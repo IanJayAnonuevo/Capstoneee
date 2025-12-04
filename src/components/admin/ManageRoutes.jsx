@@ -217,34 +217,6 @@ const ManageRoutes = () => {
                     >
                         Print
                     </button>
-
-                    <button
-                        onClick={() => {
-                            const csvContent = [
-                                ['Route ID', 'Date', 'Barangays', 'Team', 'Time', 'Stops', 'Status'],
-                                ...routes.map(route => [
-                                    route.id,
-                                    formatDate(route.date),
-                                    route.barangays_passed || route.barangay_name,
-                                    `Team ${route.team_id}`,
-                                    `${route.start_time?.substring(0, 5)} - ${route.end_time?.substring(0, 5)}`,
-                                    `${route.stop_count} stops`,
-                                    route.status.replace('_', ' ')
-                                ])
-                            ].map(row => row.join(',')).join('\n');
-
-                            const blob = new Blob([csvContent], { type: 'text/csv' });
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `routes_${filters.date}.csv`;
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                        }}
-                        className="px-4 py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-all shadow-sm hover:shadow-md active:scale-95"
-                    >
-                        Export CSV
-                    </button>
                 </div>
             </div>
 

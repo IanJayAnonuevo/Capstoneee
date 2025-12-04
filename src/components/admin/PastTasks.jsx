@@ -188,31 +188,6 @@ export default function PastTasks() {
         window.print();
     };
 
-    const handleExport = () => {
-        const headers = ['Name of Worker', 'Designation', 'AM Status', 'PM Status'];
-        const rows = workerList.map(worker => [
-            worker.name,
-            worker.designation,
-            worker.amStatus,
-            worker.pmStatus
-        ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `past_tasks_${selectedDate}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     // Get today's date for max attribute
     const today = new Date().toISOString().split('T')[0];
 
@@ -458,12 +433,6 @@ export default function PastTasks() {
                         className="bg-emerald-600 text-white font-bold py-2 px-8 rounded-full hover:bg-emerald-700 transition shadow-sm hover:shadow-md"
                     >
                         Print
-                    </button>
-                    <button
-                        onClick={handleExport}
-                        className="bg-emerald-600 text-white font-bold py-2 px-8 rounded-full hover:bg-emerald-700 transition shadow-sm hover:shadow-md"
-                    >
-                        Export
                     </button>
                 </div>
             </div>

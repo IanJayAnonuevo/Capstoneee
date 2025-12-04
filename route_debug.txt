@@ -1,0 +1,498 @@
+=== Route Generation Debug ===
+Date: 2025-12-01
+Session: AM
+Barangay count: 6
+Collection points count: 18
+Barangays: [
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    },
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    },
+    {
+        "barangay_id": "20-IMPG",
+        "barangay_name": "Impig"
+    },
+    {
+        "barangay_id": "42-TR",
+        "barangay_name": "Tara"
+    }
+]
+Collection points: [
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 20,
+        "barangay_id": "20-IMPG",
+        "location_name": "Impig CP",
+        "latitude": "13.78860000",
+        "longitude": "122.98550000",
+        "barangay_name": "Impig"
+    },
+    {
+        "point_id": 42,
+        "barangay_id": "42-TR",
+        "location_name": "Tara CP",
+        "latitude": "13.74760000",
+        "longitude": "122.97380000",
+        "barangay_name": "Tara"
+    }
+]
+
+=== Route Generation Debug ===
+Date: 2025-12-01
+Session: PM
+Barangay count: 4
+Collection points count: 16
+Barangays: [
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    },
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    }
+]
+Collection points: [
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    }
+]
+
+=== Route Generation Debug ===
+Date: 2025-12-04
+Session: AM
+Barangay count: 5
+Collection points count: 17
+Barangays: [
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    },
+    {
+        "barangay_id": "31-NRTHC",
+        "barangay_name": "North Centro"
+    },
+    {
+        "barangay_id": "39-STHCN",
+        "barangay_name": "South Centro"
+    },
+    {
+        "barangay_id": "19-GNGN",
+        "barangay_name": "Gaongan"
+    }
+]
+Collection points: [
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 31,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP",
+        "latitude": "13.77010000",
+        "longitude": "122.97620000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 47,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - A",
+        "latitude": "13.77050000",
+        "longitude": "122.97670000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 48,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - B",
+        "latitude": "13.76980000",
+        "longitude": "122.97580000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 49,
+        "barangay_id": "31-NRTHC",
+        "location_name": "North Centro CP - C",
+        "latitude": "13.77030000",
+        "longitude": "122.97540000",
+        "barangay_name": "North Centro"
+    },
+    {
+        "point_id": 39,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP",
+        "latitude": "13.76440000",
+        "longitude": "122.97600000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 50,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - A",
+        "latitude": "13.76480000",
+        "longitude": "122.97640000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 51,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - B",
+        "latitude": "13.76400000",
+        "longitude": "122.97560000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 52,
+        "barangay_id": "39-STHCN",
+        "location_name": "South Centro CP - C",
+        "latitude": "13.76370000",
+        "longitude": "122.97630000",
+        "barangay_name": "South Centro"
+    },
+    {
+        "point_id": 19,
+        "barangay_id": "19-GNGN",
+        "location_name": "Gaongan CP",
+        "latitude": "13.76020000",
+        "longitude": "122.96680000",
+        "barangay_name": "Gaongan"
+    }
+]
+

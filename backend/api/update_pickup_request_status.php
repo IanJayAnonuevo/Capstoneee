@@ -43,6 +43,7 @@ if (!isset($input['request_id']) || !isset($input['status'])) {
 $request_id = $input['request_id'];
 $status = $input['status'];
 $scheduled_date = $input['scheduled_date'] ?? null;
+$scheduled_time = $input['scheduled_time'] ?? null;
 $admin_remarks = $input['admin_remarks'] ?? null;
 $declined_reason = $input['declined_reason'] ?? null;
 $processed_by = $input['processed_by'] ?? null;
@@ -120,13 +121,13 @@ try {
     // Execute the query
     if ($stmt->execute()) {
         if ($stmt->rowCount() > 0) {
-            // If status is 'scheduled' and assignment data is provided, create schedule and team
-            if ($status === 'scheduled' && isset($input['assignment'])) {
+            // If status is 'scheduled', create a simple collection_schedule entry
+            // Team assignment will be handled by auto-generation
+            if ($status === 'scheduled' && $scheduled_date && $scheduled_time) {
                 try {
-                    $assignment = $input['assignment'];
-                    error_log('Processing assignment data: ' . print_r($assignment, true));
+                    error_log('Creating collection schedule for special pickup...');
                     
-                    // Get request details for notifications
+                    // Get request details
                     $requestQuery = $db->prepare("
                         SELECT pr.*, u.user_id, b.barangay_id
                         FROM pickup_requests pr
@@ -136,117 +137,59 @@ try {
                     ");
                     $requestQuery->execute([':request_id' => $request_id]);
                     $requestDetails = $requestQuery->fetch(PDO::FETCH_ASSOC);
-                    error_log('Request details: ' . print_r($requestDetails, true));
                     
-                    // Create collection schedule entry for special pickup
-                    error_log('Checking conditions - driver_id: ' . ($assignment['driver_id'] ?? 'NOT SET') . ', truck_id: ' . ($assignment['truck_id'] ?? 'NOT SET') . ', requestDetails: ' . ($requestDetails ? 'EXISTS' : 'NULL'));
-                    
-                    if (isset($assignment['driver_id']) && isset($assignment['truck_id']) && $requestDetails) {
-                        error_log('Creating collection schedule...');
-                        // Insert into collection_schedule
+                    if ($requestDetails && $requestDetails['barangay_id']) {
+                        // Determine session based on time
+                        $hour = (int)date('H', strtotime($scheduled_time));
+                        $session = $hour < 12 ? 'AM' : 'PM';
+                        
+                        // Insert into collection_schedule (without team assignment)
                         $scheduleQuery = $db->prepare("
                             INSERT INTO collection_schedule 
-                            (barangay_id, scheduled_date, start_time, schedule_type, session, special_pickup_id)
+                            (barangay_id, scheduled_date, start_time, schedule_type, session, special_pickup_id, status)
                             VALUES 
-                            (:barangay_id, :scheduled_date, :start_time, 'special_pickup', 'special', :special_pickup_id)
+                            (:barangay_id, :scheduled_date, :start_time, 'special_pickup', :session, :special_pickup_id, 'pending')
                         ");
                         $scheduleQuery->execute([
-                            ':barangay_id' => $requestDetails['barangay_id'] ?? null,
-                            ':scheduled_date' => $assignment['schedule_date'],
-                            ':start_time' => $assignment['schedule_time'],
+                            ':barangay_id' => $requestDetails['barangay_id'],
+                            ':scheduled_date' => $scheduled_date,
+                            ':start_time' => $scheduled_time,
+                            ':session' => $session,
                             ':special_pickup_id' => $request_id
                         ]);
                         
                         $scheduleId = $db->lastInsertId();
-                        error_log('Created schedule ID: ' . $scheduleId);
+                        error_log('Created schedule ID: ' . $scheduleId . ' for special pickup');
                         
-                        // Create collection team
-                        error_log('Creating collection team...');
-                        $teamQuery = $db->prepare("
-                            INSERT INTO collection_team 
-                            (schedule_id, truck_id, driver_id, status)
-                            VALUES 
-                            (:schedule_id, :truck_id, :driver_id, 'pending')
-                        ");
-                        $teamQuery->execute([
-                            ':schedule_id' => $scheduleId,
-                            ':truck_id' => $assignment['truck_id'],
-                            ':driver_id' => $assignment['driver_id']
-                        ]);
-                        
-                        $teamId = $db->lastInsertId();
-                        error_log('Created team ID: ' . $teamId);
-                        
-                        // Send notification to driver
-                        error_log('Sending notification to driver ID: ' . $assignment['driver_id']);
-                        $driverMessage = 'You have been assigned to a special pickup at ' . $requestDetails['barangay'] . ' on ' . date('M d, Y', strtotime($assignment['schedule_date'])) . ' at ' . date('g:i A', strtotime($assignment['schedule_time']));
-                        $notifQuery = $db->prepare("
-                            INSERT INTO notification 
-                            (recipient_id, message, response_status)
-                            VALUES 
-                            (:recipient_id, :message, 'unread')
-                        ");
-                        $notifQuery->execute([
-                            ':recipient_id' => $assignment['driver_id'],
-                            ':message' => $driverMessage
-                        ]);
-                        error_log('Driver notification sent');
-                        
-                        // Add collectors to team
-                        if (isset($assignment['collector_ids']) && is_array($assignment['collector_ids'])) {
-                            error_log('Adding ' . count($assignment['collector_ids']) . ' collectors...');
-                            foreach ($assignment['collector_ids'] as $collectorId) {
-                                $memberQuery = $db->prepare("
-                                    INSERT INTO collection_team_member 
-                                    (team_id, collector_id, response_status)
-                                    VALUES 
-                                    (:team_id, :collector_id, 'pending')
-                                ");
-                                $memberQuery->execute([
-                                    ':team_id' => $teamId,
-                                    ':collector_id' => $collectorId
-                                ]);
-                                
-                                // Send notification to collector
-                                $collectorMessage = 'You have been assigned to a special pickup at ' . $requestDetails['barangay'] . ' on ' . date('M d, Y', strtotime($assignment['schedule_date'])) . ' at ' . date('g:i A', strtotime($assignment['schedule_time']));
-                                $collectorNotifQuery = $db->prepare("
-                                    INSERT INTO notification 
-                                    (recipient_id, message, response_status)
-                                    VALUES 
-                                    (:recipient_id, :message, 'unread')
-                                ");
-                                $collectorNotifQuery->execute([
-                                    ':recipient_id' => $collectorId,
-                                    ':message' => $collectorMessage
-                                ]);
-                                error_log('Collector notification sent to ID: ' . $collectorId);
-                            }
+                        // Send notification to requester only
+                        if ($requestDetails['user_id']) {
+                            $requesterMessage = json_encode([
+                                'type' => 'special_pickup_scheduled',
+                                'barangay' => $requestDetails['barangay'],
+                                'date' => $scheduled_date,
+                                'time' => $scheduled_time,
+                                'message' => 'Your special pickup request has been scheduled for ' . date('M d, Y', strtotime($scheduled_date)) . ' at ' . date('g:i A', strtotime($scheduled_time)) . '. A team will be automatically assigned.'
+                            ]);
+                            
+                            $requesterNotifQuery = $db->prepare("
+                                INSERT INTO notification 
+                                (recipient_id, message, response_status)
+                                VALUES 
+                                (:recipient_id, :message, 'unread')
+                            ");
+                            $requesterNotifQuery->execute([
+                                ':recipient_id' => $requestDetails['user_id'],
+                                ':message' => $requesterMessage
+                            ]);
+                            error_log('Requester notification sent');
                         }
                     }
                     
-                    // Send notification to requester
-                    if ($requestDetails && $requestDetails['user_id']) {
-                        error_log('Sending notification to requester ID: ' . $requestDetails['user_id']);
-                        $requesterMessage = 'Your special pickup request has been scheduled for ' . date('M d, Y', strtotime($assignment['schedule_date'])) . ' at ' . date('g:i A', strtotime($assignment['schedule_time']));
-                        $requesterNotifQuery = $db->prepare("
-                            INSERT INTO notification 
-                            (recipient_id, message, response_status)
-                            VALUES 
-                            (:recipient_id, :message, 'unread')
-                        ");
-                        $requesterNotifQuery->execute([
-                            ':recipient_id' => $requestDetails['user_id'],
-                            ':message' => $requesterMessage
-                        ]);
-                        error_log('Requester notification sent');
-                    }
-                    
-                    error_log('Assignment processing completed successfully');
-                } catch (Exception $assignmentError) {
-                    error_log('ERROR in assignment processing: ' . $assignmentError->getMessage());
-                    error_log('Stack trace: ' . $assignmentError->getTraceAsString());
+                    error_log('Schedule creation completed successfully');
+                } catch (Exception $scheduleError) {
+                    error_log('ERROR in schedule creation: ' . $scheduleError->getMessage());
+                    error_log('Stack trace: ' . $scheduleError->getTraceAsString());
                     // Don't fail the whole request, just log the error
-                    // The status update already succeeded
                 }
             }
             

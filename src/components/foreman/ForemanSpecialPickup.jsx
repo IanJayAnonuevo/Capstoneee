@@ -4,7 +4,6 @@ import { IoChevronBack } from 'react-icons/io5';
 import { FiSearch, FiRefreshCw, FiUser, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiX, FiAlertCircle, FiPhone, FiTrash2, FiMessageSquare } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import Skeleton from '../shared/Skeleton';
-import ScheduleAssignmentModal from './ScheduleAssignmentModal';
 
 export default function ForemanSpecialPickup() {
   const navigate = useNavigate();
@@ -18,6 +17,8 @@ export default function ForemanSpecialPickup() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [requestToSchedule, setRequestToSchedule] = useState(null);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('09:00');
 
   const fetchData = async () => {
     try {
@@ -70,13 +71,45 @@ export default function ForemanSpecialPickup() {
 
   const handleSchedule = (request) => {
     setRequestToSchedule(request);
+    // Set default date to preferred date if available
+    if (request.pickup_date) {
+      setScheduleDate(request.pickup_date);
+    }
     setShowScheduleModal(true);
   };
 
-  const handleScheduleSuccess = () => {
-    // Refresh the requests list
-    fetchData();
-    setShowModal(false);
+  const handleScheduleSubmit = async () => {
+    if (!scheduleDate || !scheduleTime) {
+      alert('Please select both date and time');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const response = await authService.updatePickupRequestStatus(
+        requestToSchedule.id || requestToSchedule.request_id,
+        'scheduled',
+        {
+          scheduled_date: scheduleDate,
+          scheduled_time: scheduleTime
+        }
+      );
+
+      if (response.status === 'success') {
+        // Close modals
+        setShowScheduleModal(false);
+        setShowModal(false);
+        // Redirect to calendar
+        navigate('/foreman/schedule');
+      } else {
+        alert('Failed to schedule: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error scheduling:', error);
+      alert('Failed to schedule request.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleDecline = async (request) => {
@@ -379,16 +412,85 @@ export default function ForemanSpecialPickup() {
 
       {showModal && <RequestModal />}
 
-      {/* Schedule Assignment Modal */}
-      {showScheduleModal && (
-        <ScheduleAssignmentModal
-          request={requestToSchedule}
-          onClose={() => {
-            setShowScheduleModal(false);
-            setRequestToSchedule(null);
-          }}
-          onSuccess={handleScheduleSuccess}
-        />
+      {/* Simple Schedule Modal */}
+      {showScheduleModal && requestToSchedule && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowScheduleModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Schedule Special Pickup</h3>
+                  <p className="text-sm text-gray-500 mt-1">{requestToSchedule.barangay} - {requestToSchedule.requester_name}</p>
+                </div>
+                <button onClick={() => setShowScheduleModal(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                  <FiX className="w-6 h-6 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Date Input */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FiCalendar className="w-4 h-4 text-green-600" />
+                    Schedule Date
+                  </label>
+                  <input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Time Input */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FiClock className="w-4 h-4 text-green-600" />
+                    Schedule Time
+                  </label>
+                  <input
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                  <div className="flex gap-3">
+                    <FiAlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-900 font-medium">Auto-Assignment</p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        This pickup will be automatically assigned to the priority team working on the selected date and time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScheduleSubmit}
+                  disabled={actionLoading || !scheduleDate || !scheduleTime}
+                  className="flex-1 py-3 px-4 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? 'Scheduling...' : 'Schedule & Assign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

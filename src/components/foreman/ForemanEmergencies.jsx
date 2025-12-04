@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoChevronBack } from 'react-icons/io5';
-import { FiClock, FiCheckCircle, FiAlertTriangle, FiFilter, FiRefreshCw, FiImage, FiCalendar, FiUser, FiMapPin, FiSearch, FiX, FiTruck, FiAlertCircle } from 'react-icons/fi';
+import { FiClock, FiCheckCircle, FiAlertTriangle, FiFilter, FiRefreshCw, FiImage, FiCalendar, FiUser, FiMapPin, FiSearch, FiX, FiTruck, FiAlertCircle, FiEye } from 'react-icons/fi';
 import { MdWarning, MdLocalShipping } from 'react-icons/md';
 import axios from 'axios';
 import { buildApiUrl } from '../../config/api';
@@ -38,9 +38,8 @@ const EMERGENCY_TYPES = [
 ];
 
 const FOREMAN_ACTIONS = [
-    { value: 'acknowledged', label: 'Acknowledged', description: 'Noted and monitoring the situation' },
     { value: 'resolved', label: 'Resolved', description: 'Issue has been fixed, collection resumed' },
-    { value: 'escalated', label: 'Escalated', description: 'Requires higher-level intervention' },
+    { value: 'cancelled', label: 'Cancelled', description: 'Collection is cancelled for today' },
 ];
 
 export default function ForemanEmergencies() {
@@ -61,6 +60,7 @@ export default function ForemanEmergencies() {
         notes: ''
     });
     const [userData, setUserData] = useState(null);
+    const [successModal, setSuccessModal] = useState({ show: false, action: '', message: '' });
 
     const backendBaseUrl = API_BASE_URL.replace(/\/api\/?$/, '/');
 
@@ -173,9 +173,14 @@ export default function ForemanEmergencies() {
             if (response.data.success) {
                 setShowResolveModal(false);
                 setSelectedEmergency(null);
+                const actionText = resolveForm.action === 'cancelled' ? 'cancelled' : 'resolved';
+                setSuccessModal({
+                    show: true,
+                    action: actionText,
+                    message: `Emergency ${actionText} successfully!`
+                });
                 setResolveForm({ action: 'resolved', notes: '' });
                 await fetchEmergencies();
-                alert('Emergency ' + resolveForm.action + ' successfully!');
             } else {
                 setError(response.data.message || 'Failed to resolve emergency');
             }
@@ -475,41 +480,39 @@ export default function ForemanEmergencies() {
                 </div>
 
                 {/* Filters */}
-                <div className="space-y-2">
-                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex gap-2">
                         {['all', 'active', 'resolved'].map(status => (
                             <button
                                 key={status}
                                 onClick={() => setFilterStatus(status)}
-                                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filterStatus === status
-                                        ? 'bg-green-600 text-white shadow-md'
-                                        : 'bg-white border border-gray-200 text-gray-600'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === status
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                                     }`}
                             >
                                 {status.charAt(0).toUpperCase() + status.slice(1)}
                             </button>
                         ))}
                     </div>
-                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                        <select
-                            value={filterImpact}
-                            onChange={(e) => setFilterImpact(e.target.value)}
-                            className="px-3 py-1.5 rounded-lg text-sm border border-gray-200 bg-white"
-                        >
-                            <option value="all">All Impacts</option>
-                            <option value="delay">Delay</option>
-                            <option value="cancel">Cancel</option>
-                        </select>
-                        <select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className="px-3 py-1.5 rounded-lg text-sm border border-gray-200 bg-white"
-                        >
-                            {EMERGENCY_TYPES.map(type => (
-                                <option key={type.value} value={type.value}>{type.label}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <select
+                        value={filterImpact}
+                        onChange={(e) => setFilterImpact(e.target.value)}
+                        className="px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    >
+                        <option value="all">All Impacts</option>
+                        <option value="delay">Delay</option>
+                        <option value="cancel">Cancel</option>
+                    </select>
+                    <select
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                        className="px-3 py-2 rounded-lg text-sm border border-gray-300 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    >
+                        {EMERGENCY_TYPES.map(type => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -545,64 +548,44 @@ export default function ForemanEmergencies() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-3">
                         {emergencies.map((emergency) => {
                             const statusInfo = getStatusBadge(emergency);
                             const impactInfo = getImpactBadge(emergency.impact);
                             const StatusIcon = statusInfo.icon;
 
                             return (
-                                <div key={emergency.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-10 h-10 rounded-full ${emergency.status === 'active' ? 'bg-red-100' : 'bg-green-100'} flex items-center justify-center`}>
+                                <div key={emergency.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow">
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between gap-4 mb-3">
+                                        <div className="flex items-start gap-3 flex-1">
+                                            {/* Icon */}
+                                            <div className={`w-12 h-12 rounded-lg ${emergency.status === 'active' ? 'bg-red-50' : 'bg-green-50'} flex items-center justify-center flex-shrink-0`}>
                                                 <MdWarning className={`w-6 h-6 ${emergency.status === 'active' ? 'text-red-600' : 'text-green-600'}`} />
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-gray-900">{emergency.emergency_type}</p>
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${impactInfo.bgColor} ${impactInfo.color}`}>
-                                                    {impactInfo.label}
-                                                </span>
+
+                                            {/* Title */}
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-base font-bold text-gray-900">{emergency.emergency_type}</h3>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${impactInfo.bgColor} ${impactInfo.color}`}>
+                                                        {impactInfo.label}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
-                                            <StatusIcon className="w-3 h-3 mr-1" />
-                                            {statusInfo.label}
-                                        </span>
-                                    </div>
 
-                                    <div className="mb-3 flex-1 space-y-1">
-                                        <div className="flex items-center text-sm text-gray-600">
-                                            <FiTruck className="w-3 h-3 mr-1.5" />
-                                            {emergency.route_name}
-                                        </div>
-                                        <div className="flex items-center text-sm text-gray-600">
-                                            <FiMapPin className="w-3 h-3 mr-1.5" />
-                                            {emergency.barangay_name}
-                                        </div>
-                                        <div className="flex items-center text-sm text-gray-600">
-                                            <FiUser className="w-3 h-3 mr-1.5" />
-                                            {emergency.driver_name}
-                                        </div>
-                                        {emergency.notes && (
-                                            <p className="text-sm text-gray-500 line-clamp-2 mt-2">{emergency.notes}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-                                        <span className="text-xs text-gray-400 flex items-center">
-                                            <FiCalendar className="w-3 h-3 mr-1" />
-                                            {formatDate(emergency.reported_at)}
-                                        </span>
-                                        <div className="flex gap-2">
+                                        {/* Actions */}
+                                        <div className="flex gap-2 flex-shrink-0">
                                             <button
                                                 onClick={() => {
                                                     setSelectedEmergency(emergency);
                                                     setShowDetailModal(true);
                                                 }}
-                                                className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                                                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                                title="View details"
                                             >
-                                                View
+                                                <FiEye className="w-4 h-4" />
                                             </button>
                                             {emergency.status === 'active' && (
                                                 <button
@@ -610,12 +593,41 @@ export default function ForemanEmergencies() {
                                                         setSelectedEmergency(emergency);
                                                         setShowResolveModal(true);
                                                     }}
-                                                    className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+                                                    className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                                                    title="Resolve emergency"
                                                 >
-                                                    Resolve
+                                                    <FiCheckCircle className="w-4 h-4" />
                                                 </button>
                                             )}
                                         </div>
+                                    </div>
+
+                                    {/* Details Grid */}
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <FiTruck className="w-4 h-4 text-gray-400" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs text-gray-500 font-medium">Route</p>
+                                                <p className="text-sm text-gray-900 font-medium truncate">{emergency.route_name}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <FiUser className="w-4 h-4 text-gray-400" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs text-gray-500 font-medium">Driver</p>
+                                                <p className="text-sm text-gray-900 font-medium truncate">{emergency.driver_name}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {emergency.notes && (
+                                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{emergency.notes}</p>
+                                    )}
+
+                                    <div className="flex items-center text-xs text-gray-400 pt-3 border-t">
+                                        <FiCalendar className="w-3 h-3 mr-1" />
+                                        {formatDate(emergency.reported_at)}
                                     </div>
                                 </div>
                             );
@@ -626,6 +638,35 @@ export default function ForemanEmergencies() {
 
             {showDetailModal && <EmergencyDetailModal />}
             {showResolveModal && <ResolveModal />}
+
+            {/* Success Modal */}
+            {successModal.show && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className={`p-5 ${successModal.action === 'cancelled' ? 'bg-red-600' : 'bg-green-600'}`}>
+                            <div className="flex items-center gap-2">
+                                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <h3 className="text-white font-bold text-lg">
+                                    {successModal.action === 'cancelled' ? 'Emergency Cancelled' : 'Emergency Resolved'}
+                                </h3>
+                            </div>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-gray-800 text-base font-medium">{successModal.message}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                            <button
+                                onClick={() => setSuccessModal({ show: false, action: '', message: '' })}
+                                className={`px-6 py-2.5 rounded-lg font-semibold text-white transition-all ${successModal.action === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

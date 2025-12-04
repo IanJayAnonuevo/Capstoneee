@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Flexible Team Size</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #059669;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #047857;
+        }
+
+        button.secondary {
+            background: #6b7280;
+        }
+
+        button.secondary:hover {
+            background: #4b5563;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .result {
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #059669;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Flexible Team Size Testing</h1>
+
+        <div class="test-section">
+            <div id="tasks-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Setup Test Scenarios</h2>
+            <p>Quick SQL commands to set up different test scenarios</p>
+            <button onclick="showScenario1()">Scenario 1: 2D, 2C, 1T</button>
+            <button onclick="showScenario2()">Scenario 2: 2D, 3C, 1T</button>
+            <button onclick="showScenario3()">Scenario 3: 2D, 8C, 2T</button>
+            <div id="scenario-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/kolektrash/backend/api';
+
+        async function checkTeamFormation() {
+            const resultDiv = document.getElementById('debug-result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/debug_task_generation.php`);
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Team Formation Successful</h3>
+                            <p><strong>Trucks Available:</strong> ${data.checks.snapshot.truck_count}</p>
+                            <p><strong>Drivers:</strong> ${data.checks.personnel.drivers_count}</p>
+                            <p><strong>Collectors:</strong> ${data.checks.personnel.collectors_count}</p>
+                            
+                            <h4>Priority Team:</h4>
+                            <p>Driver: ${data.checks.snapshot.priority_driver}</p>
+                            <p>Collectors (${data.checks.snapshot.priority_collectors_count}): ${data.checks.snapshot.priority_collectors.join(', ')}</p>
+                            
+                            <h4>Clustered Team:</h4>
+                            <p>Driver: ${data.checks.snapshot.clustered_driver || 'None'}</p>
+                            <p>Collectors (${data.checks.snapshot.clustered_collectors_count}): ${data.checks.snapshot.clustered_collectors.join(', ') || 'None'}</p>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Tasks Generated Successfully</h3>
+                            <p><strong>Total Generated:</strong> ${tasks.total_generated || 0}</p>
+                            <p><strong>Trucks Available:</strong> ${tasks.trucks_available || 0}</p>
+                            <p><strong>Skipped (Duplicates):</strong> ${tasks.skipped_duplicates || 0}</p>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        async function viewTasks() {
+            const resultDiv = document.getElementById('tasks-result');
+            resultDiv.innerHTML = '<p>Loading tasks...</p>';
+
+            try {
+                // This would need a proper API endpoint to fetch tasks
+                // For now, just show a message
+                resultDiv.innerHTML = `
+                    <p>To view tasks, go to:</p>
+                    <ul>
+                        <li><a href="http://localhost:5173/admin/task-management/today" target="_blank">Today's Tasks (Admin)</a></li>
+                        <li>Or check the database: <code>SELECT * FROM collection_team WHERE session = 'AM'</code></li>
+                    </ul>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Flexible Team Size</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #059669;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #047857;
+        }
+
+        button.secondary {
+            background: #6b7280;
+        }
+
+        button.secondary:hover {
+            background: #4b5563;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .result {
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #059669;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Flexible Team Size Testing</h1>
+
+        <div class="test-section">
+            <div id="tasks-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Setup Test Scenarios</h2>
+            <p>Quick SQL commands to set up different test scenarios</p>
+            <button onclick="showScenario1()">Scenario 1: 2D, 2C, 1T</button>
+            <button onclick="showScenario2()">Scenario 2: 2D, 3C, 1T</button>
+            <button onclick="showScenario3()">Scenario 3: 2D, 8C, 2T</button>
+            <div id="scenario-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/kolektrash/backend/api';
+
+        async function checkTeamFormation() {
+            const resultDiv = document.getElementById('debug-result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+
+            try {
+                const response = await fetch(`${ API_BASE }/debug_task_generation.php`);
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Team Formation Successful</h3>
+                            <p><strong>Trucks Available:</strong> ${data.checks.snapshot.truck_count}</p>
+                            <p><strong>Drivers:</strong> ${data.checks.personnel.drivers_count}</p>
+                            <p><strong>Collectors:</strong> ${data.checks.personnel.collectors_count}</p>
+                            
+                            <h4>Priority Team:</h4>
+                            <p>Driver: ${data.checks.snapshot.priority_driver}</p>
+                            <p>Collectors (${data.checks.snapshot.priority_collectors_count}): ${data.checks.snapshot.priority_collectors.join(', ')}</p>
+                            
+                            <h4>Clustered Team:</h4>
+                            <p>Driver: ${data.checks.snapshot.clustered_driver || 'None'}</p>
+                            <p>Collectors (${data.checks.snapshot.clustered_collectors_count}): ${data.checks.snapshot.clustered_collectors.join(', ') || 'None'}</p>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Tasks Generated Successfully</h3>
+                            <p><strong>Total Generated:</strong> ${tasks.total_generated || 0}</p>
+                            <p><strong>Trucks Available:</strong> ${tasks.trucks_available || 0}</p>
+                            <p><strong>Skipped (Duplicates):</strong> ${tasks.skipped_duplicates || 0}</p>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        async function viewTasks() {
+            const resultDiv = document.getElementById('tasks-result');
+            resultDiv.innerHTML = '<p>Loading tasks...</p>';
+
+            try {
+                // This would need a proper API endpoint to fetch tasks
+                // For now, just show a message
+                resultDiv.innerHTML = `
+                    <p>To view tasks, go to:</p>
+                    <ul>
+                        <li><a href="http://localhost:5173/admin/task-management/today" target="_blank">Today's Tasks (Admin)</a></li>
+                        <li>Or check the database: <code>SELECT * FROM collection_team WHERE session = 'AM'</code></li>
+                    </ul>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Error</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        function showScenario1() {
+            const resultDiv = document.getElementById('scenario-result');
+            resultDiv.innerHTML = `
+                <h3>Scenario 1: 2 Drivers, 2 Collectors, 1 Truck</h3>
+                <p>Run these SQL commands in phpMyAdmin:</p>
+                <pre>-- Set only 1 truck available
+UPDATE truck SET status = 'maintenance' WHERE truck_id != 1;
+UPDATE truck SET status = 'available' WHERE truck_id = 1;
+
+-- Mark 2 drivers and 2 collectors as verified
+-- (Replace user IDs with actual IDs from your database)
+UPDATE attendance 
+SET verification_status = 'verified' 
+WHERE attendance_date = '2025-12-04' 
+  AND session = 'AM' 
+  AND user_id IN (17, 94, 28, 29);
+
+-- Mark others as absent
+UPDATE attendance 
+SET verification_status = 'absent' 
+WHERE attendance_date = '2025-12-04' 
+  AND session = 'AM' 
+  AND user_id NOT IN (17, 94, 28, 29);</pre>
+                <p><strong>Expected Result:</strong> 1 team with Driver 1 + 2 collectors, Driver 2 gets no task</p>
+            `;
+        }
+
+        function showScenario2() {
+            const resultDiv = document.getElementById('scenario-result');
+            resultDiv.innerHTML = `
+                <h3>Scenario 2: 2 Drivers, 3 Collectors, 1 Truck</h3>
+                <p>Run these SQL commands in phpMyAdmin:</p>
+                <pre>-- Set only 1 truck available
+UPDATE truck SET status = 'maintenance' WHERE truck_id != 1;
+UPDATE truck SET status = 'available' WHERE truck_id = 1;
+
+-- Mark 2 drivers and 3 collectors as verified
+UPDATE attendance 
+SET verification_status = 'verified' 
+WHERE attendance_date = '2025-12-04' 
+  AND session = 'AM' 
+  AND user_id IN (17, 94, 28, 29, 31);</pre>
+                <p><strong>Expected Result:</strong> 1 team with Driver 1 + 3 collectors, Driver 2 gets no task</p>
+            `;
+        }
+
+        function showScenario3() {
+            const resultDiv = document.getElementById('scenario-result');
+            resultDiv.innerHTML = `
+                <h3>Scenario 3: 2 Drivers, 8 Collectors, 2 Trucks</h3>
+                <p>Run these SQL commands in phpMyAdmin:</p>
+                <pre>-- Set 2 trucks available
+UPDATE truck SET status = 'available' WHERE truck_id IN (1, 2);
+
+-- Mark 2 drivers and 8 collectors as verified
+UPDATE attendance 
+SET verification_status = 'verified' 
+WHERE attendance_date = '2025-12-04' 
+  AND session = 'AM' 
+  AND user_id IN (17, 94, 28, 29, 31, 32, 33, 34, 35, 30);</pre>
+                <p><strong>Expected Result:</strong> 2 teams, each with 1 driver + 4 collectors</p>
+            `;
+        }
+    </script>
+</body>
+
+</html>

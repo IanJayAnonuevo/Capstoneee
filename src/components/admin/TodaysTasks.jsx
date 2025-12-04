@@ -186,31 +186,6 @@ export default function TodaysTasks() {
         window.print();
     };
 
-    const handleExport = () => {
-        const headers = ['Name of Worker', 'Designation', 'AM Status', 'PM Status'];
-        const rows = workerList.map(worker => [
-            worker.name,
-            worker.designation,
-            worker.amStatus,
-            worker.pmStatus
-        ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `todays_tasks_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     if (loading) return <div className="p-8 text-center text-gray-500">Loading today's tasks...</div>;
     if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
@@ -433,18 +408,19 @@ export default function TodaysTasks() {
                     >
                         Print
                     </button>
-                    <button
-                        onClick={handleExport}
-                        className="bg-emerald-600 text-white font-bold py-2 px-8 rounded-full hover:bg-emerald-700 transition shadow-sm hover:shadow-md"
-                    >
-                        Export
-                    </button>
                 </div>
             </div>
 
             {/* Print Styles */}
             <style>{`
                 @media print {
+                    /* Hide buttons, filters, and summary */
+                    button,
+                    .print\\:hidden {
+                        display: none !important;
+                    }
+                    
+                    /* Remove background colors */
                     body {
                         visibility: hidden;
                     }
@@ -469,6 +445,16 @@ export default function TodaysTasks() {
                     }
                     th {
                         color: white !important;
+                    }
+                    /* Ensure status dots print with colors */
+                    .bg-blue-500,
+                    .bg-yellow-500,
+                    .bg-green-500,
+                    .bg-red-600,
+                    .bg-orange-500,
+                    .bg-gray-400 {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
                 }
             `}</style>

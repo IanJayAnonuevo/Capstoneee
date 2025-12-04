@@ -2,6 +2,13 @@
   RewriteEngine On
   RewriteBase /
   
+  # Exclude backend API and cron directories from React Router
+  RewriteCond %{REQUEST_URI} ^/backend/ [OR]
+  RewriteCond %{REQUEST_URI} ^/cron/ [OR]
+  RewriteCond %{REQUEST_URI} ^/uploads/ [OR]
+  RewriteCond %{REQUEST_URI} ^/storage/
+  RewriteRule ^ - [L]
+  
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

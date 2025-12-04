@@ -18,10 +18,10 @@ export default function PickupSimple() {
       try {
         setLoading(true);
         console.log('Fetching data...');
-        
+
         const response = await authService.getPickupRequests();
         console.log('Response:', response);
-        
+
         if (response && response.status === 'success') {
           setRequests(response.data || []);
         } else {
@@ -42,10 +42,10 @@ export default function PickupSimple() {
   const filtered = (requests || []).filter(req =>
     (barangay === 'All' || req.barangay === barangay) &&
     (status === 'All' || req.status === status) &&
-    (searchTerm === '' || 
-     req.requester_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     req.barangay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     req.waste_type?.toLowerCase().includes(searchTerm.toLowerCase()))
+    (searchTerm === '' ||
+      req.requester_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.barangay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.waste_type?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Calculate statistics
@@ -82,26 +82,26 @@ export default function PickupSimple() {
       setActionLoading(true);
       console.log('Scheduling request:', request);
       console.log('Request ID:', request.id || request.request_id);
-      
+
       const response = await authService.updatePickupRequestStatus(
         request.id || request.request_id,
         'scheduled',
         { admin_remarks: 'Request scheduled by admin' }
       );
-      
+
       if (response.status === 'success') {
         // Update the request in the list
-        setRequests(prevRequests => 
-          prevRequests.map(req => 
+        setRequests(prevRequests =>
+          prevRequests.map(req =>
             (req.id || req.request_id) === (request.id || request.request_id)
               ? { ...req, status: 'scheduled' }
               : req
           )
         );
-        
+
         // Update the selected request in modal
         setSelectedRequest(prev => ({ ...prev, status: 'scheduled' }));
-        
+
         alert('Request scheduled successfully!');
       } else {
         alert('Failed to schedule request: ' + response.message);
@@ -117,7 +117,7 @@ export default function PickupSimple() {
   const handleDecline = async (request) => {
     const reason = prompt('Please provide a reason for declining this request:');
     if (reason === null || reason.trim() === '') return; // User cancelled or empty
-    
+
     try {
       setActionLoading(true);
       const response = await authService.updatePickupRequestStatus(
@@ -125,20 +125,20 @@ export default function PickupSimple() {
         'declined',
         { declined_reason: reason }
       );
-      
+
       if (response.status === 'success') {
         // Update the request in the list
-        setRequests(prevRequests => 
-          prevRequests.map(req => 
+        setRequests(prevRequests =>
+          prevRequests.map(req =>
             (req.id || req.request_id) === (request.id || request.request_id)
               ? { ...req, status: 'declined', declined_reason: reason }
               : req
           )
         );
-        
+
         // Update the selected request in modal
         setSelectedRequest(prev => ({ ...prev, status: 'declined', declined_reason: reason }));
-        
+
         alert('Request declined successfully!');
       } else {
         alert('Failed to decline request: ' + response.message);
@@ -171,25 +171,11 @@ export default function PickupSimple() {
 
   return (
     <div className="p-6 bg-green-50 min-h-screen">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl text-green-800 mb-2 font-normal tracking-tight">
-          Special Pick-up Requests
-        </h1>
-        <p className="text-sm md:text-base lg:text-lg text-gray-600 m-0 font-normal">
-          Manage, schedule, and track special waste pick-up requests from residents.
-        </p>
-      </div>
-
       {/* Action Bar */}
       <div className="flex justify-end gap-3 mb-6">
         <button className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
           <FiRefreshCw className="w-4 h-4" />
           Refresh
-        </button>
-        <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          <FiDownload className="w-4 h-4" />
-          Export
         </button>
       </div>
 
@@ -205,9 +191,9 @@ export default function PickupSimple() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
-        <select 
-          value={status} 
-          onChange={e => setStatus(e.target.value)} 
+        <select
+          value={status}
+          onChange={e => setStatus(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
         >
           <option>All Status</option>
@@ -231,7 +217,7 @@ export default function PickupSimple() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -243,7 +229,7 @@ export default function PickupSimple() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -255,7 +241,7 @@ export default function PickupSimple() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -308,12 +294,11 @@ export default function PickupSimple() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       req.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                      req.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        req.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                      }`}>
                       {req.status === 'pending' && <FiClock className="w-3 h-3" />}
                       {req.status === 'scheduled' && <FiCalendar className="w-3 h-3" />}
                       {req.status === 'completed' && <FiCheckCircle className="w-3 h-3" />}
@@ -336,7 +321,7 @@ export default function PickupSimple() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button 
+                    <button
                       onClick={() => openModal(req)}
                       className="text-green-600 hover:text-green-900 flex items-center gap-1"
                     >
@@ -359,14 +344,14 @@ export default function PickupSimple() {
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900">Pick-up Request Details</h2>
-                <button 
+                <button
                   onClick={closeModal}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <FiX className="w-6 h-6" />
                 </button>
               </div>
-              
+
               {/* Content */}
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -394,12 +379,11 @@ export default function PickupSimple() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       selectedRequest.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                      selectedRequest.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        selectedRequest.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                      }`}>
                       {selectedRequest.status === 'pending' && <FiClock className="w-3 h-3" />}
                       {selectedRequest.status === 'scheduled' && <FiCalendar className="w-3 h-3" />}
                       {selectedRequest.status === 'completed' && <FiCheckCircle className="w-3 h-3" />}
@@ -408,21 +392,21 @@ export default function PickupSimple() {
                     </span>
                   </div>
                 </div>
-                
+
                 {selectedRequest.notes && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                     <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedRequest.notes}</p>
                   </div>
                 )}
-                
+
                 {selectedRequest.declined_reason && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Decline Reason</label>
                     <p className="text-sm text-gray-900 bg-red-50 p-3 rounded-lg border border-red-200">{selectedRequest.declined_reason}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Request Date</label>
                   <p className="text-sm text-gray-900">
@@ -430,10 +414,10 @@ export default function PickupSimple() {
                   </p>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-                <button 
+                <button
                   onClick={closeModal}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
@@ -441,25 +425,23 @@ export default function PickupSimple() {
                 </button>
                 {selectedRequest.status === 'pending' && (
                   <>
-                    <button 
+                    <button
                       onClick={() => handleSchedule(selectedRequest)}
                       disabled={actionLoading}
-                      className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                        actionLoading 
-                          ? 'bg-gray-400 cursor-not-allowed' 
-                          : 'bg-green-600 hover:bg-green-700'
-                      }`}
+                      className={`px-4 py-2 text-white rounded-lg transition-colors ${actionLoading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700'
+                        }`}
                     >
                       {actionLoading ? 'Processing...' : 'Schedule'}
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDecline(selectedRequest)}
                       disabled={actionLoading}
-                      className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                        actionLoading 
-                          ? 'bg-gray-400 cursor-not-allowed' 
-                          : 'bg-red-600 hover:bg-red-700'
-                      }`}
+                      className={`px-4 py-2 text-white rounded-lg transition-colors ${actionLoading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-red-600 hover:bg-red-700'
+                        }`}
                     >
                       {actionLoading ? 'Processing...' : 'Decline'}
                     </button>

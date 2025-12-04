@@ -50,36 +50,6 @@ export default function AttendanceLogsDetail() {
         window.print();
     };
 
-    const handleExport = () => {
-        const headers = ['Date', 'Morning IN', 'Morning OUT', 'Afternoon IN', 'Afternoon OUT'];
-        const rows = attendance.map(record => {
-            const hasMorningIn = record.am_time_in && record.am_time_in !== 'null';
-            const hasMorningOut = record.am_time_out && record.am_time_out !== 'null';
-            const hasAfternoonIn = record.pm_time_in && record.pm_time_in !== 'null';
-            const hasAfternoonOut = record.pm_time_out && record.pm_time_out !== 'null';
-
-            return [
-                new Date(record.attendance_date).toLocaleDateString(),
-                hasMorningIn ? 'Present' : '-',
-                hasMorningOut ? 'Present' : '-',
-                hasAfternoonIn ? 'Present' : '-',
-                hasAfternoonOut ? 'Present' : '-'
-            ];
-        });
-
-        const csvContent = [
-            headers.join(','),
-            ...rows.map(row => row.join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `attendance_${monthNames[month - 1]}_${year}.csv`;
-        a.click();
-    };
-
     return (
         <div className="min-h-screen bg-gray-50 font-sans pb-20">
             <div className="px-4 py-6 max-w-6xl mx-auto">
@@ -108,13 +78,6 @@ export default function AttendanceLogsDetail() {
                         >
                             <FiPrinter className="w-4 h-4" />
                             Print
-                        </button>
-                        <button
-                            onClick={handleExport}
-                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2 text-sm font-medium"
-                        >
-                            <FiDownload className="w-4 h-4" />
-                            Export
                         </button>
                     </div>
                 </div>
@@ -240,6 +203,45 @@ export default function AttendanceLogsDetail() {
                     </div>
                 )}
             </div>
+
+            {/* Print Styles */}
+            <style>{`
+                @media print {
+                    /* Hide all buttons and navigation */
+                    button,
+                    .print\\:hidden {
+                        display: none !important;
+                    }
+                    
+                    /* Remove background colors and shadows */
+                    body {
+                        background: white !important;
+                    }
+                    
+                    .bg-gray-50,
+                    .bg-emerald-50 {
+                        background: white !important;
+                    }
+                    
+                    /* Ensure table colors print */
+                    .bg-emerald-600 {
+                        background-color: #059669 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    
+                    /* Remove shadows and borders */
+                    .shadow-sm,
+                    .shadow-lg {
+                        box-shadow: none !important;
+                    }
+                    
+                    /* Minimal padding */
+                    .p-6 {
+                        padding: 1rem !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

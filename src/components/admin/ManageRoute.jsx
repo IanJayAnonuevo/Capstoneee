@@ -947,28 +947,6 @@ const ManageRoute = () => {
     }
   }
 
-  // Export to CSV
-  function exportToCSV() {
-    const headers = ['Location', 'Truck', 'Driver', 'Barangay', 'Date & Time', 'Volume', 'Status'];
-    const rows = filteredRoutes.map(r => [
-      r.locationName || 'Main Area',
-      r.truck,
-      r.driver,
-      r.barangay,
-      r.datetime,
-      r.volume,
-      r.status
-    ]);
-    const csvContent = [headers, ...rows].map(row => row.map(cell => '"' + (cell || '') + '"').join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'routes.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   // Print
   function printTable() {
     const printContent = document.getElementById('route-table-print').outerHTML;
@@ -1011,9 +989,6 @@ const ManageRoute = () => {
             }`}
         >
           {isLoading ? 'Working…' : 'Regenerate'}
-        </button>
-        <button onClick={exportToCSV} className="px-5 py-2.5 bg-green-700 text-white border-none rounded-md font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-600">
-          Export CSV
         </button>
         <button onClick={printTable} className="px-5 py-2.5 bg-green-700 text-white border-none rounded-md font-medium cursor-pointer text-sm min-w-fit transition-all duration-200 hover:bg-green-600">
           Print

@@ -1,0 +1,332 @@
+import React, { useState, useEffect } from 'react';
+import { FiRefreshCw, FiSearch, FiCalendar, FiClock, FiCheckCircle, FiX, FiAlertCircle, FiUser, FiMapPin, FiPhone, FiMessageSquare } from 'react-icons/fi';
+import { authService } from '../../services/authService';
+import Skeleton from '../shared/Skeleton';
+
+export default function ViewPickupRequests() {
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+
+    const fetchRequests = async () => {
+        try {
+            setLoading(true);
+            const response = await authService.getPickupRequests();
+            if (response && response.status === 'success') {
+                // Filter to show only requests from current barangay head
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    const userData = JSON.parse(storedUser);
+                    const userId = userData.user_id || userData.id;
+                    const filteredRequests = (response.data || []).filter(
+                        req => req.requester_id === userId
+                    );
+                    setRequests(filteredRequests);
+                } else {
+                    setRequests(response.data || []);
+                }
+            } else {
+                setError('Failed to fetch requests');
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            setError('Error loading requests');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests();
+    }, []);
+
+    const filteredRequests = requests.filter(req => {
+        const matchesStatus = statusFilter === 'All' || req.status === statusFilter.toLowerCase();
+        const matchesSearch =
+            req.barangay?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            req.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesStatus && matchesSearch;
+    });
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'scheduled': return 'bg-blue-100 text-blue-800';
+            case 'completed': return 'bg-green-100 text-green-800';
+            case 'declined': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'pending': return <FiClock className="w-3 h-3" />;
+            case 'scheduled': return <FiCalendar className="w-3 h-3" />;
+            case 'completed': return <FiCheckCircle className="w-3 h-3" />;
+            case 'declined': return <FiX className="w-3 h-3" />;
+            default: return <FiAlertCircle className="w-3 h-3" />;
+        }
+    };
+
+    const RequestModal = () => {
+        if (!selectedRequest) return null;
+
+        return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="p-5">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Request Details</h3>
+                                <p className="text-sm text-gray-500">ID: #{selectedRequest.id || selectedRequest.request_id}</p>
+                            </div>
+                            <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                <FiX className="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Status Banner */}
+                            <div className={`flex items-center gap-2 p-3 rounded-xl ${getStatusColor(selectedRequest.status)} bg-opacity-20`}>
+                                {getStatusIcon(selectedRequest.status)}
+                                <span className="font-semibold capitalize">{selectedRequest.status}</span>
+                            </div>
+
+                            {/* Requester Info */}
+                            <div className="bg-gray-50 p-4 rounded-xl space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-green-600">
+                                        <FiUser className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Requester</p>
+                                        <p className="font-semibold text-gray-900">{selectedRequest.requester_name}</p>
+                                    </div>
+                                </div>
+                                {selectedRequest.contact_number && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-blue-600">
+                                            <FiPhone className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">Contact</p>
+                                            <p className="font-semibold text-gray-900">{selectedRequest.contact_number}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Location */}
+                            <div className="bg-gray-50 p-3 rounded-xl">
+                                <div className="flex items-center gap-2 mb-1 text-gray-500">
+                                    <FiMapPin className="w-4 h-4" />
+                                    <span className="text-xs font-medium uppercase">Location</span>
+                                </div>
+                                <p className="font-semibold text-gray-900">{selectedRequest.barangay}</p>
+                            </div>
+
+                            {/* Date & Notes */}
+                            <div className="bg-gray-50 p-4 rounded-xl space-y-3">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1 text-gray-500">
+                                        <FiCalendar className="w-4 h-4" />
+                                        <span className="text-xs font-medium uppercase">Preferred Date</span>
+                                    </div>
+                                    <p className="font-semibold text-gray-900">
+                                        {selectedRequest.pickup_date ? new Date(selectedRequest.pickup_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}
+                                    </p>
+                                </div>
+                                {selectedRequest.scheduled_date && selectedRequest.status === 'scheduled' && (
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <div className="flex items-center gap-2 mb-1 text-gray-500">
+                                            <FiCalendar className="w-4 h-4" />
+                                            <span className="text-xs font-medium uppercase">Scheduled Date</span>
+                                        </div>
+                                        <p className="font-semibold text-green-700">
+                                            {new Date(selectedRequest.scheduled_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedRequest.notes && (
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <div className="flex items-center gap-2 mb-1 text-gray-500">
+                                            <FiMessageSquare className="w-4 h-4" />
+                                            <span className="text-xs font-medium uppercase">Notes</span>
+                                        </div>
+                                        <p className="text-sm text-gray-700 italic">"{selectedRequest.notes}"</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Decline Reason */}
+                            {selectedRequest.declined_reason && (
+                                <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                                    <p className="text-xs font-bold text-red-800 uppercase mb-1">Reason for Decline</p>
+                                    <p className="text-sm text-red-700">{selectedRequest.declined_reason}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-6">
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="w-full py-3 px-4 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="h-full bg-gray-50 flex flex-col">
+            {/* Header */}
+            <div className="bg-white px-4 py-4 shadow-sm sticky top-0 z-10">
+                <div className="flex items-center gap-3 mb-4">
+                    <h1 className="text-xl font-bold text-gray-800">My Special Pick-up Requests</h1>
+                    <button
+                        onClick={fetchRequests}
+                        className="ml-auto p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                    >
+                        <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+
+                {/* Search & Filter */}
+                <div className="flex flex-col gap-3">
+                    <div className="relative">
+                        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search by barangay or notes..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-green-500 transition-all"
+                        />
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        {['All', 'Pending', 'Scheduled', 'Completed', 'Declined'].map(status => (
+                            <button
+                                key={status}
+                                onClick={() => setStatusFilter(status)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${statusFilter === status
+                                    ? 'bg-green-600 text-white shadow-md'
+                                    : 'bg-white border border-gray-200 text-gray-600'
+                                    }`}
+                            >
+                                {status}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+                {loading && requests.length === 0 ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton variant="circular" className="w-10 h-10" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-32" />
+                                            <Skeleton className="h-3 w-24" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-6 w-20 rounded-lg" />
+                                </div>
+                                <div className="space-y-2 mb-3">
+                                    <div className="flex justify-between">
+                                        <Skeleton className="h-3 w-16" />
+                                        <Skeleton className="h-3 w-20" />
+                                    </div>
+                                </div>
+                                <div className="pt-3 border-t border-gray-50 flex justify-between items-center">
+                                    <Skeleton className="h-3 w-24" />
+                                    <Skeleton className="h-3 w-20" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : error ? (
+                    <div className="bg-red-50 text-red-700 p-4 rounded-xl flex items-center gap-3">
+                        <FiAlertCircle className="w-6 h-6 flex-shrink-0" />
+                        <p>{error}</p>
+                    </div>
+                ) : filteredRequests.length === 0 ? (
+                    <div className="text-center py-12">
+                        <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FiCalendar className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900">No requests found</h3>
+                        <p className="text-gray-500 mt-1">
+                            {requests.length === 0 ? 'You haven\'t submitted any special pickup requests yet' : 'Try adjusting your filters'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredRequests.map((req) => (
+                            <div
+                                key={req.id || req.request_id}
+                                onClick={() => {
+                                    setSelectedRequest(req);
+                                    setShowModal(true);
+                                }}
+                                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform cursor-pointer"
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold">
+                                            <FiMapPin className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-900 line-clamp-1">{req.barangay}</p>
+                                            <div className="flex items-center text-xs text-gray-500">
+                                                <FiCalendar className="w-3 h-3 mr-1" />
+                                                {req.pickup_date ? new Date(req.pickup_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'N/A'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(req.status)}`}>
+                                        {getStatusIcon(req.status)}
+                                        <span className="ml-1 capitalize">{req.status}</span>
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2 mb-3">
+                                    {req.scheduled_date && req.status === 'scheduled' && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-500">Scheduled</span>
+                                            <span className="font-medium text-green-700">
+                                                {new Date(req.scheduled_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-3 border-t border-gray-50 flex justify-between items-center">
+                                    <span className="text-xs text-gray-400">
+                                        Requested {req.created_at ? new Date(req.created_at).toLocaleDateString() : ''}
+                                    </span>
+                                    <span className="text-sm font-medium text-green-600">View Details &rarr;</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {showModal && <RequestModal />}
+        </div>
+    );
+}

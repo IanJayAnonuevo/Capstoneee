@@ -41,6 +41,7 @@ import ReportIssue from './components/barangayhead/ReportIssue'
 import BarangayHeadIssueStatus from './components/barangayhead/BarangayHeadIssueStatus'
 import BarangayHeadFeedback from './components/barangayhead/Feedback'
 import PickupRequest from './components/barangayhead/PickupRequest'
+import ViewPickupRequests from './components/barangayhead/ViewPickupRequests'
 import CollectionSchedule from './components/barangayhead/CollectionSchedule'
 import CollectionReports from './components/barangayhead/CollectionReports'
 import Appointments from './components/barangayhead/Appointments'
@@ -259,6 +260,7 @@ function App() {
             <Route path="/admin/issues" element={<RequireAuth allowedRoles={['admin']}><Issues /></RequireAuth>} />
             <Route path="/admin/task-management" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
             <Route path="/admin/task-management/today" element={<RequireAuth allowedRoles={['admin']}><TodaysTasks /></RequireAuth>} />
+            <Route path="/admin/task-management/special" element={<RequireAuth allowedRoles={['admin']}><SpecialTasks /></RequireAuth>} />
             <Route path="/admin/task-management/past" element={<RequireAuth allowedRoles={['admin']}><PastTasks /></RequireAuth>} />
             <Route path="/admin/task-management/manual" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
             {/* Admin catch-all for undefined admin routes */}
@@ -287,6 +289,7 @@ function App() {
               <Route path="issue-status" element={<BarangayHeadIssueStatus />} />
               <Route path="feedback" element={<BarangayHeadFeedback />} />
               <Route path="pickup" element={<PickupRequest />} />
+              <Route path="view-pickup" element={<ViewPickupRequests />} />
               <Route path="schedule" element={<CollectionSchedule />} />
               <Route path="collection-reports" element={<CollectionReports />} />
               <Route path="appointments" element={<Appointments />} />

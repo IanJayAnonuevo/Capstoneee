@@ -90,6 +90,8 @@ try {
                                         t.truck_type,
                                         t.capacity,
                                         u.username AS driver_username,
+                                        up_driver.firstname AS driver_firstname,
+                                        up_driver.lastname AS driver_lastname,
                                         dr.id as route_id,
                                         COALESCE((SELECT COUNT(*) FROM daily_route_stop WHERE daily_route_id = dr.id), 0) as total_stops,
                                         COALESCE((SELECT COUNT(*) FROM daily_route_stop WHERE daily_route_id = dr.id AND status = 'visited'), 0) as completed_stops
@@ -98,6 +100,7 @@ try {
                                     JOIN barangay b ON cs.barangay_id = b.barangay_id
                                     LEFT JOIN truck t ON ct.truck_id = t.truck_id
                                     LEFT JOIN user u ON ct.driver_id = u.user_id
+                                    LEFT JOIN user_profile up_driver ON up_driver.user_id = u.user_id
                                     LEFT JOIN daily_route dr ON dr.team_id = ct.team_id AND dr.date = cs.scheduled_date
                                     JOIN (
                                         SELECT DISTINCT ctm.team_id, ctm.response_status
@@ -126,7 +129,13 @@ try {
         // Collectors
         $collectors = [];
         if (!empty($schedule['team_id'])) {
-            $stmtC = $db->prepare("SELECT u.username, ctm.response_status FROM collection_team_member ctm JOIN user u ON u.user_id = ctm.collector_id WHERE ctm.team_id = ?");
+            $stmtC = $db->prepare("
+                SELECT u.username, up.firstname, up.lastname, ctm.response_status 
+                FROM collection_team_member ctm 
+                JOIN user u ON u.user_id = ctm.collector_id 
+                LEFT JOIN user_profile up ON up.user_id = u.user_id
+                WHERE ctm.team_id = ?
+            ");
             $stmtC->execute([$schedule['team_id']]);
             $collectors = $stmtC->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
@@ -148,6 +157,8 @@ try {
             'truck_capacity' => isset($schedule['capacity']) ? (int)$schedule['capacity'] : null,
             'your_response_status' => isset($schedule['response_status']) ? $schedule['response_status'] : ($schedule['team_status'] ?? null),
             'driver_name' => $schedule['driver_username'] ?? 'N/A',
+            'driver_firstname' => $schedule['driver_firstname'] ?? null,
+            'driver_lastname' => $schedule['driver_lastname'] ?? null,
             'collectors' => $collectors,
             'total_stops' => isset($schedule['total_stops']) ? (int)$schedule['total_stops'] : 0,
             'completed_stops' => isset($schedule['completed_stops']) ? (int)$schedule['completed_stops'] : 0

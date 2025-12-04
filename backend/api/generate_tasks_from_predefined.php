@@ -112,7 +112,7 @@ try {
                 try {
                     if (!isset($sessionSnapshots[$date][$session])) {
                         $personnel = getApprovedPersonnelBySession($db, $date, $session);
-                        $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors']);
+                        $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors'], $trucksAvailable);
                     }
                     $snapshot = $sessionSnapshots[$date][$session];
                 } catch (RuntimeException $sessionError) {

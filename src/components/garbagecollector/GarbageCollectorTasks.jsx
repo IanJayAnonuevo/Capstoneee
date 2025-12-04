@@ -93,6 +93,9 @@ export default function GarbageCollectorTasks() {
   const [dateFilter, setDateFilter] = useState(''); // YYYY-MM-DD format
   const [searchFilter, setSearchFilter] = useState(''); // Search by barangay or truck number
 
+  // Emergency modal state
+  const [emergencyModal, setEmergencyModal] = useState({ show: false, type: '', message: '' });
+
   const userId = useMemo(() => {
     try { return localStorage.getItem('user_id') || localStorage.getItem('userId') || ''; } catch (_) { return ''; }
   }, []);
@@ -882,11 +885,41 @@ export default function GarbageCollectorTasks() {
                     const routeId = task.routeId || task.route_id || (task.barangayList && task.barangayList[0] && (task.barangayList[0].route_id || task.barangayList[0].id));
                     const uniqueKey = `${task.key}-start-route`;
 
+                    // Check if task is unfinished using same logic as Foreman's TodaysTasks
+                    const isTaskUnfinished = () => {
+                      const status = (task.status || '').toLowerCase();
+                      if (status === 'completed' || status === 'cancelled') return false;
+
+                      const now = new Date();
+                      const currentHour = now.getHours();
+                      const currentMinute = now.getMinutes();
+
+                      const taskTime = task.time || task.start_time || task.startTime;
+                      const isAm = taskTime && parseInt(taskTime.split(':')[0]) < 12;
+                      const expectedEndHour = isAm ? 12 : 17;
+                      const expectedEndMinute = 0;
+
+                      if (currentHour > expectedEndHour) return true;
+                      if (currentHour === expectedEndHour && currentMinute >= expectedEndMinute) return true;
+
+                      return false;
+                    };
+
+                    const isUnfinished = isTaskUnfinished();
+
                     if (isFullyCompleted) {
                       return (
                         <div className="text-center py-2 text-green-700 font-semibold text-sm">
                           <FiCheckCircle className="inline mr-1" />
                           Route Completed
+                        </div>
+                      );
+                    }
+
+                    if (isUnfinished) {
+                      return (
+                        <div className="text-center py-2 text-orange-700 font-semibold text-sm bg-orange-50 rounded-lg border border-orange-200">
+                          Task Unfinished
                         </div>
                       );
                     }
@@ -904,11 +937,58 @@ export default function GarbageCollectorTasks() {
                             barangayName: task.title,
                             scheduleId: task.scheduleId,
                           });
-                          setStartLoadingKey(null);
+
                           if (resolved) {
-                            // Navigate WITHOUT barangay_id to show all stops
+                            // Check for active emergency before navigating
+                            try {
+                              const routeDetailsRes = await fetch(buildApiUrl(`get_route_details.php?route_id=${resolved}`), {
+                                headers: { ...authHeaders() }
+                              });
+                              const routeDetailsData = await routeDetailsRes.json();
+
+                              if (routeDetailsData?.success && routeDetailsData?.route) {
+                                const routeInfo = routeDetailsData.route;
+
+                                // Check if route is cancelled
+                                if (routeInfo.status === 'cancelled') {
+                                  setEmergencyModal({
+                                    show: true,
+                                    type: 'Route Cancelled',
+                                    message: 'This route has been cancelled and cannot be started.'
+                                  });
+                                  setStartLoadingKey(null);
+                                  return; // Stop execution - don't navigate
+                                }
+
+                                // Check for active emergency in route notes
+                                if (routeInfo.notes) {
+                                  try {
+                                    const notesData = JSON.parse(routeInfo.notes);
+                                    if (notesData.emergency && notesData.emergency.active === true) {
+                                      // Emergency is active - prevent starting route
+                                      const emergencyType = notesData.emergency.type_label || notesData.emergency.type || 'Emergency';
+                                      setEmergencyModal({
+                                        show: true,
+                                        type: emergencyType,
+                                        message: 'Route cannot be started. Please wait for resolution.'
+                                      });
+                                      setStartLoadingKey(null);
+                                      return; // Stop execution - don't navigate
+                                    }
+                                  } catch (e) {
+                                    // Notes is not JSON or parsing failed, continue normally
+                                  }
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Error checking emergency status:', error);
+                            }
+
+                            // No active emergency - proceed with navigation
+                            setStartLoadingKey(null);
                             navigate(`/garbagecollector/route/${resolved}`);
                           } else {
+                            setStartLoadingKey(null);
                             alert('Missing route id. Please refresh and try again.');
                           }
                         }}
@@ -940,41 +1020,26 @@ export default function GarbageCollectorTasks() {
                         return (
                           <div
                             key={c.user_id ?? c.id ?? i}
-                            className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1 last:border-b-0"
+                            className="flex items-center justify-between border-b border-gray-300 pb-1 last:border-b-0"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-gray-900 shrink-0">Collector Name {i + 1}:</span>
-                              <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
-                            </div>
-                            <span className={`uppercase font-semibold text-xs sm:text-[11px] ${statusColor}`}>
-                              {String(c.response_status || 'pending').toUpperCase()}
-                            </span>
+                            <span className="text-gray-900">Collector Name {i + 1}:</span>
+                            <span className="font-semibold text-gray-900 truncate">{collectorName}</span>
                           </div>
                         );
                       })
                     ) : (
                       fallbackCollectorName ? (
-                        <div className="flex items-center justify-between gap-3 border-b border-gray-300 pb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-gray-900 shrink-0">Collector Name:</span>
-                            <span className="font-semibold text-gray-900 truncate">{fallbackCollectorName}</span>
-                          </div>
-                          <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus || 'pending').toLowerCase() === 'accepted' ? 'text-green-700' : String(task.yourResponseStatus || 'pending').toLowerCase() === 'declined' ? 'text-red-600' : 'text-yellow-700'}`}>
-                            {String(task.yourResponseStatus || 'pending').toUpperCase()}
-                          </span>
+                        <div className="flex items-center justify-between border-b border-gray-300 pb-1">
+                          <span className="text-gray-900">Collector Name:</span>
+                          <span className="font-semibold text-gray-900 truncate">{fallbackCollectorName}</span>
                         </div>
                       ) : (
                         <div className="text-gray-500">No collectors listed</div>
                       )
                     )}
-                    <div className="flex items-center justify-between gap-3 pt-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-gray-900 shrink-0">Driver Name:</span>
-                        <span className="font-semibold text-gray-900 truncate">{task.driverName || 'N/A'}</span>
-                      </div>
-                      <span className={`uppercase font-semibold text-xs sm:text-[11px] ${String(task.yourResponseStatus || 'pending').toLowerCase() === 'accepted' ? 'text-green-700' : String(task.yourResponseStatus || 'pending').toLowerCase() === 'declined' ? 'text-red-600' : 'text-yellow-700'}`}>
-                        {String(task.yourResponseStatus || 'pending').toUpperCase()}
-                      </span>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-gray-900">Driver Name:</span>
+                      <span className="font-semibold text-gray-900 truncate">{task.driverName || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -982,6 +1047,29 @@ export default function GarbageCollectorTasks() {
             ))}
         </div>
       </div>
+
+      {/* Emergency Modal */}
+      {emergencyModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-red-600 px-5 py-4">
+              <h3 className="text-white font-semibold text-lg">⚠️ Emergency Active</h3>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm font-semibold text-gray-900 mb-2">{emergencyModal.type}</p>
+              <p className="text-sm text-gray-700">{emergencyModal.message}</p>
+            </div>
+            <div className="px-5 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setEmergencyModal({ show: false, type: '', message: '' })}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

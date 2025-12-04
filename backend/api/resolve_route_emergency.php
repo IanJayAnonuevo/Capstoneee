@@ -29,7 +29,7 @@ try {
   $foremanNotes = trim($input['foreman_notes'] ?? '');
   
   // Validate foreman action
-  $validActions = ['acknowledged', 'resolved', 'escalated'];
+  $validActions = ['resolved', 'cancelled'];
   if (!in_array($foremanAction, $validActions, true)) {
     $foremanAction = 'resolved';
   }
@@ -92,6 +92,12 @@ try {
       json_encode($routeNotes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
       $emergency['route_id']
     ]);
+  }
+  
+  // If action is cancelled, update route status to cancelled
+  if ($foremanAction === 'cancelled') {
+    $cancelRouteStmt = $db->prepare('UPDATE daily_route SET status = ?, updated_at = NOW() WHERE id = ?');
+    $cancelRouteStmt->execute(['cancelled', $emergency['route_id']]);
   }
   
   // Log task event
@@ -202,12 +208,35 @@ try {
     $recipientIds = array_merge($recipientIds, $foremanStmt->fetchAll(PDO::FETCH_COLUMN));
   }
   
+  // 4. Send notifications to assigned personnel (driver and collectors)
+  if ($emergency['team_id']) {
+    // Get driver from collection_team
+    $driverStmt = $db->prepare("
+      SELECT driver_id as user_id 
+      FROM collection_team 
+      WHERE team_id = ? AND driver_id IS NOT NULL
+    ");
+    $driverStmt->execute([$emergency['team_id']]);
+    $driverIds = $driverStmt->fetchAll(PDO::FETCH_COLUMN);
+    $recipientIds = array_merge($recipientIds, $driverIds);
+    
+    // Get collectors from collection_team_member
+    $collectorsStmt = $db->prepare("
+      SELECT collector_id as user_id 
+      FROM collection_team_member 
+      WHERE team_id = ? AND collector_id IS NOT NULL
+    ");
+    $collectorsStmt->execute([$emergency['team_id']]);
+    $collectorIds = $collectorsStmt->fetchAll(PDO::FETCH_COLUMN);
+    $recipientIds = array_merge($recipientIds, $collectorIds);
+  }
+  
   // Remove duplicates
   $recipientIds = array_values(array_unique(array_filter(array_map('intval', $recipientIds))));
   
   // Prepare notification messages
-  $actionText = $foremanAction === 'acknowledged' ? 'acknowledged' : ($foremanAction === 'escalated' ? 'escalated' : 'resolved');
-  $actionPastTense = $foremanAction === 'acknowledged' ? 'acknowledged' : ($foremanAction === 'escalated' ? 'escalated' : 'resolved');
+  $actionText = $foremanAction === 'cancelled' ? 'cancelled' : 'resolved';
+  $actionPastTense = $foremanAction === 'cancelled' ? 'cancelled' : 'resolved';
   
   // Send notifications to all recipients
   $notifCount = 0;
@@ -253,16 +282,11 @@ try {
           $messageText = "Good news! The emergency in {$emergency['barangay_name']} has been resolved. " .
                          "Garbage collection will resume as scheduled." .
                          ($resolutionNotes ? " Update: {$resolutionNotes}" : '');
-        } elseif ($foremanAction === 'acknowledged') {
-          $title = 'Emergency Update';
-          $messageText = "The emergency in {$emergency['barangay_name']} has been acknowledged by our team. " .
-                         "We are monitoring the situation." .
-                         ($resolutionNotes ? " Details: {$resolutionNotes}" : '');
-        } else { // escalated
-          $title = 'Emergency Escalated';
-          $messageText = "The emergency in {$emergency['barangay_name']} has been escalated for higher-level intervention. " .
-                         "We will keep you updated." .
-                         ($resolutionNotes ? " Details: {$resolutionNotes}" : '');
+        } else { // cancelled
+          $title = 'Collection Cancelled';
+          $messageText = "We regret to inform you that garbage collection in {$emergency['barangay_name']} has been cancelled for today due to an emergency. " .
+                         "We apologize for the inconvenience." .
+                         ($resolutionNotes ? " Reason: {$resolutionNotes}" : '');
         }
       }
       
@@ -299,7 +323,12 @@ try {
   http_response_code(400);
   echo json_encode([
     'success' => false,
-    'message' => $e->getMessage()
+    'message' => $e->getMessage(),
+    'error_details' => [
+      'file' => $e->getFile(),
+      'line' => $e->getLine(),
+      'trace' => $e->getTraceAsString()
+    ]
   ]);
 }
 ?>

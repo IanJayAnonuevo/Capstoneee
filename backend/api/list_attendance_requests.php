@@ -132,7 +132,11 @@ try {
                 ELSE 'Unknown'
             END AS role_name,
             f.username AS foreman_username,
-            COALESCE(CONCAT(TRIM(fp.firstname), ' ', TRIM(fp.lastname)), f.username) AS foreman_name
+            COALESCE(CONCAT(TRIM(fp.firstname), ' ', TRIM(fp.lastname)), f.username) AS foreman_name,
+            JSON_UNQUOTE(JSON_EXTRACT(ar.remarks, '$.intent')) AS request_type,
+            JSON_UNQUOTE(JSON_EXTRACT(ar.remarks, '$.attendance_date')) AS attendance_date,
+            JSON_UNQUOTE(JSON_EXTRACT(ar.remarks, '$.session')) AS session,
+            ar.submitted_at AS request_time
         FROM attendance_request ar
         INNER JOIN user u ON ar.user_id = u.user_id
         LEFT JOIN user_profile up ON u.user_id = up.user_id

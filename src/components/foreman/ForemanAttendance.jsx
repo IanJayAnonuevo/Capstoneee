@@ -457,10 +457,6 @@ export default function ForemanAttendance() {
                 <MdPrint className="w-4 h-4" />
                 Print
               </button>
-              <button onClick={() => alert('Exporting...')} className="bg-[#008F53] text-white px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 hover:bg-green-700 transition-colors">
-                <MdFileDownload className="w-4 h-4" />
-                Export
-              </button>
             </div>
           </div>
         </div>
@@ -773,6 +769,32 @@ export default function ForemanAttendance() {
 
   return (
     <>
+      <style>{`
+        @media print {
+          /* Force print colors for status dots */
+          .inline-block.rounded-full {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          
+          /* Ensure background colors are printed */
+          .bg-green-500,
+          .bg-red-500,
+          .bg-yellow-400,
+          .bg-gray-300 {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          
+          /* Hide navigation and action buttons when printing */
+          button:not(.inline-block) {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {view === 'menu' && renderMenu()}
       {view === 'today' && renderDailyView("Today's Attendance")}
       {view === 'verification' && renderVerification()}

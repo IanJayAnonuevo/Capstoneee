@@ -16,7 +16,7 @@ try {
     $database = new Database();
     $db = $database->connect();
     
-    $date = '2025-12-01';
+    $date = '2025-12-04';
     $session = 'AM';
     
     $result = [
@@ -46,11 +46,17 @@ try {
     
     // Step 2: Build session snapshot
     try {
-        $snapshot = buildSessionSnapshot($personnel['drivers'], $personnel['collectors']);
+        // Get truck count for testing
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM truck WHERE status = 'available' OR status = 'Available'");
+        $stmt->execute();
+        $truckCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        $snapshot = buildSessionSnapshot($personnel['drivers'], $personnel['collectors'], $truckCount);
         $result['checks']['snapshot'] = [
             'success' => true,
+            'truck_count' => $truckCount,
             'priority_driver' => $snapshot['drivers']['priority']['full_name'],
-            'clustered_driver' => $snapshot['drivers']['clustered']['full_name'],
+            'clustered_driver' => $snapshot['drivers']['clustered'] ? $snapshot['drivers']['clustered']['full_name'] : null,
             'priority_collectors_count' => count($snapshot['collectors']['priority']),
             'clustered_collectors_count' => count($snapshot['collectors']['clustered']),
             'priority_collectors' => array_map(fn($c) => $c['full_name'], $snapshot['collectors']['priority']),

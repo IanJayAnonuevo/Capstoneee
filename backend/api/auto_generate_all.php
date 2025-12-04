@@ -250,7 +250,7 @@ function generateTasksDirectly($db, $start_date, $end_date, $overwrite, $force_s
                     try {
                         if (!isset($sessionSnapshots[$date][$session])) {
                             $personnel = getApprovedPersonnelBySession($db, $date, $session);
-                            $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors']);
+                            $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors'], $trucksAvailable);
                         }
                         $snapshot = $sessionSnapshots[$date][$session];
                     } catch (RuntimeException $sessionError) {
@@ -394,6 +394,121 @@ function generateTasksDirectly($db, $start_date, $end_date, $overwrite, $force_s
                         }
                     }
                 }
+            }
+            
+            // Process special pickups for this date
+            // Get all special pickups scheduled for this date
+            $specialPickupQuery = $db->prepare("
+                SELECT cs.schedule_id, cs.barangay_id, cs.scheduled_date, cs.start_time, 
+                       cs.session, cs.special_pickup_id, b.barangay_name, pr.requester_name
+                FROM collection_schedule cs
+                JOIN barangay b ON cs.barangay_id = b.barangay_id
+                JOIN pickup_requests pr ON cs.special_pickup_id = pr.id
+                WHERE cs.schedule_type = 'special_pickup'
+                  AND cs.scheduled_date = ?
+                  AND cs.special_pickup_id IS NOT NULL
+                  AND pr.status = 'scheduled'
+            ");
+            $specialPickupQuery->execute([$date]);
+            $specialPickups = $specialPickupQuery->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($specialPickups as $pickup) {
+                $session = strtoupper($pickup['session']);
+                
+                if ($force_session && $session !== $force_session) {
+                    continue;
+                }
+                
+                // Build/fetch session snapshot if not already built
+                try {
+                    if (!isset($sessionSnapshots[$date][$session])) {
+                        $personnel = getApprovedPersonnelBySession($db, $date, $session);
+                        $sessionSnapshots[$date][$session] = buildSessionSnapshot($personnel['drivers'], $personnel['collectors'], $trucksAvailable);
+                    }
+                    $snapshot = $sessionSnapshots[$date][$session];
+                } catch (RuntimeException $sessionError) {
+                    error_log("Cannot assign special pickup - no personnel available for $date $session: " . $sessionError->getMessage());
+                    continue;
+                }
+                
+                // Check if team already exists for this schedule
+                $teamCheckStmt = $db->prepare("SELECT team_id FROM collection_team WHERE schedule_id = ?");
+                $teamCheckStmt->execute([$pickup['schedule_id']]);
+                if ($teamCheckStmt->fetchColumn()) {
+                    // Team already assigned, skip
+                    continue;
+                }
+                
+                // Assign to priority team (special pickups always use priority team)
+                $driver = $snapshot['drivers']['priority'];
+                $selectedCollectors = $snapshot['collectors']['priority'];
+                $truck = $priorityTruck;
+                
+                // Create collection team for special pickup
+                $attendanceSnapshot = buildAttendanceSnapshotPayload($driver, $selectedCollectors);
+                $stmt = $db->prepare("INSERT INTO collection_team (schedule_id, truck_id, driver_id, session, attendance_snapshot, status) VALUES (?, ?, ?, ?, ?, 'approved')");
+                $stmt->execute([$pickup['schedule_id'], $truck['truck_id'], $driver['user_id'], $session, $attendanceSnapshot]);
+                $team_id = $db->lastInsertId();
+                
+                // Assign collectors
+                $stmt = $db->prepare("INSERT INTO collection_team_member (team_id, collector_id, response_status) VALUES (?, ?, 'approved')");
+                foreach ($selectedCollectors as $collector) {
+                    $stmt->execute([$team_id, $collector['user_id']]);
+                }
+                
+                // Queue notifications
+                $assignmentEntry = [
+                    'team_id' => (int)$team_id,
+                    'barangay' => $pickup['barangay_name'],
+                    'cluster' => '1C-PB', // Special pickups use priority team
+                    'date' => $date,
+                    'time' => $pickup['start_time'],
+                    'type' => 'special_pickup',
+                    'truck' => $truck['plate_num'],
+                    'requester' => $pickup['requester_name']
+                ];
+                
+                $recipientId = (int)$driver['user_id'];
+                if (!isset($recipientNotifications[$recipientId])) { $recipientNotifications[$recipientId] = []; }
+                $recipientNotifications[$recipientId][] = $assignmentEntry;
+                
+                foreach ($selectedCollectors as $collector) {
+                    $rid = (int)$collector['user_id'];
+                    if (!isset($recipientNotifications[$rid])) { $recipientNotifications[$rid] = []; }
+                    $recipientNotifications[$rid][] = $assignmentEntry;
+                }
+                
+                $generatedTasks[] = [
+                    'barangay_name' => $pickup['barangay_name'],
+                    'barangay_id' => $pickup['barangay_id'],
+                    'cluster_id' => '1C-PB',
+                    'date' => $date,
+                    'session' => $session,
+                    'time' => $pickup['start_time'],
+                    'type' => 'special_pickup',
+                    'driver' => $driver['full_name'],
+                    'collectors' => array_map(fn($c) => $c['full_name'], $selectedCollectors),
+                    'truck' => $truck['plate_num'],
+                    'team_id' => $team_id,
+                    'assignment_type' => 'Special Pickup (Priority Team)',
+                    'collector_team' => 'Priority Team',
+                    'requester' => $pickup['requester_name']
+                ];
+                
+                // Track assigned personnel
+                $sessionKey = $date . '|' . $session;
+                if (!isset($assignedPersonnel[$sessionKey])) {
+                    $assignedPersonnel[$sessionKey] = [
+                        'drivers' => [],
+                        'collectors' => []
+                    ];
+                }
+                $assignedPersonnel[$sessionKey]['drivers'][] = $driver['user_id'];
+                foreach ($selectedCollectors as $collector) {
+                    $assignedPersonnel[$sessionKey]['collectors'][] = $collector['user_id'];
+                }
+                
+                error_log("Special pickup assigned: {$pickup['barangay_name']} on $date at {$pickup['start_time']} to team $team_id");
             }
             
             $currentDate->add(new DateInterval('P1D'));
@@ -592,8 +707,7 @@ function generateRoutesForDateDirectly($db, $date) {
         $dayOfMonth = date('j', strtotime($date));
         $weekOfMonth = ceil($dayOfMonth / 7);
         
-        // Query schedules for this date
-        // NOTE: Do NOT use DISTINCT here - we need duplicate barangays if they have multiple schedules
+        // Query schedules for this date (both predefined and special pickups)
         $scheduleQuery = "SELECT
                             ps.schedule_type,
                             ps.barangay_id,
@@ -607,10 +721,29 @@ function generateRoutesForDateDirectly($db, $date) {
                           WHERE ps.day_of_week = ?
                           AND (ps.week_of_month = ? OR ps.week_of_month IS NULL)
                           AND ps.is_active = 1
-                          ORDER BY ps.schedule_type, ps.session, ps.start_time, b.barangay_name";
+                          
+                          UNION ALL
+                          
+                          SELECT
+                            'special_pickup' as schedule_type,
+                            cs.barangay_id,
+                            '1C-PB' as cluster_id,
+                            b.barangay_name,
+                            cs.start_time,
+                            NULL as end_time,
+                            cs.session
+                          FROM collection_schedule cs
+                          JOIN barangay b ON cs.barangay_id = b.barangay_id
+                          JOIN pickup_requests pr ON cs.special_pickup_id = pr.id
+                          WHERE cs.schedule_type = 'special_pickup'
+                          AND cs.scheduled_date = ?
+                          AND cs.special_pickup_id IS NOT NULL
+                          AND pr.status = 'scheduled'
+                          
+                          ORDER BY schedule_type, session, start_time, barangay_name";
         
         $scheduleStmt = $db->prepare($scheduleQuery);
-        $scheduleStmt->execute([$dayOfWeek, $weekOfMonth]);
+        $scheduleStmt->execute([$dayOfWeek, $weekOfMonth, $date]);
         $schedules = $scheduleStmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (empty($schedules)) {
