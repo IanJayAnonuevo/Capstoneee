@@ -15,12 +15,6 @@ export default function ForemanTasks() {
             icon: MdToday
         },
         {
-            label: "Special Pickup Tasks",
-            description: "Manage one-time special pickup requests",
-            to: '/foreman/tasks/special-pickup',
-            icon: FaTruckPickup
-        },
-        {
             label: "Past Tasks",
             description: "Review history of completed tasks",
             to: '/foreman/tasks/past',

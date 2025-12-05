@@ -88,23 +88,28 @@ const truckMarkerIcon = (status = 'idle', heading = 0, scale = 1) => {
 }
 
 const binIcon = (status = 'pending') => {
-  const emoji = status === 'completed' ? '✅' : '🗑️'
-  const color = status === 'completed' ? '#10b981' : '#ef4444'
+  const bgColor = status === 'completed' ? '#10b981' : '#ef4444'
 
   return L.divIcon({
     className: 'bin-marker',
     html: `
       <div style="
-        font-size: 24px;
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        color: ${color};
+        width: 20px;
+        height: 20px;
+        background-color: ${bgColor};
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       ">
-        ${emoji}
+        <div style="font-size: 10px;">🗑️</div>
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   })
 }
 
@@ -446,18 +451,10 @@ export default function Dashboard() {
                         icon={truckMarkerIcon(status, heading, 1.05)}
                         opacity={opacity}
                       >
-                        <Tooltip permanent direction="top" offset={[0, -25]} className="truck-label">
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', textAlign: 'center' }}>
-                            {t.plate || `Truck ${t.truck_id}`}
-                          </div>
-                        </Tooltip>
                         <Popup>
                           <div className="text-sm">
                             <div><strong>{t.plate || `Truck ${t.truck_id}`}</strong> {stale && <span className="text-xs text-gray-500">(Stale)</span>}</div>
                             <div>Driver: {t.driver || 'N/A'}</div>
-                            <div>Status: <span style={{ color: getTruckColor(status), fontWeight: 'bold' }}>{status}</span></div>
-                            <div>Speed: {t.speed ?? 0} km/h</div>
-                            <div>Accuracy: {t.accuracy ?? '—'} m</div>
                             <div>Updated: {new Date(t.ts).toLocaleTimeString()}</div>
                           </div>
                         </Popup>
@@ -485,7 +482,12 @@ export default function Dashboard() {
                         <div className="text-sm">
                           <div><strong>{point.location_name}</strong></div>
                           <div>Barangay: {point.barangay_id}</div>
-                          <div>Status: {point.status === 'completed' ? '✅ Collected' : '🗑️ Pending'}</div>
+                          <div>Status: {
+                            point.status === 'completed' ? '✅ Collected' :
+                              point.status === 'pending' ? '🗑️ Pending' :
+                                point.status === 'skipped' ? '⏭️ Skipped' :
+                                  '⚪ Not Scheduled'
+                          }</div>
                           {point.is_mrf && <div className="text-xs text-blue-600">MRF Site</div>}
                           {point.last_collected && (
                             <div className="text-xs text-gray-600">

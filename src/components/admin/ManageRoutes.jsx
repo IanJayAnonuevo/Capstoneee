@@ -209,15 +209,6 @@ const ManageRoutes = () => {
 
                     <GenerateRoutesButton onRoutesGenerated={fetchRoutes} />
                 </div>
-
-                <div className="flex gap-3 items-center">
-                    <button
-                        onClick={() => window.print()}
-                        className="px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm hover:shadow-md active:scale-95"
-                    >
-                        Print
-                    </button>
-                </div>
             </div>
 
             {/* Error Message */}

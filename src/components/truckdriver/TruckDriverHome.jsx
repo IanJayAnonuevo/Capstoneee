@@ -143,7 +143,7 @@ export default function TruckDriverHome() {
       {/* Attendance Status Notification - Minimal & Top */}
       {currentWindow !== 'CLOSED' && (
         <div className="mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          {/* Morning Notifications */}
+          {/* Morning Time-In Notification */}
           {currentWindow === 'AM_TIME_IN' && !sessionStatus.am.hasTimeIn && !sessionStatus.am.pending && (
             <div className="flex items-center justify-between bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
               <div>
@@ -152,29 +152,13 @@ export default function TruckDriverHome() {
               </div>
             </div>
           )}
-          {currentWindow === 'AM_TIME_OUT' && sessionStatus.am.hasTimeIn && !sessionStatus.am.hasTimeOut && (
-            <div className="flex items-center justify-between bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
-              <div>
-                <p className="font-bold text-amber-800 text-sm">Morning Break Open</p>
-                <p className="text-xs text-amber-600">Time-out window: 12:00 - 1:00 PM</p>
-              </div>
-            </div>
-          )}
 
-          {/* Afternoon Notifications */}
+          {/* Afternoon Time-In Notification */}
           {currentWindow === 'PM_TIME_IN' && !sessionStatus.pm.hasTimeIn && !sessionStatus.pm.pending && (
             <div className="flex items-center justify-between bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r shadow-sm">
               <div>
                 <p className="font-bold text-emerald-800 text-sm">Afternoon Session Open</p>
                 <p className="text-xs text-emerald-600">Time-in window: 1:00 - 2:00 PM</p>
-              </div>
-            </div>
-          )}
-          {currentWindow === 'PM_TIME_OUT' && sessionStatus.pm.hasTimeIn && !sessionStatus.pm.hasTimeOut && (
-            <div className="flex items-center justify-between bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r shadow-sm">
-              <div>
-                <p className="font-bold text-indigo-800 text-sm">End of Day Open</p>
-                <p className="text-xs text-indigo-600">Time-out window: 5:00 - 6:00 PM</p>
               </div>
             </div>
           )}

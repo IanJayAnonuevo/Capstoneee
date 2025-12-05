@@ -57,11 +57,41 @@ function generateDailyRoutes(PDO $db, string $date, string $policy = 'preserve_m
       $cleanupConditions[] = "barangay_id = ?";
       $cleanupParams[] = $scopeId;
     }
-    $stopWhere = array_map(fn($c) => 'dr.' . $c, $cleanupConditions);
-    $stopCleanupSql = "DELETE drs FROM daily_route_stop drs INNER JOIN daily_route dr ON drs.daily_route_id = dr.id WHERE " . implode(' AND ', $stopWhere);
+    
+    // Build WHERE clause for child table deletions
+    $whereClause = implode(' AND ', array_map(fn($c) => "dr.$c", $cleanupConditions));
+    
+    // Delete all child records first to avoid foreign key constraint violations
+    // 1. Delete route stops
+    $stopCleanupSql = "DELETE drs FROM daily_route_stop drs 
+                       INNER JOIN daily_route dr ON drs.daily_route_id = dr.id 
+                       WHERE $whereClause";
     $stopCleanupStmt = $db->prepare($stopCleanupSql);
     $stopCleanupStmt->execute($cleanupParams);
+    
+    // 2. Delete route logs (if table exists) - using route_id as the foreign key
+    try {
+      $logCleanupSql = "DELETE grl FROM gpc_route_log grl 
+                        INNER JOIN daily_route dr ON grl.route_id = dr.id 
+                        WHERE $whereClause";
+      $logCleanupStmt = $db->prepare($logCleanupSql);
+      $logCleanupStmt->execute($cleanupParams);
+    } catch (Throwable $e) {
+      // Table might not exist or column name is different, ignore
+    }
+    
+    // 3. Delete any other child records (route_emergencies, etc.)
+    try {
+      $emergencyCleanupSql = "DELETE re FROM route_emergency re 
+                              INNER JOIN daily_route dr ON re.route_id = dr.id 
+                              WHERE $whereClause";
+      $emergencyCleanupStmt = $db->prepare($emergencyCleanupSql);
+      $emergencyCleanupStmt->execute($cleanupParams);
+    } catch (Throwable $e) {
+      // Table might not exist, ignore
+    }
 
+    // Finally, delete the routes themselves
     $routeCleanupSql = "DELETE FROM daily_route WHERE " . implode(' AND ', $cleanupConditions);
     $routeCleanupStmt = $db->prepare($routeCleanupSql);
     $routeCleanupStmt->execute($cleanupParams);

@@ -130,7 +130,7 @@ export default function Issues() {
     try {
       setLoading(true);
       setError('');
-      
+
       const params = new URLSearchParams();
       if (filterStatus !== 'all') {
         params.append('status', filterStatus);
@@ -139,7 +139,7 @@ export default function Issues() {
       const response = await axios.get(`${buildApiUrl('get_issues.php')}?${params}`, {
         headers: getAuthHeaders(),
       });
-      
+
       if (response.data.status === 'success') {
         const normalizedReports = (response.data.data || []).map((report) => {
           const submittedPhotoUrl = resolvePhotoUrl(report.photo_url);
@@ -177,7 +177,7 @@ export default function Issues() {
     try {
       setUpdatingStatus(true);
       const { keepExistingPhoto = false } = options;
-      
+
       // If status is resolved and photo is provided, use multipart form data
       if (newStatus === 'resolved' && resolutionPhoto) {
         const formData = new FormData();
@@ -192,17 +192,17 @@ export default function Issues() {
         });
 
         if (response.data.status === 'success') {
-          setReports(prev => prev.map(report => 
-            report.id === reportId 
+          setReports(prev => prev.map(report =>
+            report.id === reportId
               ? {
-                  ...report,
-                  status: newStatus,
-                  resolution_notes: resolutionNotes,
-                  resolution_photo_url: response.data.data.resolution_photo_url,
-                  resolutionPhotoUrl: resolvePhotoUrl(response.data.data.resolution_photo_url),
-                  resolvedPhotoUrl: resolvePhotoUrl(response.data.data.resolution_photo_url),
-                  resolved_at: response.data.data.updated_at || report.resolved_at
-                }
+                ...report,
+                status: newStatus,
+                resolution_notes: resolutionNotes,
+                resolution_photo_url: response.data.data.resolution_photo_url,
+                resolutionPhotoUrl: resolvePhotoUrl(response.data.data.resolution_photo_url),
+                resolvedPhotoUrl: resolvePhotoUrl(response.data.data.resolution_photo_url),
+                resolved_at: response.data.data.updated_at || report.resolved_at
+              }
               : report
           ));
           setShowModal(false);
@@ -302,7 +302,7 @@ export default function Issues() {
   };
 
   // Filter reports based on search term
-  const filteredReports = reports.filter(report => 
+  const filteredReports = reports.filter(report =>
     report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.issue_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.barangay.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -328,13 +328,6 @@ export default function Issues() {
 
     if (filteredReports.length === 0) {
       alert('No reports available to print with the current filters.');
-      return;
-    }
-
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=650');
-
-    if (!printWindow) {
-      alert('Please allow pop-ups to print the reports.');
       return;
     }
 
@@ -483,30 +476,38 @@ export default function Issues() {
       </html>
     `;
 
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    // Create iframe for printing
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
 
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 200);
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Wait for content to load then print
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        // Remove iframe after printing
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    };
   };
 
-  // Status update modal
+  // View-only modal for admin
   const StatusUpdateModal = () => {
     if (!selectedReport) return null;
 
-    const [newStatus, setNewStatus] = useState(selectedReport.status);
     const initialResolutionPhotoUrl = selectedReport.resolutionPhotoUrl || null;
-    const [resolutionNotes, setResolutionNotes] = useState(selectedReport.resolution_notes || '');
-    const [resolutionPhoto, setResolutionPhoto] = useState(null);
-    const [photoPreviewUrl, setPhotoPreviewUrl] = useState(initialResolutionPhotoUrl);
-    const [useExistingPhoto, setUseExistingPhoto] = useState(Boolean(initialResolutionPhotoUrl));
-
-    const normalizedIssueType = (selectedReport.issue_type || '').trim().toLowerCase();
-    const isProofOptional = normalizedIssueType === 'rude or unprofessional service from collectors';
-    const requiresResolutionProof = newStatus === 'resolved' && !isProofOptional;
+    const statusInfo = getStatusInfo(selectedReport.status);
 
     const handleOpenExistingProof = () => {
       if (initialResolutionPhotoUrl) {
@@ -514,42 +515,12 @@ export default function Issues() {
       }
     };
 
-    const handlePhotoChange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setResolutionPhoto(file);
-        setUseExistingPhoto(false);
-        // Create preview URL
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPhotoPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    const removePhoto = () => {
-      if (resolutionPhoto) {
-        setResolutionPhoto(null);
-        if (initialResolutionPhotoUrl) {
-          setPhotoPreviewUrl(initialResolutionPhotoUrl);
-          setUseExistingPhoto(true);
-        } else {
-          setPhotoPreviewUrl(null);
-          setUseExistingPhoto(false);
-        }
-      } else if (useExistingPhoto) {
-        setPhotoPreviewUrl(null);
-        setUseExistingPhoto(false);
-      }
-    };
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Update Issue Status</h3>
-            
+            <h3 className="text-xl font-bold text-gray-800 mb-4">View Issue Details</h3>
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Issue Type</label>
               <p className="text-gray-900 font-medium">{selectedReport.issue_type}</p>
@@ -562,12 +533,37 @@ export default function Issues() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-              <p className="text-gray-600 text-sm">{selectedReport.description}</p>
+              <p className="text-gray-600 text-sm whitespace-pre-line">{selectedReport.description}</p>
             </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+                {statusInfo.label}
+              </span>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Submitted Date</label>
+              <p className="text-gray-900 text-sm">{formatDate(selectedReport.created_at)}</p>
+            </div>
+
+            {selectedReport.photo_url && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Submitted Photo</label>
+                <button
+                  type="button"
+                  onClick={() => openPhotoPreview(selectedReport)}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-900"
+                >
+                  <FiImage className="w-4 h-4" /> View Photo
+                </button>
+              </div>
+            )}
 
             {(selectedReport.resolution_notes || initialResolutionPhotoUrl) && (
               <div className="mb-4 border border-green-200 bg-green-50 rounded-lg p-4">
-                <p className="text-sm font-semibold text-green-700">Current resolution details</p>
+                <p className="text-sm font-semibold text-green-700">Resolution Details</p>
                 {selectedReport.resolution_notes && (
                   <p className="mt-2 text-sm text-green-800 whitespace-pre-line">{selectedReport.resolution_notes}</p>
                 )}
@@ -583,112 +579,21 @@ export default function Issues() {
                     onClick={handleOpenExistingProof}
                     className="mt-3 inline-flex items-center gap-2 text-xs font-medium text-green-700 hover:text-green-900"
                   >
-                    <FiExternalLink className="w-4 h-4" /> View current proof
+                    <FiExternalLink className="w-4 h-4" /> View resolution proof
                   </button>
                 )}
               </div>
             )}
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="pending">Pending</option>
-                <option value="active">Active</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-
-            {newStatus === 'resolved' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Resolution Photo
-                  {requiresResolutionProof ? (
-                    <>
-                      {' '}<span className="text-red-500">*</span>
-                      <span className="text-xs text-gray-500 ml-1">(Proof that issue is resolved)</span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-gray-500 ml-1">(Optional for this issue type)</span>
-                  )}
-                </label>
-                
-                {!photoPreviewUrl ? (
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <FiImage className="w-8 h-8 text-gray-400 mb-2" />
-                      <p className="text-xs text-gray-500">Click to upload resolution photo</p>
-                      <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
-                    </div>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                    />
-                  </label>
-                ) : (
-                  <div className="relative">
-                    <img 
-                      src={photoPreviewUrl} 
-                      alt="Resolution preview" 
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <span className="absolute left-3 top-3 px-2 py-1 rounded-full text-xs font-semibold text-white bg-green-600/80">
-                      {resolutionPhoto ? 'New upload' : 'Current proof'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={removePhoto}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                    >
-                      <FiX className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-
-                {requiresResolutionProof && !resolutionPhoto && !useExistingPhoto && (
-                  <p className="mt-2 text-xs text-red-500">Attach a proof photo before marking this issue as resolved.</p>
-                )}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Resolution Notes</label>
-              <textarea
-                value={resolutionNotes}
-                onChange={(e) => setResolutionNotes(e.target.value)}
-                placeholder="Add notes about the resolution..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => updateReportStatus(
-                  selectedReport.id,
-                  newStatus,
-                  resolutionNotes,
-                  resolutionPhoto,
-                  { keepExistingPhoto: useExistingPhoto && !resolutionPhoto }
-                )}
-                disabled={updatingStatus || (requiresResolutionProof && !resolutionPhoto && !useExistingPhoto)}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {updatingStatus ? 'Updating...' : 'Update Status'}
-              </button>
+            <div className="flex justify-end">
               <button
                 onClick={() => {
                   setShowModal(false);
                   setSelectedReport(null);
                 }}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700"
               >
-                Cancel
+                Close
               </button>
             </div>
           </div>
@@ -712,12 +617,6 @@ export default function Issues() {
 
   return (
     <div className="w-full h-full p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-green-700 mb-2">Issue Reports</h1>
-        <p className="text-gray-600">Manage and track all issue reports from residents and barangay heads</p>
-      </div>
-
       {/* Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -732,7 +631,7 @@ export default function Issues() {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-full sm:w-64"
             />
           </div>
-          
+
           {/* Filter */}
           <select
             value={filterStatus}
@@ -746,7 +645,7 @@ export default function Issues() {
             <option value="closed">Closed</option>
           </select>
         </div>
-        
+
         <div className="flex gap-3">
           {/* Refresh */}
           <button
@@ -756,7 +655,7 @@ export default function Issues() {
             <FiRefreshCw className="w-5 h-5" />
             Refresh
           </button>
-          
+
           {/* Export */}
           <button
             onClick={handlePrintReports}
@@ -777,45 +676,41 @@ export default function Issues() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Reports</p>
-              <p className="text-2xl font-bold text-gray-900">{reports.length}</p>
-            </div>
-            <FiAlertCircle className="w-8 h-8 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Reports</span>
+            <FiAlertCircle className="w-5 h-5 text-blue-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{statusCounts.total}</div>
+          <p className="text-sm text-gray-500 mt-1">Across all barangays</p>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600">{reports.filter(r => r.status === 'pending').length}</p>
-            </div>
-            <FiClock className="w-8 h-8 text-yellow-500" />
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending</span>
+            <FiClock className="w-5 h-5 text-yellow-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{statusCounts.pending}</div>
+          <p className="text-sm text-gray-500 mt-1">Awaiting review</p>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Resolved</p>
-              <p className="text-2xl font-bold text-green-600">{reports.filter(r => r.status === 'resolved').length}</p>
-            </div>
-            <FiCheckCircle className="w-8 h-8 text-green-500" />
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Resolved</span>
+            <FiCheckCircle className="w-5 h-5 text-green-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{statusCounts.resolved}</div>
+          <p className="text-sm text-gray-500 mt-1">Successfully addressed</p>
         </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Closed</p>
-              <p className="text-2xl font-bold text-gray-600">{reports.filter(r => r.status === 'closed').length}</p>
-            </div>
-            <FiXCircle className="w-8 h-8 text-gray-500" />
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Closed</span>
+            <FiXCircle className="w-5 h-5 text-gray-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{statusCounts.closed}</div>
+          <p className="text-sm text-gray-500 mt-1">Completed and archived</p>
         </div>
       </div>
 
@@ -846,7 +741,7 @@ export default function Issues() {
                 {filteredReports.map((report) => {
                   const statusInfo = getStatusInfo(report.status);
                   const StatusIcon = statusInfo.icon;
-                  
+
                   return (
                     <tr key={report.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">

@@ -2,14 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiAlertCircle } from 'react-icons/fi';
 import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson, MdQuestionAnswer } from 'react-icons/md';
-import Slider from 'react-slick';
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
 import { authService } from '../../services/authService';
-import eventTreePlanting from '../../assets/images/users/tp.jpg';
-import eventCleanUp from '../../assets/images/users/cd.jpg';
-import eventCampaign from '../../assets/images/users/s.jpg';
-import eventCoastal from '../../assets/images/users/an.jpg';
 import BrandedLoader from '../shared/BrandedLoader';
 import { calculateUnreadCount } from '../../utils/notificationUtils';
 import { useLoader } from '../../contexts/LoaderContext';
@@ -412,33 +405,7 @@ const ResidentDashboard = () => {
   };
 
 
-  // Upcoming MENRO events
-  const upcomingEvents = [
-    {
-      image: eventTreePlanting,
-      title: 'Tree Planting Activity',
-      date: 'October 20, 2025',
-      location: 'Gaongan, Sipocot, Camarines Sur'
-    },
-    {
-      image: eventCleanUp,
-      title: 'Clean Up Drive',
-      date: 'October 24, 2025',
-      location: 'Impig, Sipocot, Camarines Sur'
-    },
-    {
-      image: eventCampaign,
-      title: 'Campaign Seminar',
-      date: 'October 26, 2025',
-      location: 'Caima, Sipocot, Camarines Sur'
-    },
-    {
-      image: eventCoastal,
-      title: 'Coastal Clean Up Drive',
-      date: 'October 30, 2025',
-      location: 'Anib, Sipocot, Camarines Sur'
-    }
-  ];
+
 
   const handleNavigation = (targetPath, options = {}) => {
     const { skipLoading = false, closeMenu = true, customAction } = options;
@@ -802,8 +769,8 @@ const ResidentDashboard = () => {
                   type="submit"
                   disabled={!feedbackMessage.trim()}
                   className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${feedbackMessage.trim()
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
                     }`}
                 >
                   Submit Feedback
@@ -867,52 +834,21 @@ const ResidentDashboard = () => {
         {/* --- Main Content Container: px-4 py-4, just like TruckDriverHome --- */}
         {location.pathname === '/resident' ? (
           <div className="flex-1 bg-gray-50 px-4 py-4">
-            {/* Event Carousel */}
+            {/* MENRO Banner */}
             <div className="relative w-full h-64 md:h-80 overflow-hidden shadow-lg mb-8 mt-4 rounded-xl">
-              <Slider
-                dots={true}
-                infinite={true}
-                speed={500}
-                slidesToShow={1}
-                slidesToScroll={1}
-                autoplay={true}
-                autoplaySpeed={4000}
-                arrows={false}
-                dotsClass="slick-dots custom-dots"
-              >
-                {upcomingEvents.map((event, index) => (
-                  <div key={index} className="relative h-64 md:h-80">
-                    <div
-                      className="w-full h-full bg-cover bg-center relative rounded-xl"
-                      style={{ backgroundImage: `url(${event.image})` }}
-                    >
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl"></div>
-                      {/* Event Info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <div className="flex items-center gap-2 mb-2">
-                          <MdEvent className="w-4 h-4 text-green-400" />
-                          <span className="text-sm font-medium text-green-400">{event.date}</span>
-                        </div>
-                        <h3 className="text-xl md:text-2xl font-bold mb-2">{event.title}</h3>
-                        <p className="text-sm md:text-base text-gray-200">{event.location}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </Slider>
-              <style>{`
-                .custom-dots {
-                  bottom: 20px !important;
-                }
-                .custom-dots li button:before {
-                  color: white !important;
-                  font-size: 12px !important;
-                }
-                .custom-dots li.slick-active button:before {
-                  color: white !important;
-                }
-              `}</style>
+              <img
+                src="/src/assets/menro_banner.jpg"
+                alt="Municipal Environment and Natural Resources Office"
+                className="w-full h-full object-cover rounded-xl"
+              />
+              {/* Policy Text Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl">
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h3 className="text-base md:text-lg font-bold text-center">
+                    STRICTLY "NO SEGREGATION, NO COLLECTION" POLICY
+                  </h3>
+                </div>
+              </div>
             </div>
             {/* Quick Actions Section */}
             <div className="mt-6">
@@ -1002,8 +938,8 @@ const ResidentDashboard = () => {
                 )}
                 <div
                   className={`max-w-[80%] p-2.5 sm:p-3 rounded-2xl shadow-sm text-sm ${message.type === 'user'
-                      ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
-                      : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
+                    ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-none'
+                    : 'bg-white text-gray-800 rounded-bl-none border border-gray-100'
                     }`}
                 >
                   {message.content}

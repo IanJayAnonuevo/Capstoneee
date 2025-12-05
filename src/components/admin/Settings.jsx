@@ -1,0 +1,373 @@
+import React, { useState, useEffect } from 'react';
+import { MdPerson, MdLock, MdEmail, MdPhone, MdSave, MdCancel, MdEdit } from 'react-icons/md';
+import { authService } from '../../services/authService';
+import Skeleton from '../shared/Skeleton';
+
+export default function Settings() {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('profile');
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    // Profile edit state
+    const [editMode, setEditMode] = useState(false);
+    const [profileData, setProfileData] = useState({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: ''
+    });
+
+    // Password change state
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+
+    useEffect(() => {
+        fetchUserData();
+    }, []);
+
+    const fetchUserData = async () => {
+        try {
+            setLoading(true);
+            const userId = localStorage.getItem('user_id');
+            if (!userId) {
+                throw new Error('User ID not found');
+            }
+
+            const response = await authService.getUserData(userId);
+            if (response.status === 'success' && response.data) {
+                const userData = response.data;
+                setUser(userData);
+                setProfileData({
+                    first_name: userData.firstname || '',
+                    last_name: userData.lastname || '',
+                    email: userData.email || '',
+                    phone: userData.phone || ''
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+            showMessage('error', 'Failed to load user data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const showMessage = (type, text) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    };
+
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            const userId = localStorage.getItem('user_id');
+            const response = await authService.updateProfile(userId, profileData);
+
+            if (response.success) {
+                showMessage('success', 'Profile updated successfully');
+                setEditMode(false);
+                fetchUserData();
+
+                // Update localStorage
+                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                localStorage.setItem('user', JSON.stringify({ ...currentUser, ...profileData }));
+            } else {
+                showMessage('error', response.message || 'Failed to update profile');
+            }
+        } catch (error) {
+            showMessage('error', 'Error updating profile');
+        }
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            showMessage('error', 'New passwords do not match');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 6) {
+            showMessage('error', 'Password must be at least 6 characters');
+            return;
+        }
+
+        try {
+            const userId = localStorage.getItem('user_id');
+            const response = await authService.changePassword(
+                userId,
+                passwordData.currentPassword,
+                passwordData.newPassword
+            );
+
+            if (response.success) {
+                showMessage('success', 'Password changed successfully');
+                setPasswordData({
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                });
+            } else {
+                showMessage('error', response.message || 'Failed to change password');
+            }
+        } catch (error) {
+            showMessage('error', 'Error changing password');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="w-full h-full p-8">
+                <div className="max-w-4xl mx-auto">
+                    <div className="flex gap-2 mb-6 border-b border-gray-200">
+                        <Skeleton className="h-10 w-24" />
+                        <Skeleton className="h-10 w-24" />
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <Skeleton className="h-6 w-48" />
+                            <Skeleton className="h-9 w-20 rounded-lg" />
+                        </div>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i}>
+                                        <Skeleton className="h-4 w-24 mb-1" />
+                                        <Skeleton className="h-10 w-full rounded-lg" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full p-8">
+            <div className="max-w-4xl mx-auto">
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                    <button
+                        onClick={() => setActiveTab('profile')}
+                        className={`px-4 py-2 font-medium transition-colors ${activeTab === 'profile'
+                                ? 'text-green-600 border-b-2 border-green-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        Profile
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('password')}
+                        className={`px-4 py-2 font-medium transition-colors ${activeTab === 'password'
+                                ? 'text-green-600 border-b-2 border-green-600'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        Password
+                    </button>
+                </div>
+
+                {/* Message Banner */}
+                {message.text && (
+                    <div
+                        className={`mb-4 p-3 rounded-lg ${message.type === 'success'
+                                ? 'bg-green-50 text-green-800 border border-green-200'
+                                : 'bg-red-50 text-red-800 border border-red-200'
+                            }`}
+                    >
+                        {message.text}
+                    </div>
+                )}
+
+                {/* Profile Tab */}
+                {activeTab === 'profile' && (
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
+                            {!editMode && (
+                                <button
+                                    onClick={() => setEditMode(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                    <MdEdit className="w-4 h-4" />
+                                    Edit
+                                </button>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleProfileUpdate} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        First Name
+                                    </label>
+                                    <div className="relative">
+                                        <MdPerson className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            value={profileData.first_name}
+                                            onChange={(e) => setProfileData({ ...profileData, first_name: e.target.value })}
+                                            disabled={!editMode}
+                                            className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editMode ? 'bg-gray-50 text-gray-600' : ''
+                                                }`}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Last Name
+                                    </label>
+                                    <div className="relative">
+                                        <MdPerson className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="text"
+                                            value={profileData.last_name}
+                                            onChange={(e) => setProfileData({ ...profileData, last_name: e.target.value })}
+                                            disabled={!editMode}
+                                            className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editMode ? 'bg-gray-50 text-gray-600' : ''
+                                                }`}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Email
+                                    </label>
+                                    <div className="relative">
+                                        <MdEmail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="email"
+                                            value={profileData.email}
+                                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                            disabled={!editMode}
+                                            className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editMode ? 'bg-gray-50 text-gray-600' : ''
+                                                }`}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Phone
+                                    </label>
+                                    <div className="relative">
+                                        <MdPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                        <input
+                                            type="tel"
+                                            value={profileData.phone}
+                                            onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                            disabled={!editMode}
+                                            className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${!editMode ? 'bg-gray-50 text-gray-600' : ''
+                                                }`}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {editMode && (
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="submit"
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                    >
+                                        <MdSave className="w-4 h-4" />
+                                        Save Changes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditMode(false);
+                                            setProfileData({
+                                                first_name: user.firstname || '',
+                                                last_name: user.lastname || '',
+                                                email: user.email || '',
+                                                phone: user.phone || ''
+                                            });
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                    >
+                                        <MdCancel className="w-4 h-4" />
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                        </form>
+                    </div>
+                )}
+
+                {/* Password Tab */}
+                {activeTab === 'password' && (
+                    <div className="bg-white rounded-xl shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-6">Change Password</h2>
+
+                        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Current Password
+                                </label>
+                                <div className="relative">
+                                    <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <input
+                                        type="password"
+                                        value={passwordData.currentPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                        required
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    New Password
+                                </label>
+                                <div className="relative">
+                                    <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <input
+                                        type="password"
+                                        value={passwordData.newPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                        required
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Confirm New Password
+                                </label>
+                                <div className="relative">
+                                    <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <input
+                                        type="password"
+                                        value={passwordData.confirmPassword}
+                                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                        required
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                <MdSave className="w-4 h-4" />
+                                Change Password
+                            </button>
+                        </form>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

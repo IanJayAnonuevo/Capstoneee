@@ -54,6 +54,11 @@ export default function TruckDriverTask() {
   // Emergency modal state
   const [emergencyModal, setEmergencyModal] = useState({ show: false, type: '', message: '' });
 
+  // Auto-timeout state
+  const [autoTimeoutTriggered, setAutoTimeoutTriggered] = useState({}); // Track which date+session combos have been triggered
+  const [showAutoTimeoutModal, setShowAutoTimeoutModal] = useState(false);
+  const [autoTimeoutData, setAutoTimeoutData] = useState(null);
+
   const userId = useMemo(() => {
     try {
       return localStorage.getItem('user_id') || localStorage.getItem('userId') || '';
@@ -242,6 +247,9 @@ export default function TruckDriverTask() {
             };
           });
           setTasks(mapped);
+
+          // Check for task completion and trigger auto-timeout
+          checkAndTriggerAutoTimeout(mapped);
         } else {
           setTasks([]);
           setError(data.message || 'Failed to load tasks');
@@ -275,6 +283,126 @@ export default function TruckDriverTask() {
       alert('Network error while submitting response');
     }
   };
+
+  // Auto-timeout trigger function
+  const checkAndTriggerAutoTimeout = useCallback(async (taskList) => {
+    console.log('[Auto-Timeout] Function called with tasks:', taskList);
+
+    if (!userId || !taskList || taskList.length === 0) {
+      console.log('[Auto-Timeout] Early return - userId:', userId, 'taskList length:', taskList?.length);
+      return;
+    }
+
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    console.log('[Auto-Timeout] Today:', todayStr);
+
+    // Group tasks by date and session
+    const tasksByDateSession = {};
+    taskList.forEach(task => {
+      if (!task.rawDate) return;
+
+      // Determine session from task time
+      const timeStr = task.time || '';
+      const [startStr] = timeStr.split('-').map(s => s.trim());
+      const startHour = parseInt(startStr?.split(':')[0] || '0', 10);
+      const session = startHour < 12 ? 'AM' : 'PM';
+
+      const key = `${task.rawDate}_${session}`;
+      if (!tasksByDateSession[key]) {
+        tasksByDateSession[key] = {
+          date: task.rawDate,
+          session,
+          totalStops: 0,
+          completedStops: 0,
+          tasks: []
+        };
+      }
+
+      tasksByDateSession[key].totalStops += Number(task.totalStops || 0);
+      tasksByDateSession[key].completedStops += Number(task.completedStops || 0);
+      tasksByDateSession[key].tasks.push(task);
+    });
+
+    console.log('[Auto-Timeout] Grouped tasks by date/session:', tasksByDateSession);
+
+    // Check each date+session for completion
+    for (const [key, group] of Object.entries(tasksByDateSession)) {
+      console.log('[Auto-Timeout] Checking group:', key, group);
+
+      // Only check today's tasks
+      if (group.date !== todayStr) {
+        console.log('[Auto-Timeout] Skipping - not today:', group.date, 'vs', todayStr);
+        continue;
+      }
+
+      // Skip if already triggered
+      if (autoTimeoutTriggered[key]) {
+        console.log('[Auto-Timeout] Skipping - already triggered:', key);
+        continue;
+      }
+
+      // Check if all stops are completed
+      console.log('[Auto-Timeout] Checking completion:', {
+        totalStops: group.totalStops,
+        completedStops: group.completedStops,
+        isComplete: group.totalStops > 0 && group.completedStops >= group.totalStops
+      });
+
+      if (group.totalStops > 0 && group.completedStops >= group.totalStops) {
+        console.log('[Auto-Timeout] ✓ All tasks completed! Triggering auto-timeout for:', key);
+        // Mark as triggered to prevent duplicate calls
+        setAutoTimeoutTriggered(prev => ({ ...prev, [key]: true }));
+
+        // Call auto-timeout API
+        try {
+          console.log('[Auto-Timeout] Calling API with data:', {
+            date: group.date,
+            session: group.session
+          });
+
+          const res = await fetch(buildApiUrl('auto_timeout_on_task_completion.php'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({
+              // Don't send user_id - let API use authenticated user from token
+              date: group.date,
+              session: group.session
+            })
+          });
+
+          console.log('[Auto-Timeout] API Response status:', res.status);
+
+          const data = await res.json();
+          console.log('[Auto-Timeout] API Response data:', data);
+
+          if (data.success || data.status === 'success') {
+            console.log('[Auto-Timeout] ✓ Success! Showing modal');
+            // Show success modal
+            setAutoTimeoutData({
+              date: group.date,
+              session: group.session,
+              totalStops: group.totalStops,
+              completedStops: group.completedStops
+            });
+            setShowAutoTimeoutModal(true);
+          } else {
+            console.log('[Auto-Timeout] ✗ API returned non-success:', data);
+          }
+        } catch (error) {
+          console.error('[Auto-Timeout] API error:', error);
+        }
+      }
+    }
+  }, [userId, autoTimeoutTriggered]);
+
+  // Monitor task changes and trigger auto-timeout when tasks are updated
+  useEffect(() => {
+    if (tasks.length > 0) {
+      checkAndTriggerAutoTimeout(tasks);
+    }
+  }, [tasks, checkAndTriggerAutoTimeout]);
 
   const filteredTasks = useMemo(() => {
     // Helper to normalize date to YYYY-MM-DD format (avoid timezone issues)
@@ -470,11 +598,21 @@ export default function TruckDriverTask() {
       const dateKey = normalizeDate(t.rawDate);
       if (!dateKey) continue;
 
-      // Group by Date + Truck + Driver to merge schedules for the same shift/team
+      // Determine session (AM/PM) based on start time
+      const determineSession = (timeStr) => {
+        if (!timeStr) return 'UNKNOWN';
+        const [startStr] = String(timeStr).split('-').map(s => s.trim());
+        const startHour = parseInt(startStr?.split(':')[0] || '0', 10);
+        return startHour < 12 ? 'AM' : 'PM';
+      };
+
+      const session = determineSession(t.time);
+
+      // Group by Date + Truck + Driver + Session to separate AM/PM schedules
       // Use a fallback for missing truck/driver to avoid grouping unrelated tasks
       const truckKey = (t.vehicle || 'UnknownTruck').trim().toLowerCase();
       const driverKey = (t.driverName || 'UnknownDriver').trim().toLowerCase();
-      const uniqueKey = `${dateKey}_${truckKey}_${driverKey}`;
+      const uniqueKey = `${dateKey}_${truckKey}_${driverKey}_${session}`;
 
       if (!map[uniqueKey]) {
         const formattedDate = formatPrettyDate(dateKey);
@@ -777,8 +915,8 @@ export default function TruckDriverTask() {
                 return startHour < 12;
               }
               if (scheduleTimeFilter === 'pm') {
-                // Show in PM if it ends in PM (12:00 or later) or starts in PM
-                return endHour >= 12 || startHour >= 12;
+                // Show in PM only if it starts in PM (12:00 or later)
+                return startHour >= 12;
               }
               return true;
             })
@@ -1043,6 +1181,51 @@ export default function TruckDriverTask() {
             })}
         </div >
       </div >
+
+      {/* Auto-Timeout Success Modal */}
+      {showAutoTimeoutModal && autoTimeoutData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <FiCheckCircle className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-white font-bold text-xl">All Tasks Completed!</h3>
+              </div>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-gray-700 mb-4">
+                Congratulations! You have successfully completed all your assigned collection points for the <strong>{autoTimeoutData.session}</strong> session.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">Total Collection Points:</span>
+                  <span className="text-lg font-bold text-green-700">{autoTimeoutData.totalStops}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Completed:</span>
+                  <span className="text-lg font-bold text-green-700">{autoTimeoutData.completedStops}</span>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>✓ Auto Time-Out</strong><br />
+                  You have been automatically marked as present for today's {autoTimeoutData.session} session. Great work!
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowAutoTimeoutModal(false)}
+                className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors"
+              >
+                Awesome!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Emergency Modal */}
       {emergencyModal.show && (

@@ -817,6 +817,42 @@ export default function RouteRun() {
           body: JSON.stringify({ route_id: Number(id) })
         }).catch(() => { })
 
+        // Trigger auto-timeout after route completion
+        try {
+          const routeDate = nextMeta?.date || nextMeta?.scheduled_date || new Date().toISOString().slice(0, 10);
+          const startTime = nextMeta?.start_time || '00:00:00';
+          const startHour = parseInt(startTime.split(':')[0], 10);
+          const session = startHour < 12 ? 'AM' : 'PM';
+
+          console.log('[Auto-Timeout] Triggering after route completion:', {
+            date: routeDate,
+            session
+          });
+
+          const autoTimeoutRes = await fetch(buildApiUrl('auto_timeout_on_task_completion.php'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders()
+            },
+            body: JSON.stringify({
+              // Don't send user_id - let API use authenticated user from token
+              date: routeDate,
+              session: session
+            })
+          });
+
+          const autoTimeoutData = await autoTimeoutRes.json();
+          console.log('[Auto-Timeout] Response:', autoTimeoutData);
+
+          if (autoTimeoutData.success || autoTimeoutData.status === 'success') {
+            console.log('[Auto-Timeout] ✓ Successfully marked attendance');
+          }
+        } catch (autoTimeoutError) {
+          console.error('[Auto-Timeout] Failed to trigger auto-timeout:', autoTimeoutError);
+          // Don't block route completion if auto-timeout fails
+        }
+
         stopTracking()
         const nextRoute = await findNextRoute(Number(id), nextMeta)
         if (nextRoute && Number(nextRoute.id) !== Number(id)) {

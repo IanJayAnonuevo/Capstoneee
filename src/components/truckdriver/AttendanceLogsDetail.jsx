@@ -37,7 +37,46 @@ export default function AttendanceLogsDetail() {
             const data = await response.json();
 
             if (data.status === 'success' && Array.isArray(data.data)) {
-                setAttendance(data.data);
+                // Group attendance records by date to merge AM and PM sessions
+                const groupedByDate = {};
+
+                data.data.forEach(record => {
+                    const date = record.attendance_date;
+
+                    if (!groupedByDate[date]) {
+                        groupedByDate[date] = {
+                            attendance_date: date,
+                            status: record.status,
+                            am_time_in: null,
+                            am_time_out: null,
+                            pm_time_in: null,
+                            pm_time_out: null
+                        };
+                    }
+
+                    // Merge AM session data
+                    if (record.am_time_in && record.am_time_in !== 'null') {
+                        groupedByDate[date].am_time_in = record.am_time_in;
+                    }
+                    if (record.am_time_out && record.am_time_out !== 'null') {
+                        groupedByDate[date].am_time_out = record.am_time_out;
+                    }
+
+                    // Merge PM session data
+                    if (record.pm_time_in && record.pm_time_in !== 'null') {
+                        groupedByDate[date].pm_time_in = record.pm_time_in;
+                    }
+                    if (record.pm_time_out && record.pm_time_out !== 'null') {
+                        groupedByDate[date].pm_time_out = record.pm_time_out;
+                    }
+                });
+
+                // Convert grouped object back to array and sort by date
+                const mergedAttendance = Object.values(groupedByDate).sort((a, b) =>
+                    new Date(a.attendance_date) - new Date(b.attendance_date)
+                );
+
+                setAttendance(mergedAttendance);
             }
         } catch (error) {
             console.error('Error fetching attendance:', error);

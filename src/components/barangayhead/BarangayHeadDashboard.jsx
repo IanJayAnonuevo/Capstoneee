@@ -2,14 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { FiMenu, FiBell, FiChevronRight, FiX, FiSettings, FiMessageSquare, FiSend, FiBarChart2, FiClipboard, FiEye } from 'react-icons/fi';
 import { MdHome, MdReport, MdEvent, MdMenuBook, MdLogout, MdPerson, MdQuestionAnswer } from 'react-icons/md';
-import Slider from 'react-slick';
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
 import { authService } from '../../services/authService';
-import eventTreePlanting from '../../assets/images/users/tp.jpg';
-import eventCleanUp from '../../assets/images/users/cd.jpg';
-import eventCampaign from '../../assets/images/users/s.jpg';
-import eventCoastal from '../../assets/images/users/an.jpg';
 import { calculateUnreadCount } from '../../utils/notificationUtils';
 import { buildApiUrl } from '../../config/api';
 import BrandedLoader from '../shared/BrandedLoader';
@@ -45,44 +38,7 @@ const faqData = [
   },
 ];
 
-const eventImages = [
-  {
-    image: eventTreePlanting,
-    title: 'Tree Planting Activity',
-    date: 'October 20, 2025',
-    location: 'Gaongan, Sipocot, Camarines Sur',
-  },
-  {
-    image: eventCleanUp,
-    title: 'Clean Up Drive',
-    date: 'October 24, 2025',
-    location: 'Impig, Sipocot, Camarines Sur',
-  },
-  {
-    image: eventCampaign,
-    title: 'Campaign Seminar',
-    date: 'October 26, 2025',
-    location: 'Caima, Sipocot, Camarines Sur',
-  },
-  {
-    image: eventCoastal,
-    title: 'Coastal Clean Up Drive',
-    date: 'October 30, 2025',
-    location: 'Anib, Sipocot, Camarines Sur',
-  },
-];
 
-const carouselSettings = {
-  dots: true,
-  infinite: true,
-  speed: 500,
-  slidesToShow: 1,
-  slidesToScroll: 1,
-  autoplay: true,
-  autoplaySpeed: 5000,
-  arrows: false,
-  dotsClass: 'slick-dots custom-dots',
-};
 
 export default function BarangayHeadDashboard({ unreadNotifications: initialUnread = 0 }) {
   const navigate = useNavigate();
@@ -743,27 +699,21 @@ export default function BarangayHeadDashboard({ unreadNotifications: initialUnre
       <div className="flex-1 flex flex-col w-full">
         {location.pathname === '/barangayhead' && (
           <div className="flex-1 bg-gray-50 px-4 py-4">
+            {/* MENRO Banner */}
             <div className="relative w-full h-64 md:h-80 overflow-hidden shadow-lg mb-8 mt-4 rounded-xl">
-              <Slider {...carouselSettings} className="h-full">
-                {eventImages.map((event) => (
-                  <div key={event.title} className="relative h-64 md:h-80">
-                    <div
-                      className="w-full h-full bg-cover bg-center relative rounded-xl"
-                      style={{ backgroundImage: `url(${event.image})` }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <div className="flex items-center gap-2 mb-2">
-                          <MdEvent className="w-4 h-4 text-green-400" />
-                          <span className="text-sm font-medium text-green-400">{event.date}</span>
-                        </div>
-                        <h3 className="text-xl md:text-2xl font-bold mb-2">{event.title}</h3>
-                        <p className="text-sm md:text-base text-gray-200">{event.location}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </Slider>
+              <img
+                src="/src/assets/menro_banner.jpg"
+                alt="Municipal Environment and Natural Resources Office"
+                className="w-full h-full object-cover rounded-xl"
+              />
+              {/* Policy Text Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent rounded-xl">
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h3 className="text-base md:text-lg font-bold text-center">
+                    STRICTLY "NO SEGREGATION, NO COLLECTION" POLICY
+                  </h3>
+                </div>
+              </div>
             </div>
 
             <div className="px-0 py-0 space-y-8">

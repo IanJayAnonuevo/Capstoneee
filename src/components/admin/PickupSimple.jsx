@@ -171,87 +171,83 @@ export default function PickupSimple() {
 
   return (
     <div className="p-6 bg-green-50 min-h-screen">
-      {/* Action Bar */}
-      <div className="flex justify-end gap-3 mb-6">
-        <button className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
-          <FiRefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
+      {/* Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search requests..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-full sm:w-64"
+            />
+          </div>
 
-      {/* Search and Filter Section */}
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1 relative">
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
+          {/* Filter */}
+          <select
+            value={status}
+            onChange={e => setStatus(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <option value="All">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="declined">Declined</option>
+          </select>
         </div>
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
-        >
-          <option>All Status</option>
-          <option>pending</option>
-          <option>scheduled</option>
-          <option>completed</option>
-          <option>declined</option>
-        </select>
+
+        <div className="flex gap-3">
+          {/* Refresh */}
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+            <FiRefreshCw className="w-5 h-5" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <FiUser className="w-5 h-5 text-blue-600" />
-            </div>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Total Requests</span>
+            <FiUser className="w-5 h-5 text-blue-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+          <p className="text-sm text-gray-500 mt-1">All pickup requests</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-            </div>
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <FiClock className="w-5 h-5 text-yellow-600" />
-            </div>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Pending</span>
+            <FiClock className="w-5 h-5 text-yellow-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{stats.pending}</div>
+          <p className="text-sm text-gray-500 mt-1">Awaiting approval</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Scheduled</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.scheduled}</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <FiCalendar className="w-5 h-5 text-blue-600" />
-            </div>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Scheduled</span>
+            <FiCalendar className="w-5 h-5 text-blue-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{stats.scheduled}</div>
+          <p className="text-sm text-gray-500 mt-1">Ready for pickup</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-            </div>
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <FiCheckCircle className="w-5 h-5 text-green-600" />
-            </div>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Completed</span>
+            <FiCheckCircle className="w-5 h-5 text-green-500" />
           </div>
+          <div className="text-3xl font-bold text-gray-900">{stats.completed}</div>
+          <p className="text-sm text-gray-500 mt-1">Successfully finished</p>
         </div>
       </div>
 
@@ -419,34 +415,10 @@ export default function PickupSimple() {
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={closeModal}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Close
                 </button>
-                {selectedRequest.status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => handleSchedule(selectedRequest)}
-                      disabled={actionLoading}
-                      className={`px-4 py-2 text-white rounded-lg transition-colors ${actionLoading
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700'
-                        }`}
-                    >
-                      {actionLoading ? 'Processing...' : 'Schedule'}
-                    </button>
-                    <button
-                      onClick={() => handleDecline(selectedRequest)}
-                      disabled={actionLoading}
-                      className={`px-4 py-2 text-white rounded-lg transition-colors ${actionLoading
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-red-600 hover:bg-red-700'
-                        }`}
-                    >
-                      {actionLoading ? 'Processing...' : 'Decline'}
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           </div>

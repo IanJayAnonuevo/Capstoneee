@@ -40,14 +40,10 @@ export default function AttendancePage() {
     // Morning Session
     const AM_START_HOUR = 5;
     const AM_END_HOUR = 6;
-    const AM_TIMEOUT_START = 12;
-    const AM_TIMEOUT_END = 13;
 
     // Afternoon Session
     const PM_START_HOUR = 13; // 1 PM
     const PM_END_HOUR = 14;   // 2 PM
-    const PM_TIMEOUT_START = 17; // 5 PM
-    const PM_TIMEOUT_END = 18;   // 6 PM
 
     useEffect(() => {
         const interval = setInterval(() => setNow(new Date()), 30 * 1000);
@@ -122,32 +118,21 @@ export default function AttendancePage() {
     let currentWindow = 'CLOSED';
     let activeSession = null;
 
-    // Morning Windows
+    // Morning Window
     if (currentHour >= AM_START_HOUR && currentHour < AM_END_HOUR) {
         currentWindow = 'AM_TIME_IN';
         activeSession = 'am';
-    } else if (currentHour >= AM_TIMEOUT_START && currentHour < AM_TIMEOUT_END) {
-        currentWindow = 'AM_TIME_OUT';
-        activeSession = 'am';
     }
-    // Afternoon Windows
+    // Afternoon Window
     else if (currentHour >= PM_START_HOUR && currentHour < PM_END_HOUR) {
         currentWindow = 'PM_TIME_IN';
         activeSession = 'pm';
-    } else if (currentHour >= PM_TIMEOUT_START && currentHour < PM_TIMEOUT_END) {
-        currentWindow = 'PM_TIME_OUT';
-        activeSession = 'pm';
     }
 
-    // Logic for enabling buttons
+    // Logic for enabling buttons - only time-in is allowed
     const isTimeInEnabled = (
         (currentWindow === 'AM_TIME_IN' && !sessionStatus.am.hasTimeIn && !sessionStatus.am.pending) ||
         (currentWindow === 'PM_TIME_IN' && !sessionStatus.pm.hasTimeIn && !sessionStatus.pm.pending)
-    );
-
-    const isTimeOutEnabled = (
-        (currentWindow === 'AM_TIME_OUT' && sessionStatus.am.hasTimeIn && !sessionStatus.am.hasTimeOut) ||
-        (currentWindow === 'PM_TIME_OUT' && sessionStatus.pm.hasTimeIn && !sessionStatus.pm.hasTimeOut)
     );
 
     const otherButtonsEnabled = true; // Always allow absent/leave for now, or refine as needed
@@ -275,19 +260,17 @@ export default function AttendancePage() {
                             currentWindow === 'CLOSED' ||
                             loading ||
                             (activeSession && sessionStatus[activeSession]?.pending) ||
-                            (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn) ||
-                            (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
+                            (activeSession && sessionStatus[activeSession]?.hasTimeIn)
                         }
                         onClick={() => {
-                            setModalIntent(currentWindow.includes('TIME_OUT') ? 'time_out' : 'time_in');
+                            setModalIntent('time_in');
                             setModalSession(activeSession === 'am' ? 'AM' : 'PM');
                             setShowTimeInModal(true);
                         }}
                         className={`w-full rounded-xl shadow-sm border p-4 flex items-center gap-4 transition-all duration-200 ${currentWindow === 'CLOSED' ||
                             loading ||
                             (activeSession && sessionStatus[activeSession]?.pending) ||
-                            (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn) ||
-                            (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
+                            (activeSession && sessionStatus[activeSession]?.hasTimeIn)
                             ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-60'
                             : 'bg-white hover:bg-gray-50 border-gray-200 hover:shadow-md cursor-pointer'
                             }`}
@@ -295,15 +278,13 @@ export default function AttendancePage() {
                         <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${currentWindow === 'CLOSED' ||
                             loading ||
                             (activeSession && sessionStatus[activeSession]?.pending) ||
-                            (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn) ||
-                            (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
+                            (activeSession && sessionStatus[activeSession]?.hasTimeIn)
                             ? 'bg-gray-200' : 'bg-emerald-100'
                             }`}>
                             <FiClock className={`w-6 h-6 ${currentWindow === 'CLOSED' ||
                                 loading ||
                                 (activeSession && sessionStatus[activeSession]?.pending) ||
-                                (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn) ||
-                                (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
+                                (activeSession && sessionStatus[activeSession]?.hasTimeIn)
                                 ? 'text-gray-400' : 'text-emerald-700'
                                 }`} />
                         </div>
@@ -311,22 +292,19 @@ export default function AttendancePage() {
                             <h3 className={`font-semibold text-base ${currentWindow === 'CLOSED' ||
                                 loading ||
                                 (activeSession && sessionStatus[activeSession]?.pending) ||
-                                (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn) ||
-                                (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
+                                (activeSession && sessionStatus[activeSession]?.hasTimeIn)
                                 ? 'text-gray-500' : 'text-gray-900'
                                 }`}>
-                                Daily Attendance
+                                Time In
                             </h3>
                             <p className="text-sm text-gray-500">
                                 {activeSession && sessionStatus[activeSession]?.pending
                                     ? 'Request pending approval'
-                                    : (currentWindow.includes('TIME_IN') && activeSession && sessionStatus[activeSession]?.hasTimeIn)
-                                        ? 'Already timed in'
-                                        : (currentWindow.includes('TIME_OUT') && activeSession && sessionStatus[activeSession]?.hasTimeOut)
-                                            ? 'Already timed out'
-                                            : currentWindow === 'CLOSED'
-                                                ? 'Available during time in/out windows'
-                                                : 'Time in, time out, and mark attendance'}
+                                    : (activeSession && sessionStatus[activeSession]?.hasTimeIn)
+                                        ? 'Already timed in for this session'
+                                        : currentWindow === 'CLOSED'
+                                            ? 'Available during time-in windows (5-6 AM, 1-2 PM)'
+                                            : 'Submit time-in request with photo proof'}
                             </p>
                         </div>
                     </button>
@@ -510,28 +488,14 @@ export default function AttendancePage() {
                 attendanceDate={modalAttendanceDate}
                 session={modalSession}
                 onSuccess={() => {
-                    if (modalIntent === 'time_in') {
-                        setShowTimeInSuccessModal(true);
-                        // Optimistically update pending status
-                        const sess = activeSession;
-                        if (sess) {
-                            setSessionStatus(prev => ({
-                                ...prev,
-                                [sess]: { ...prev[sess], pending: true }
-                            }));
-                        }
-                    } else {
-                        // Time-out request
-                        setMessage({ type: 'success', text: 'Time-out request submitted. Awaiting foreman review.' });
-                        setTimeout(() => setMessage({ type: '', text: '' }), 3500);
-                        // Optimistically update pending status for time-out too
-                        const sess = activeSession;
-                        if (sess) {
-                            setSessionStatus(prev => ({
-                                ...prev,
-                                [sess]: { ...prev[sess], pending: true }
-                            }));
-                        }
+                    setShowTimeInSuccessModal(true);
+                    // Optimistically update pending status
+                    const sess = activeSession;
+                    if (sess) {
+                        setSessionStatus(prev => ({
+                            ...prev,
+                            [sess]: { ...prev[sess], pending: true }
+                        }));
                     }
                 }}
             />

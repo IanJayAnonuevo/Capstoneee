@@ -31,8 +31,8 @@ const GenerateRoutesButton = ({ onRoutesGenerated }) => {
         setResult(null);
 
         try {
-            // Use auto_generate_all.php to generate both tasks AND routes for all sessions
-            const url = buildApiUrl('auto_generate_all.php');
+            // Use generate_daily_routes.php to generate routes
+            const url = buildApiUrl('generate_daily_routes.php');
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -40,10 +40,7 @@ const GenerateRoutesButton = ({ onRoutesGenerated }) => {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    start_date: generateDate,
-                    end_date: generateDate,
-                    overwrite: true
-                    // No session parameter = generates for BOTH AM and PM
+                    date: generateDate
                 })
             });
 
@@ -54,17 +51,13 @@ const GenerateRoutesButton = ({ onRoutesGenerated }) => {
             const data = await response.json();
 
             if (data.success) {
-                // Transform the response to match the expected format
-                const routesData = data.routes && data.routes.length > 0 ? data.routes[0] : {};
-                const transformedResult = {
+                setResult({
                     success: true,
                     date: generateDate,
-                    routes_generated: routesData.routes_generated || 0,
-                    tasks_generated: data.tasks?.total_generated || 0,
-                    routes: [] // We'll need to fetch the actual route details
-                };
-
-                setResult(transformedResult);
+                    routes_generated: data.routes_generated || 0,
+                    tasks_generated: 0,
+                    routes: data.routes || []
+                });
 
                 // Call parent callback to refresh routes
                 if (onRoutesGenerated) {

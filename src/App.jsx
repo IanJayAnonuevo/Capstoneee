@@ -91,6 +91,7 @@ import Issues from './components/admin/Issues'
 import AdminFeedback from './components/admin/Feedback'
 import CollectionPoints from './components/admin/CollectionPoints'
 import ManageBarangay from './components/admin/ManageBarangay'
+import AdminSettings from './components/admin/Settings'
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useLoader } from './contexts/LoaderContext.jsx';
@@ -132,7 +133,7 @@ function App() {
 
   const goToSettings = () => {
     setProfileOpen(false)
-    navigate('/admin/users')
+    navigate('/admin/settings')
   }
 
   const confirmLogout = async () => {
@@ -190,6 +191,7 @@ function App() {
     if (location.pathname.startsWith('/admin/barangay')) return 'Barangay Activity'
     if (location.pathname.startsWith('/admin/feedback')) return 'Feedback'
     if (location.pathname.startsWith('/admin/issues')) return 'Issues'
+    if (location.pathname.startsWith('/admin/settings')) return 'Settings'
     if (location.pathname === '/admin/task-management/today') return "Today's tasks"
     if (location.pathname === '/admin/task-management/past') return 'Past tasks'
     if (location.pathname === '/admin/task-management/manual') return 'Task Management'
@@ -263,6 +265,7 @@ function App() {
             <Route path="/admin/task-management/special" element={<RequireAuth allowedRoles={['admin']}><SpecialTasks /></RequireAuth>} />
             <Route path="/admin/task-management/past" element={<RequireAuth allowedRoles={['admin']}><PastTasks /></RequireAuth>} />
             <Route path="/admin/task-management/manual" element={<RequireAuth allowedRoles={['admin']}><TaskManagement /></RequireAuth>} />
+            <Route path="/admin/settings" element={<RequireAuth allowedRoles={['admin']}><AdminSettings /></RequireAuth>} />
             {/* Admin catch-all for undefined admin routes */}
             <Route path="/admin/*" element={<RequireAuth allowedRoles={['admin']}><Placeholder title="Admin Page Not Found" /></RequireAuth>} />
             {/* Resident routes - protected */}

@@ -40,20 +40,19 @@ try {
         throw new Exception('Database connection failed');
     }
 
-    // Query attendance records
+    // Query attendance records - fetch both AM and PM sessions
     $query = "
         SELECT 
-            a.attendance_id,
-            a.user_id,
             a.attendance_date,
-            CONCAT(a.attendance_date, ' ', a.time_in) as am_time_in,
-            CONCAT(a.attendance_date, ' ', a.time_out) as am_time_out,
-            NULL as pm_time_in,
-            NULL as pm_time_out,
-            a.status
+            MAX(CASE WHEN a.session = 'AM' THEN CONCAT(a.attendance_date, ' ', a.time_in) END) as am_time_in,
+            MAX(CASE WHEN a.session = 'AM' THEN CONCAT(a.attendance_date, ' ', a.time_out) END) as am_time_out,
+            MAX(CASE WHEN a.session = 'PM' THEN CONCAT(a.attendance_date, ' ', a.time_in) END) as pm_time_in,
+            MAX(CASE WHEN a.session = 'PM' THEN CONCAT(a.attendance_date, ' ', a.time_out) END) as pm_time_out,
+            MAX(a.status) as status
         FROM attendance a
         WHERE a.user_id = ?
         AND a.attendance_date BETWEEN ? AND ?
+        GROUP BY a.attendance_date
         ORDER BY a.attendance_date ASC
     ";
 

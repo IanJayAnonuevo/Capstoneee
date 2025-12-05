@@ -23,7 +23,10 @@ export default function AttendanceLogsDetail() {
             const userData = JSON.parse(localStorage.getItem('user'));
             const token = localStorage.getItem('access_token');
 
-            if (!userData?.user_id || !token) return;
+            if (!userData?.user_id || !token) {
+                setLoading(false);
+                return;
+            }
 
             // Get first and last day of the month
             const firstDay = new Date(year, month - 1, 1);
@@ -33,7 +36,7 @@ export default function AttendanceLogsDetail() {
             const dateTo = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
 
             const response = await fetch(
-                `${API_BASE_URL}/get_attendance.php?user_id=${userData.user_id}&date_from=${dateFrom}&date_to=${dateTo}`,
+                `${API_BASE_URL}/get_attendance_logs.php?user_id=${userData.user_id}&date_from=${dateFrom}&date_to=${dateTo}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -154,7 +157,6 @@ export default function AttendanceLogsDetail() {
                                         <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
                                         <th className="px-4 py-3 text-center text-sm font-semibold" colSpan="2">Morning</th>
                                         <th className="px-4 py-3 text-center text-sm font-semibold" colSpan="2">Afternoon</th>
-                                        <th className="px-4 py-3 text-center text-sm font-semibold">Status</th>
                                     </tr>
                                     <tr className="bg-emerald-500">
                                         <th className="px-4 py-2 text-left text-xs font-medium"></th>
@@ -162,44 +164,76 @@ export default function AttendanceLogsDetail() {
                                         <th className="px-4 py-2 text-center text-xs font-medium">OUT</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium">IN</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium">OUT</th>
-                                        <th className="px-4 py-2 text-center text-xs font-medium"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {attendance.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                                            <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
                                                 No attendance records for this month
                                             </td>
                                         </tr>
                                     ) : (
-                                        attendance.map((record, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                    {new Date(record.attendance_date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    })}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-center text-gray-700">
-                                                    {formatTime(record.am_time_in)}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-center text-gray-700">
-                                                    {formatTime(record.am_time_out)}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-center text-gray-700">
-                                                    {formatTime(record.pm_time_in)}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-center text-gray-700">
-                                                    {formatTime(record.pm_time_out)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className={`text-sm font-medium ${getStatusColor(record.status)}`}>
-                                                        {getStatusIcon(record.status)} {record.status || 'N/A'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        attendance.map((record, index) => {
+                                            const isAbsent = record.status === 'absent';
+                                            const isOnLeave = record.status === 'on_leave' || record.status === 'on-leave';
+
+                                            const hasMorningIn = record.am_time_in && record.am_time_in !== 'null';
+                                            const hasMorningOut = record.am_time_out && record.am_time_out !== 'null';
+                                            const hasAfternoonIn = record.pm_time_in && record.pm_time_in !== 'null';
+                                            const hasAfternoonOut = record.pm_time_out && record.pm_time_out !== 'null';
+
+                                            const cellBgClass = isAbsent
+                                                ? 'bg-red-50'
+                                                : isOnLeave
+                                                    ? 'bg-amber-50'
+                                                    : 'bg-emerald-50';
+
+                                            const circleColor = isAbsent
+                                                ? 'text-red-600'
+                                                : isOnLeave
+                                                    ? 'text-amber-600'
+                                                    : 'text-emerald-600';
+
+                                            return (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        {new Date(record.attendance_date).toLocaleDateString('en-US', {
+                                                            month: 'short',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-center ${hasMorningIn ? cellBgClass : ''}`}>
+                                                        {hasMorningIn ? (
+                                                            <span className={`text-2xl ${circleColor}`}>●</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-center ${hasMorningOut ? cellBgClass : ''}`}>
+                                                        {hasMorningOut ? (
+                                                            <span className={`text-2xl ${circleColor}`}>●</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-center ${hasAfternoonIn ? cellBgClass : ''}`}>
+                                                        {hasAfternoonIn ? (
+                                                            <span className={`text-2xl ${circleColor}`}>●</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-center ${hasAfternoonOut ? cellBgClass : ''}`}>
+                                                        {hasAfternoonOut ? (
+                                                            <span className={`text-2xl ${circleColor}`}>●</span>
+                                                        ) : (
+                                                            <span className="text-gray-400">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>

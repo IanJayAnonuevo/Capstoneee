@@ -27,7 +27,6 @@ const navItems = [
     Icon: FaTasks,
     children: [
       { to: '/admin/task-management/today', label: "Today's tasks" },
-      { to: '/admin/task-management/special', label: 'Special Tasks' },
       { to: '/admin/task-management/past', label: 'Past tasks' }
     ]
   },
@@ -43,7 +42,7 @@ function getSectionLabel(index) {
   // Sections based on divider positions in navItems
   if (index === 0) return 'Overview'
   if (index === 2) return 'Operations'
-  if (index === 8) return 'Engagement'
+  if (index === 9) return 'Engagement'
   if (index === 12) return 'Account'
   return null
 }
